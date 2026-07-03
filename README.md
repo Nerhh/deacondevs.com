@@ -46,6 +46,5 @@ Cloudflare Pages or Netlify work just as well — drag-and-drop the folder, then
 
 ## TODO before going live
 
-- [ ] Replace the placeholder social handles in `index.html` (`https://x.com/deacondevs`, Spotify user URL) with the real ones. The GitHub link already points at the real account.
 - [ ] Tweak the demo numbers if you like (`TOTAL`, allocation segments in `js/main.js`).
 - [ ] Adjust skill levels in the `#skills` section of `index.html` (`data-level` attributes) — XP tooltips update automatically.
