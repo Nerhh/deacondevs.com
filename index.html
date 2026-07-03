@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marcus Deacon — deacondevs</title>
+  <meta name="description" content="Marcus Deacon — UK software developer building price-analysis tools, wealth-management apps, and the occasional LEGO city.">
+  <meta property="og:title" content="Marcus Deacon — deacondevs">
+  <meta property="og:description" content="UK software developer. Builder of tools that do the boring work — in code and in bricks.">
+  <meta name="theme-color" content="#0e0e11">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='11' width='26' height='16' rx='3' fill='%23f5c518'/%3E%3Crect x='9' y='5' width='6' height='7' rx='1.5' fill='%23f5c518'/%3E%3Crect x='18' y='5' width='6' height='7' rx='1.5' fill='%23f5c518'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <header class="site-head">
+    <a class="wordmark" href="#top" data-xp="12">~/deacondevs</a>
+    <nav>
+      <a href="#projects" data-xp="15">projects</a>
+      <a href="#skills" data-xp="15">skills</a>
+      <a href="#about" data-xp="15">about</a>
+      <a href="#contact" data-xp="15">contact</a>
+      <button id="theme-toggle" aria-label="Toggle colour theme" title="Toggle theme">☀</button>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <section class="hero">
+      <h1 class="sr-only">Marcus Deacon</h1>
+      <canvas id="hero-canvas" aria-hidden="true"></canvas>
+      <noscript><p class="hero-noscript">MARCUS DEACON</p></noscript>
+      <p class="hero-sub reveal">software developer · UK born · father · <span class="lvl-badge" data-xp="30" title="Combat level">Lvl 30</span></p>
+      <p class="hero-line reveal">I build tools that do the boring work — watching ticket prices, tracking net worth, automating the rest.</p>
+      <p class="status reveal"><span class="prompt">$</span> now building <a href="#p-vestra">vestra</a> — personal wealth management<span class="cursor">█</span></p>
+      <p class="hero-hint" aria-hidden="true">drag through the name · click to scatter</p>
+    </section>
+
+    <section id="projects" class="section">
+      <h2 class="section-h reveal"><span class="slash">//</span> projects</h2>
+      <p class="section-note reveal">The demos below are real, live-rendered on canvas — not screenshots.</p>
+      <div class="cards">
+
+        <article class="card reveal" id="p-stubhub">
+          <header class="card-head">
+            <span class="studs" aria-hidden="true"><i></i><i></i></span>
+            <h3>stubhub lens</h3>
+            <span class="badge">in development</span>
+          </header>
+          <canvas class="spark" id="spark-canvas" role="img" aria-label="Animated demo: live ticket price chart with rolling average and deal detection"></canvas>
+          <p>A Chrome extension that sits on StubHub listings and does the maths for you — live price tracking, rolling averages and deal alerts, before you overpay for tickets.</p>
+          <ul class="tags"><li>chrome-extension</li><li>javascript</li><li>price-analysis</li></ul>
+        </article>
+
+        <article class="card reveal" id="p-vestra">
+          <header class="card-head">
+            <span class="studs" aria-hidden="true"><i></i><i></i></span>
+            <h3>vestra</h3>
+            <span class="badge badge-active">active</span>
+          </header>
+          <div class="donut-wrap">
+            <canvas id="donut-canvas" role="img" aria-label="Animated demo: portfolio allocation donut chart"></canvas>
+            <ul class="legend" id="donut-legend"></ul>
+          </div>
+          <p>A wealth-management app for people who like their money where they can see it — accounts, holdings, savings habits and a monthly “Wrapped” for your net worth. <span class="muted">(demo data, sadly)</span></p>
+          <ul class="tags"><li>node</li><li>sqlite</li><li>pwa</li></ul>
+        </article>
+
+        <article class="card reveal card-queued">
+          <header class="card-head">
+            <span class="studs" aria-hidden="true"><i></i><i></i></span>
+            <h3>next build</h3>
+            <span class="badge">queued</span>
+          </header>
+          <div class="queued-art" aria-hidden="true">
+            <span class="qbrick"></span><span class="qbrick"></span><span class="qbrick"></span>
+          </div>
+          <p>Reserved for whatever gets built next. Bricks sorted, instructions open.</p>
+          <ul class="tags"><li>???</li></ul>
+        </article>
+
+      </div>
+    </section>
+
+    <section id="skills" class="section">
+      <h2 class="section-h reveal"><span class="slash">//</span> skills <span class="total">total level <b id="total-level">—</b></span></h2>
+      <p class="section-note reveal">Hover a skill for the XP. Levels follow the real Old School RuneScape experience curve — because of course they do.</p>
+      <div class="skill-grid">
+        <div class="skill" data-level="91"><span class="skill-name">javascript</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+        <div class="skill" data-level="84"><span class="skill-name">typescript</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+        <div class="skill" data-level="87"><span class="skill-name">node.js</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+        <div class="skill" data-level="90"><span class="skill-name">html &amp; css</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+        <div class="skill" data-level="76"><span class="skill-name">sql</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+        <div class="skill" data-level="82"><span class="skill-name">chrome extensions</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+        <div class="skill" data-level="85"><span class="skill-name">data visualisation</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+        <div class="skill" data-level="79"><span class="skill-name">git</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+        <div class="skill skill-99" data-level="99"><span class="skill-name">lego engineering</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+        <div class="skill skill-99" data-level="99"><span class="skill-name">old school runescape</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
+      </div>
+    </section>
+
+    <section id="about" class="section">
+      <h2 class="section-h reveal"><span class="slash">//</span> about</h2>
+      <div class="about-col">
+        <p class="reveal"><strong>I'm Marcus Deacon</strong> — 30, UK born and raised, and a father, which means my patience has been professionally load-tested.</p>
+        <p class="reveal">By day I build software: browser tooling, data-heavy apps, and small sharp utilities that quietly save people money. Current obsessions are <a href="#p-stubhub">ticket-price analysis</a> and <a href="#p-vestra">personal wealth tracking</a>.</p>
+        <p class="reveal">Off the clock it's <strong>LEGO</strong> — proper sets and freeform builds — and <strong>Old School RuneScape</strong>, which taught me everything I know about long-term incremental progress. The grind is the point.</p>
+        <p class="reveal">This site is hand-built: no frameworks, no build step — just HTML, CSS and vanilla JavaScript doing every animation you can see.</p>
+      </div>
+    </section>
+
+    <section id="contact" class="section section-last">
+      <h2 class="section-h reveal"><span class="slash">//</span> contact</h2>
+      <p class="section-note reveal">Say hello. XP is awarded on click.</p>
+      <ul class="contact-list reveal">
+        <li><a href="https://x.com/deacondevs" target="_blank" rel="noopener" data-xp="42">x / twitter ↗</a></li>
+        <li><a href="https://open.spotify.com/user/deacondevs" target="_blank" rel="noopener" data-xp="27">spotify ↗</a></li>
+        <li><a href="https://github.com/deacondevs" target="_blank" rel="noopener" data-xp="84">github ↗</a></li>
+        <li><a href="mailto:marcus@deacondevs.com" data-xp="120">marcus@deacondevs.com</a></li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer>© 2026 Marcus Deacon · deacondevs.com · built brick by brick — no frameworks harmed</footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+# deacondevs.com
+
+Personal portfolio for Marcus Deacon. Retro-minimal, hand-built — no frameworks, no build step, zero dependencies. Just `index.html`, one stylesheet, and one JavaScript file.
+
+## What's in it
+
+- **Particle hero** — the name is rendered as LEGO-stud particles sampled from real glyph pixels; they converge on load, repel from the cursor, and scatter on click.
+- **Live project demos** — the StubHub Lens card runs a live mean-reverting price sparkline with rolling average and deal detection; the Vestra card animates an allocation donut with a counting net-worth figure (demo data).
+- **OSRS skills panel** — levels count up on scroll, and hover tooltips show XP computed from the genuine Old School RuneScape experience curve.
+- **XP drops** — clicking any link awards XP, RuneScape style.
+- **Dark/light theme** — dark terminal vs. old-paper light, persisted in localStorage, respects `prefers-color-scheme`.
+- **Accessibility** — full `prefers-reduced-motion` support, semantic HTML, focus styles, noscript fallback.
+
+## Local preview
+
+```sh
+npx http-server . -p 4173
+# then open http://localhost:4173
+```
+
+(Any static file server works — there is nothing to build.)
+
+## Deploying with a Squarespace-registered domain
+
+Squarespace can't host raw custom HTML, so host the files elsewhere (free) and point the domain at it.
+
+### Option A: GitHub Pages (recommended)
+
+1. Create a GitHub repo (e.g. `deacondevs/deacondevs.com`), push this folder to it.
+2. Repo → Settings → Pages → Source: `main` branch, root. The included `CNAME` file already says `deacondevs.com`.
+3. In Pages settings, set the custom domain to `deacondevs.com` and enable **Enforce HTTPS** (available once DNS propagates).
+4. In Squarespace: **Domains → deacondevs.com → DNS Settings**, add:
+
+   | Type  | Host | Value                   |
+   |-------|------|-------------------------|
+   | A     | @    | 185.199.108.153         |
+   | A     | @    | 185.199.109.153         |
+   | A     | @    | 185.199.110.153         |
+   | A     | @    | 185.199.111.153         |
+   | CNAME | www  | `<your-gh-user>.github.io` |
+
+   Remove any conflicting Squarespace default A/CNAME records on `@` and `www`.
+
+Cloudflare Pages or Netlify work just as well — drag-and-drop the folder, then follow their custom-domain DNS instructions instead.
+
+## TODO before going live
+
+- [ ] Replace the placeholder social handles in `index.html` (`https://x.com/deacondevs`, Spotify user URL, GitHub URL) with the real ones.
+- [ ] Tweak the demo numbers if you like (`TOTAL`, allocation segments in `js/main.js`).
+- [ ] Adjust skill levels in the `#skills` section of `index.html` (`data-level` attributes) — XP tooltips update automatically.
