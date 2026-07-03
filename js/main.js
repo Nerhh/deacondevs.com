@@ -482,6 +482,31 @@ document.addEventListener('click', e => {
   setTimeout(() => d.remove(), 1500);
 });
 
+/* ---------- email: assembled at runtime so scrapers never see it ---------- */
+
+(function initEmail() {
+  const a = document.getElementById('email-link');
+  if (!a) return;
+  const rot13 = s => s.replace(/[a-z]/g, c =>
+    String.fromCharCode((c.charCodeAt(0) - 97 + 13) % 26 + 97));
+  const addr = rot13('znephf') + String.fromCharCode(64) + rot13('qrnpbaqrif') + '.' + rot13('pbz');
+  let revealed = false;
+  a.addEventListener('click', e => {
+    if (revealed) return; // second click follows the real mailto
+    e.preventDefault();
+    revealed = true;
+    a.href = 'mailto:' + addr;
+    a.textContent = addr;
+    a.title = 'click again to open your mail app';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(addr).then(() => {
+        a.textContent = addr + ' · copied';
+        setTimeout(() => { a.textContent = addr; }, 1600);
+      }, () => {});
+    }
+  });
+})();
+
 /* ---------- scroll reveal ---------- */
 
 (function initReveal() {

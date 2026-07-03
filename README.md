@@ -8,6 +8,7 @@ Personal portfolio for Marcus Deacon. Retro-minimal, hand-built — no framework
 - **Live project demos** — the StubHub Lens card runs a live mean-reverting price sparkline with rolling average and deal detection; the Vestra card animates an allocation donut with a counting net-worth figure (demo data).
 - **OSRS skills panel** — levels count up on scroll, and hover tooltips show XP computed from the genuine Old School RuneScape experience curve.
 - **XP drops** — clicking any link awards XP, RuneScape style.
+- **Scraper-resistant email** — the address never appears in the HTML source; it's ROT13-assembled in JavaScript on first click (which also copies it to the clipboard), and a second click opens the mail app.
 - **Dark/light theme** — dark terminal vs. old-paper light, persisted in localStorage, respects `prefers-color-scheme`.
 - **Accessibility** — full `prefers-reduced-motion` support, semantic HTML, focus styles, noscript fallback.
 
@@ -45,6 +46,6 @@ Cloudflare Pages or Netlify work just as well — drag-and-drop the folder, then
 
 ## TODO before going live
 
-- [ ] Replace the placeholder social handles in `index.html` (`https://x.com/deacondevs`, Spotify user URL, GitHub URL) with the real ones.
+- [ ] Replace the placeholder social handles in `index.html` (`https://x.com/deacondevs`, Spotify user URL) with the real ones. The GitHub link already points at the real account.
 - [ ] Tweak the demo numbers if you like (`TOTAL`, allocation segments in `js/main.js`).
 - [ ] Adjust skill levels in the `#skills` section of `index.html` (`data-level` attributes) — XP tooltips update automatically.
