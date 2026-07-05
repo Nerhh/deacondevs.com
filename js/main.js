@@ -27,6 +27,68 @@ function countUp(el, to, dur) {
   tick(t0);
 }
 
+/* ---------- OSRS hitsplat pixel art (shared by the duel and the favicon) ---------- */
+
+const SPLAT_MAP = [
+  '.......d.......',
+  '...d...dd......',
+  '...dd.drrd..d..',
+  '....drrrrd.dd..',
+  '..ddrrrrrrddd..',
+  '.d.rrrrrrrrrd..',
+  '..drrrrrrrrrdd.',
+  'ddrrrrrrrrrrrdd',
+  '..drrrrrrrrrd..',
+  '.ddrrrrrrrrrd.d',
+  '..drrrrrrrrdd..',
+  '...drrrrrrd....',
+  '..dd.drrd.dd...',
+  '.d....dd...d...',
+  '.......d.......',
+];
+const SPLAT_COLS = {
+  hit: { r: '#c0281a', d: '#6f100a' },
+  miss: { r: '#2951c4', d: '#0f2166' },
+};
+function drawSplatPixels(g, x, y, cell, kind) {
+  const cols = SPLAT_COLS[kind] || SPLAT_COLS.hit;
+  for (let ry = 0; ry < SPLAT_MAP.length; ry++) {
+    const row = SPLAT_MAP[ry];
+    for (let rx = 0; rx < row.length; rx++) {
+      const ch = row[rx];
+      if (ch === '.') continue;
+      g.fillStyle = ch === 'r' ? cols.r : cols.d;
+      g.fillRect(x + rx * cell, y + ry * cell, cell, cell);
+    }
+  }
+}
+
+/* ---------- favicon: the hitsplat, drawn live ---------- */
+
+(function initFavicon() {
+  try {
+    const c = document.createElement('canvas');
+    c.width = 30; c.height = 30;
+    const g = c.getContext('2d');
+    drawSplatPixels(g, 0, 0, 2, 'hit');
+    const D7 = ['111', '..1', '..1', '.1.', '.1.'];
+    const D3 = ['111', '..1', '.11', '..1', '111'];
+    g.fillStyle = '#fff';
+    const put = (D, cx) => D.forEach((row, ry) => {
+      for (let rx = 0; rx < 3; rx++) if (row[rx] === '1') g.fillRect((cx + rx) * 2, (5 + ry) * 2, 2, 2);
+    });
+    put(D7, 4);
+    put(D3, 8);
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.href = c.toDataURL('image/png');
+  } catch (e) { /* static icon stays */ }
+})();
+
 /* ---------- theme + palette ---------- */
 
 let PAL = {};
@@ -80,7 +142,6 @@ function applyTheme(t) {
     skin: '#c8956c',
     masori: { base: '#332a24', trim: '#d2a13c', dark: '#211b17', quiver: '#4a3220', bow: '#6d4f28', string: '#cfc4a6', arrow: '#d9c284' },
     ancest: { base: '#232f5c', trim: '#7fb4d9', gold: '#d2a13c', dark: '#17203f', staff: '#453a66', orb: '#8f7fd9', ice: '#9cc7ff' },
-    hit: '#a31212', miss: '#2b4bad',
     hpGreen: '#39c04a', hpRed: '#b0271f',
   };
 
@@ -544,21 +605,21 @@ function applyTheme(t) {
 
   function drawSplat(s, t) {
     const age = t - s.t0;
-    const pop = easeOut(Math.min(1, age / 110));
-    const alpha = age > 550 ? Math.max(0, 1 - (age - 550) / 250) : 1;
-    const size = 8.5 * SC * pop;
+    // OSRS splats snap in, hold, then vanish — just a tiny pop for juice
+    const pop = 0.72 + 0.28 * Math.min(1, age / 80);
+    const alpha = age > 620 ? Math.max(0, 1 - (age - 620) / 180) : 1;
+    const cell = 1.7 * SC * pop;
+    const w = 15 * cell;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(s.x, s.y - age * 0.008 * SC);
-    ctx.rotate(Math.PI / 4);
-    ctx.fillStyle = s.miss ? COL.miss : COL.hit;
-    rr(-size, -size, size * 2, size * 2, size * 0.45);
-    ctx.rotate(-Math.PI / 4);
-    ctx.fillStyle = '#fff';
-    ctx.font = `${Math.max(11, 15 * SC)}px VT323, "IBM Plex Mono", monospace`;
+    drawSplatPixels(ctx, s.x - w / 2, s.y - w / 2, cell, s.miss ? 'miss' : 'hit');
+    ctx.font = `${Math.max(12, 16 * SC)}px VT323, "IBM Plex Mono", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(s.dmg), 0, 1);
+    ctx.fillStyle = '#000';
+    ctx.fillText(String(s.dmg), s.x + 1.2, s.y + 2.2);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(String(s.dmg), s.x, s.y + 1);
     ctx.restore();
   }
 
@@ -665,10 +726,15 @@ function applyTheme(t) {
 
   function start() {
     size();
-    if (REDUCED) { render(0); return; }
+    if (REDUCED) {
+      if (!W || !H) window.addEventListener('load', () => { size(); render(0); }, { once: true });
+      else render(0);
+      return;
+    }
     const io = new IntersectionObserver(entries => {
       const vis = entries.some(en => en.isIntersecting);
       if (vis && !running) {
+        if (!W || !H) size(); // fonts can resolve before first layout
         running = true;
         last = 0;
         if (!nextAttack) scheduleNext(performance.now() + 400);
