@@ -4,9 +4,9 @@ Personal portfolio for Marcus Deacon. Retro-minimal, hand-built — no framework
 
 ## What's in it
 
-- **Particle hero** — the name is rendered as LEGO-stud particles sampled from real glyph pixels; they converge on load, repel from the cursor, and scatter on click.
+- **The duel** — a fully hand-coded OSRS-style combat scene: Marcus (ranger in Masori-inspired gear) versus Deacon (mage in Ancestral-inspired robes), with projectile arcs, particle trails, hitsplats, HP bars, freeze effects, screen shake, death/respawn cycles, and click-triggered special attacks.
 - **Live project demos** — the StubHub Lens card runs a live mean-reverting price sparkline with rolling average and deal detection; the Vestra card animates an allocation donut with a counting net-worth figure (demo data).
-- **OSRS skills panel** — levels count up on scroll, and hover tooltips show XP computed from the genuine Old School RuneScape experience curve.
+- **Quest log** — shipped work and works-in-progress as OSRS quests, with quest points that count up on scroll. Honest by design: no self-assigned skill levels.
 - **XP drops** — clicking any link awards XP, RuneScape style.
 - **Scraper-resistant email** — the address never appears in the HTML source; it's ROT13-assembled in JavaScript on first click (which also copies it to the clipboard), and a second click opens the mail app.
 - **Dark/light theme** — dark terminal vs. old-paper light, persisted in localStorage, respects `prefers-color-scheme`.
@@ -47,4 +47,4 @@ Cloudflare Pages or Netlify work just as well — drag-and-drop the folder, then
 ## TODO before going live
 
 - [ ] Tweak the demo numbers if you like (`TOTAL`, allocation segments in `js/main.js`).
-- [ ] Adjust skill levels in the `#skills` section of `index.html` (`data-level` attributes) — XP tooltips update automatically.
+- [ ] Add or update quests in the `#quests` section of `index.html` (`data-qp` attributes feed the quest-point counter).

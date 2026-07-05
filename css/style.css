@@ -79,7 +79,8 @@ a:hover { color: var(--accent); text-decoration-color: var(--accent); }
   padding: 14px clamp(16px, 4vw, 40px);
   border-bottom: 1px solid var(--line);
   background: var(--bg);
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 
@@ -124,7 +125,7 @@ main { max-width: 980px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
 
 .hero { padding: 48px 0 44px; border-bottom: 1px solid var(--line); }
 
-#hero-canvas { width: 100%; height: min(46vh, 360px); display: block; cursor: crosshair; }
+#hero-canvas { width: 100%; height: min(40vh, 310px); display: block; cursor: crosshair; }
 
 .hero-noscript { font-size: clamp(40px, 9vw, 90px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
 
@@ -220,44 +221,39 @@ main { max-width: 980px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
 .qbrick:nth-child(3) { animation-delay: 0.8s; }
 @keyframes qpulse { 0%, 100% { opacity: 0.22; } 50% { opacity: 0.85; } }
 
-/* ---------- skills (OSRS stats panel, but subtle) ---------- */
+/* ---------- quest log ---------- */
 
-.skill-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 12px;
+.quests {
+  list-style: none; padding: 0; margin-top: 26px;
+  display: flex; flex-direction: column; gap: 10px;
 }
 
-.skill {
-  position: relative;
+.quest {
+  display: flex; align-items: flex-start; gap: 14px;
   border: 1px solid var(--line); background: var(--bg2); border-radius: 8px;
-  padding: 12px 14px; cursor: default;
+  padding: 14px 16px;
   transition: border-color 0.2s;
 }
-.skill:hover { border-color: var(--accent); }
+.quest:hover { border-color: var(--accent); }
+.quest > div { flex: 1; }
 
-.skill-name { display: block; font-size: 12.5px; color: var(--muted); letter-spacing: 0.02em; }
-.skill-lvl { display: block; font-size: 19px; font-weight: 600; margin-top: 2px; }
-.of { color: var(--muted); font-weight: 400; font-size: 13px; }
+.q-status { width: 18px; text-align: center; flex-shrink: 0; font-size: 15px; line-height: 1.5; }
+.quest-done .q-status { color: var(--green); }
+.quest-active .q-status { color: var(--accent); }
+.quest-locked .q-status { color: var(--muted); }
 
-.xp-bar { display: block; height: 3px; background: var(--line); border-radius: 2px; margin-top: 10px; overflow: hidden; }
-.xp-bar i { display: block; height: 100%; width: 0; background: var(--accent-bright); transition: width 0.9s cubic-bezier(0.22, 0.61, 0.36, 1); }
+.quest h3 { font-size: 14px; font-weight: 600; letter-spacing: 0.01em; }
+.quest p { font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.6; }
 
-.skill::after {
-  content: attr(data-xp-label);
-  position: absolute; left: 50%; bottom: calc(100% + 8px);
-  transform: translateX(-50%) translateY(4px);
-  background: var(--fg); color: var(--bg);
-  font-size: 11px; font-weight: 600;
-  padding: 3px 9px; border-radius: 5px; white-space: nowrap;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  z-index: 5;
+.q-tag {
+  margin-left: auto; flex-shrink: 0; align-self: center;
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--line);
+  border-radius: 99px; padding: 2px 8px; white-space: nowrap;
 }
-.skill:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-.skill-99 { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
-.skill-99 .lvl { color: var(--accent); }
+.quest-done .q-tag { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
+.quest-active .q-tag { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.quest-locked { opacity: 0.65; }
 
 /* ---------- about / contact / footer ---------- */
 

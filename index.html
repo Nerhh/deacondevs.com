@@ -11,7 +11,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='11' width='26' height='16' rx='3' fill='%23f5c518'/%3E%3Crect x='9' y='5' width='6' height='7' rx='1.5' fill='%23f5c518'/%3E%3Crect x='18' y='5' width='6' height='7' rx='1.5' fill='%23f5c518'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -21,7 +21,7 @@
     <a class="wordmark" href="#top" data-xp="12">~/deacondevs</a>
     <nav>
       <a href="#projects" data-xp="15">projects</a>
-      <a href="#skills" data-xp="15">skills</a>
+      <a href="#quests" data-xp="15">quests</a>
       <a href="#about" data-xp="15">about</a>
       <a href="#contact" data-xp="15">contact</a>
       <button id="theme-toggle" aria-label="Toggle colour theme" title="Toggle theme">☀</button>
@@ -37,7 +37,7 @@
       <p class="hero-sub reveal">software developer · UK born · father · <span class="lvl-badge" data-xp="30" title="Combat level">Lvl 30</span></p>
       <p class="hero-line reveal">I build tools that do the boring work — watching ticket prices, tracking net worth, automating the rest.</p>
       <p class="status reveal"><span class="prompt">$</span> now building <a href="#p-vestra">vestra</a> — personal wealth management<span class="cursor">█</span></p>
-      <p class="hero-hint" aria-hidden="true">drag through the name · click to scatter</p>
+      <p class="hero-hint" aria-hidden="true">click a fighter to unleash their special attack</p>
     </section>
 
     <section id="projects" class="section">
@@ -86,21 +86,36 @@
       </div>
     </section>
 
-    <section id="skills" class="section">
-      <h2 class="section-h reveal"><span class="slash">//</span> skills <span class="total">total level <b id="total-level">—</b></span></h2>
-      <p class="section-note reveal">Hover a skill for the XP. Levels follow the real Old School RuneScape experience curve — because of course they do.</p>
-      <div class="skill-grid">
-        <div class="skill" data-level="91"><span class="skill-name">javascript</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-        <div class="skill" data-level="84"><span class="skill-name">typescript</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-        <div class="skill" data-level="87"><span class="skill-name">node.js</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-        <div class="skill" data-level="90"><span class="skill-name">html &amp; css</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-        <div class="skill" data-level="76"><span class="skill-name">sql</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-        <div class="skill" data-level="82"><span class="skill-name">chrome extensions</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-        <div class="skill" data-level="85"><span class="skill-name">data visualisation</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-        <div class="skill" data-level="79"><span class="skill-name">git</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-        <div class="skill skill-99" data-level="99"><span class="skill-name">lego engineering</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-        <div class="skill skill-99" data-level="99"><span class="skill-name">old school runescape</span><span class="skill-lvl"><b class="lvl">1</b><span class="of">/99</span></span><span class="xp-bar"><i></i></span></div>
-      </div>
+    <section id="quests" class="section">
+      <h2 class="section-h reveal"><span class="slash">//</span> quest log <span class="total">quest points <b id="quest-points">—</b></span></h2>
+      <p class="section-note reveal">A quest log instead of a skills grid — things shipped and things in progress, no self-assigned levels.</p>
+      <ul class="quests">
+        <li class="quest quest-done reveal" data-qp="2">
+          <span class="q-status" aria-hidden="true">✓</span>
+          <div><h3>Portfolio, Brick by Brick</h3><p>Design and ship deacondevs.com by hand — no frameworks, no build step. You're looking at the proof.</p></div>
+          <span class="q-tag">completed</span>
+        </li>
+        <li class="quest quest-active reveal" data-qp="1">
+          <span class="q-status" aria-hidden="true">●</span>
+          <div><h3>The Ticket Watcher</h3><p>Build a Chrome extension that watches StubHub prices and flags genuine deals before checkout regret sets in.</p></div>
+          <span class="q-tag">in progress</span>
+        </li>
+        <li class="quest quest-active reveal" data-qp="1">
+          <span class="q-status" aria-hidden="true">●</span>
+          <div><h3>Vestra Saga I: The Ledger</h3><p>A wealth-management app worth opening daily — accounts, holdings, habits and a monthly Wrapped.</p></div>
+          <span class="q-tag">in progress</span>
+        </li>
+        <li class="quest quest-active reveal" data-qp="1">
+          <span class="q-status" aria-hidden="true">●</span>
+          <div><h3>Tutorial Island: Fatherhood</h3><p>Permanent membership. Cannot be abandoned. XP rate: immeasurable.</p></div>
+          <span class="q-tag">in progress</span>
+        </li>
+        <li class="quest quest-locked reveal" data-qp="0">
+          <span class="q-status" aria-hidden="true">?</span>
+          <div><h3>???</h3><p>Quest not yet discovered. Check back soon.</p></div>
+          <span class="q-tag">not started</span>
+        </li>
+      </ul>
     </section>
 
     <section id="about" class="section">
