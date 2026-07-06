@@ -1,6 +1,6 @@
-# deacondevs.com
+# marcus.gg
 
-My corner of the internet — [deacondevs.com](https://deacondevs.com).
+My corner of the internet — [marcus.gg](https://marcus.gg).
 
 Hand-built, on purpose: no frameworks, no build step, no dependencies. One HTML file, one stylesheet, one JavaScript file.
 
