@@ -386,9 +386,9 @@ checkMoon();
     for (const f of fighters) {
       if (f.phase === 'windup') {
         if (f.kind === 'mage') {
-          // particles converge into the staff orb while casting
+          // particles converge into the wand orb while casting
           const u = 4 * SC;
-          const ox = f.x + f.dir * 3.4 * u, oy = gy() - 14 * u;
+          const ox = f.x + f.dir * 3 * u, oy = gy() - 16 * u;
           const a = Math.random() * Math.PI * 2, r = 14 * SC;
           particles.push({
             x: ox + Math.cos(a) * r, y: oy + Math.sin(a) * r,
@@ -465,104 +465,97 @@ checkMoon();
     return age > 800 ? Math.max(0, 1 - (age - 800) / 300) : 1;
   }
 
+  // side-profile pixel sprites modelled on Marcus's actual in-game characters:
+  // slim silhouettes, twisted bow and arcane spirit shield front and centre
+  const RANGER_MAP = [
+    '....HHHH........',
+    '....HHHGG.......',
+    '....HHHGG.......',
+    '....HBBE....WW..',
+    '....HBMMM..Ww.s.',
+    '....RRRR...W..s.',
+    '..CCGGGG..wW..s.',
+    '..CCGgGGS.WW..s.',
+    '..CCGgGGSVWW..s.',
+    '..CCGgGG.VWW..s.',
+    '..CCGGGG..WW..s.',
+    '..CCBBBB..Ww..s.',
+    '..CCBBBB..WW..s.',
+    '..CCBRBB...W..s.',
+    '.CC.BBBB...Ww.s.',
+    '....BB.BB...WW..',
+    '....BB.BB.......',
+    '...VVV.VVV......',
+    '...VVV.VVVV.....',
+  ];
+  const RANGER_PAL = {
+    H: '#1d1a19', G: '#d9a821', g: '#a87e18', B: '#26221f', E: '#d93025',
+    M: '#5f7370', R: '#8a2c22', S: '#c8956c', C: '#15131a', V: '#6fae3d',
+    W: '#2f2b26', w: '#574a38', s: '#cfc4a6',
+  };
+  const MAGE_MAP = [
+    '.WW.............',
+    '..WWW...........',
+    '...WWWW.........',
+    '....WWWWW.......',
+    '....GGGGG..D....',
+    '...WWSSSS..D....',
+    '....WSbSS.aAa...',
+    '...W.LLLL.aAAAa.',
+    '...WLLLLLaAXAAa.',
+    '...WLlLLLaXXXAa.',
+    '...WLlLLLaAXAAa.',
+    '...WLlLLLaAAAAa.',
+    '...WLLLLL.aAAa..',
+    '....LLLLL.aAa...',
+    '....lLLLl..aa...',
+    '....lLLLl.......',
+    '....lllll.......',
+    '.....BB.BB......',
+    '.....BB.BB......',
+  ];
+  const MAGE_PAL = {
+    W: '#e8e6df', G: '#d9a821', S: '#c8956c', b: '#2a1d12',
+    L: '#8b96d6', l: '#6a76b8', B: '#5a5db0', D: '#4a5fd0',
+    A: '#b9c4d2', a: '#4a5f96', X: '#7b5fd0',
+  };
+
+  function drawSprite(map, pal, cx, feetY, cell, d) {
+    const rows = map.length, cols = map[0].length;
+    const top = feetY - rows * cell;
+    const cw = Math.ceil(cell);
+    for (let ry = 0; ry < rows; ry++) {
+      const row = map[ry];
+      for (let rx = 0; rx < cols; rx++) {
+        const k = row[rx];
+        if (k === '.') continue;
+        ctx.fillStyle = pal[k];
+        const left = d === 1 ? cx + (rx - cols / 2) * cell : cx + (cols / 2 - rx - 1) * cell;
+        ctx.fillRect(Math.round(left), Math.round(top + ry * cell), cw, cw);
+      }
+    }
+  }
+
   function drawRanger(f, t) {
-    const u = 4 * SC, d = f.dir;
+    const c = 4 * SC, u = 4 * SC, d = f.dir;
     const bob = (f.dead || f.freeze > 0 || REDUCED) ? 0 : Math.sin(t / 480 + f.bob) * 1.4 * SC;
-    const x = f.x + (f.flash > 0.05 ? (Math.random() - 0.5) * 3 : 0);
-    const y = gy() + f.hopY + bob;
     const wp = f.phase === 'windup' ? Math.min(1, (t - f.phaseT) / 300) : 0;
-    const M = COL.masori;
+    const x = f.x + (f.flash > 0.05 ? (Math.random() - 0.5) * 3 : 0) + d * wp * 2;
+    const y = gy() + f.hopY + bob;
 
     ctx.save();
     ctx.globalAlpha = deathTransform(f, t);
-
-    // quiver on the back
-    ctx.save();
-    ctx.translate(x - d * 2.4 * u, y - 10.5 * u);
-    ctx.rotate(d * 0.45);
-    ctx.fillStyle = M.quiver;
-    ctx.fillRect(-0.7 * u, -2.6 * u, 1.4 * u, 4.6 * u);
-    ctx.fillStyle = M.trim;
-    for (let i = 0; i < 3; i++) ctx.fillRect(-0.55 * u + i * 0.45 * u, -3.3 * u, 0.28 * u, 0.9 * u);
-    ctx.restore();
-
-    // legs + boots
-    ctx.fillStyle = M.dark;
-    ctx.fillRect(x - 1.9 * u, y - 4.6 * u, 1.4 * u, 4.6 * u);
-    ctx.fillRect(x + 0.5 * u, y - 4.6 * u, 1.4 * u, 4.6 * u);
-    ctx.fillStyle = M.trim;
-    ctx.fillRect(x - 1.9 * u, y - 1 * u, 1.4 * u, 0.4 * u);
-    ctx.fillRect(x + 0.5 * u, y - 1 * u, 1.4 * u, 0.4 * u);
-
-    // torso
-    ctx.fillStyle = M.base;
-    rr(x - 2.5 * u, y - 11 * u, 5 * u, 6.8 * u, u * 0.6);
-    // masori gold chevrons + belt
-    ctx.strokeStyle = M.trim;
-    ctx.lineWidth = 0.45 * u;
-    ctx.lineCap = 'round';
-    for (let i = 0; i < 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(x - 1.4 * u, y - (9.6 - i * 1.5) * u);
-      ctx.lineTo(x, y - (8.9 - i * 1.5) * u);
-      ctx.lineTo(x + 1.4 * u, y - (9.6 - i * 1.5) * u);
-      ctx.stroke();
-    }
-    ctx.beginPath();
-    ctx.moveTo(x - 2.5 * u, y - 4.9 * u);
-    ctx.lineTo(x + 2.5 * u, y - 4.9 * u);
-    ctx.stroke();
-
-    // head in hood
-    ctx.fillStyle = M.dark;
-    ctx.beginPath(); ctx.arc(x, y - 13.4 * u, 2.1 * u, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = COL.skin;
-    ctx.beginPath(); ctx.arc(x + d * 0.75 * u, y - 13.2 * u, 1.25 * u, 0, 6.2832); ctx.fill();
-    ctx.strokeStyle = hexA(M.trim, 0.55);
-    ctx.lineWidth = 0.35 * u;
-    ctx.beginPath(); ctx.arc(x, y - 13.4 * u, 2.1 * u, 0, 6.2832); ctx.stroke();
-
-    // bow + arms
-    const hx = x + d * (3 + wp * 0.6) * u;
-    const hy = y - (7.6 + wp * 2.2) * u;
-    ctx.strokeStyle = M.base;
-    ctx.lineWidth = 0.9 * u;
-    ctx.beginPath();
-    ctx.moveTo(x + d * 1.7 * u, y - 10 * u);
-    ctx.lineTo(hx, hy);
-    ctx.stroke();
-    // bow limb
-    ctx.strokeStyle = M.bow;
-    ctx.lineWidth = 0.75 * u;
-    ctx.beginPath();
-    ctx.moveTo(hx, hy - 4.6 * u);
-    ctx.quadraticCurveTo(hx + d * 2.6 * u, hy, hx, hy + 4.6 * u);
-    ctx.stroke();
-    // string (pulled while winding up)
-    const pullX = hx - d * 2.3 * u * wp;
-    ctx.strokeStyle = M.string;
-    ctx.lineWidth = 0.22 * u;
-    ctx.beginPath();
-    ctx.moveTo(hx, hy - 4.6 * u);
-    ctx.lineTo(pullX, hy);
-    ctx.lineTo(hx, hy + 4.6 * u);
-    ctx.stroke();
+    drawSprite(RANGER_MAP, RANGER_PAL, x, y, c, d);
     if (wp > 0.15) {
-      // nocked arrow + drawing arm
-      ctx.strokeStyle = M.arrow;
-      ctx.lineWidth = 0.35 * u;
-      ctx.beginPath();
-      ctx.moveTo(pullX, hy);
-      ctx.lineTo(hx + d * 3.2 * u, hy);
-      ctx.stroke();
-      ctx.strokeStyle = M.base;
-      ctx.lineWidth = 0.9 * u;
-      ctx.beginPath();
-      ctx.moveTo(x - d * 0.4 * u, y - 10 * u);
-      ctx.lineTo(pullX, hy);
-      ctx.stroke();
+      // pixel arrow, drawn back as he winds up
+      const ay = Math.round(y - 10 * c);
+      const tail = x + d * (6 - wp * 3) * c;
+      const ah = Math.ceil(c * 0.7);
+      ctx.fillStyle = COL.masori.arrow;
+      for (let i = 0; i < 4; i++) ctx.fillRect(Math.round(tail + d * i * c - (d === -1 ? c : 0)), ay, Math.ceil(c), ah);
+      ctx.fillStyle = COL.masori.trim;
+      ctx.fillRect(Math.round(tail + d * 4 * c - (d === -1 ? c : 0)), ay, Math.ceil(c), ah);
     }
-
     if (f.flash > 0.05) {
       ctx.fillStyle = hexA('#ff3b30', f.flash * 0.22);
       ctx.beginPath(); ctx.ellipse(x, y - 8 * u, 3.6 * u, 7 * u, 0, 0, 6.2832); ctx.fill();
@@ -572,83 +565,25 @@ checkMoon();
   }
 
   function drawMage(f, t) {
-    const u = 4 * SC, d = f.dir;
+    const c = 4 * SC, u = 4 * SC, d = f.dir;
     const bob = (f.dead || REDUCED) ? 0 : Math.sin(t / 520 + f.bob) * 1.4 * SC;
-    const x = f.x + (f.flash > 0.05 ? (Math.random() - 0.5) * 3 : 0);
-    const y = gy() + f.hopY + bob;
     const wp = f.phase === 'windup' ? Math.min(1, (t - f.phaseT) / 380) : 0;
-    const A = COL.ancest;
-    const sway = REDUCED ? 0 : Math.sin(t / 600 + f.bob) * 0.3 * u;
+    const x = f.x + (f.flash > 0.05 ? (Math.random() - 0.5) * 3 : 0) + d * wp * 2;
+    const y = gy() + f.hopY + bob;
 
     ctx.save();
     ctx.globalAlpha = deathTransform(f, t);
-
-    // robe
-    ctx.fillStyle = A.base;
-    ctx.beginPath();
-    ctx.moveTo(x - 2.2 * u, y - 11 * u);
-    ctx.quadraticCurveTo(x - 3.4 * u + sway, y - 5 * u, x - 3.6 * u + sway, y);
-    ctx.lineTo(x + 3.6 * u + sway, y);
-    ctx.quadraticCurveTo(x + 3.4 * u + sway, y - 5 * u, x + 2.2 * u, y - 11 * u);
-    ctx.closePath();
-    ctx.fill();
-    // hem + trim details
-    ctx.fillStyle = A.trim;
-    ctx.fillRect(x - 3.45 * u + sway, y - 0.9 * u, 6.9 * u, 0.9 * u);
-    ctx.fillStyle = A.gold;
-    ctx.beginPath(); ctx.arc(x, y - 9.2 * u, 0.32 * u, 0, 6.2832); ctx.fill();
-    ctx.beginPath(); ctx.arc(x, y - 7.7 * u, 0.32 * u, 0, 6.2832); ctx.fill();
-
-    // head
-    ctx.fillStyle = COL.skin;
-    ctx.beginPath(); ctx.arc(x + d * 0.3 * u, y - 12.9 * u, 1.3 * u, 0, 6.2832); ctx.fill();
-
-    // ancestral hat: bent crown, gold band, wide brim
-    ctx.fillStyle = A.base;
-    ctx.beginPath();
-    ctx.moveTo(x - 2 * u, y - 14.2 * u);
-    ctx.quadraticCurveTo(x - d * 0.2 * u, y - 17 * u, x - d * 1.5 * u, y - 19 * u);
-    ctx.quadraticCurveTo(x + d * 0.7 * u, y - 16.4 * u, x + 2 * u, y - 14.2 * u);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = A.gold;
-    ctx.fillRect(x - 1.9 * u, y - 15 * u, 3.8 * u, 0.8 * u);
-    ctx.fillStyle = A.dark;
-    ctx.beginPath();
-    ctx.ellipse(x, y - 14.2 * u, 3.9 * u, 0.85 * u, 0, 0, 6.2832);
-    ctx.fill();
-    ctx.strokeStyle = hexA(A.trim, 0.7);
-    ctx.lineWidth = 0.3 * u;
-    ctx.beginPath();
-    ctx.ellipse(x, y - 14.2 * u, 3.9 * u, 0.85 * u, 0, 0, 6.2832);
-    ctx.stroke();
-
-    // staff + casting arm
-    const ang = (-1.35 + wp * 0.55) * d;
-    const hx = x + d * 2.6 * u, hy = y - 7 * u;
-    const topX = hx + Math.cos(ang) * 8 * u * d, topY = hy + Math.sin(Math.abs(ang)) * -8 * u;
-    ctx.strokeStyle = A.base;
-    ctx.lineWidth = 0.9 * u;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x + d * 1.6 * u, y - 9.8 * u);
-    ctx.lineTo(hx, hy);
-    ctx.stroke();
-    ctx.strokeStyle = A.staff;
-    ctx.lineWidth = 0.6 * u;
-    ctx.beginPath();
-    ctx.moveTo(hx - Math.cos(ang) * 3 * u * d, hy + Math.sin(Math.abs(ang)) * 3 * u);
-    ctx.lineTo(topX, topY);
-    ctx.stroke();
-    // orb with pulsing glow (grows while casting)
-    const orbR = (1.3 + wp * 0.9 + (REDUCED ? 0 : Math.sin(t / 260) * 0.15)) * u;
-    const oc = f.spec ? A.ice : A.orb;
+    drawSprite(MAGE_MAP, MAGE_PAL, x, y, c, d);
+    // orb at the wand tip above the shield; grows while casting
+    const ox = x + d * 3 * c, oy = y - 16 * c;
+    const orbR = (1.1 + wp * 1.1 + (REDUCED ? 0 : Math.sin(t / 260) * 0.15)) * u;
+    const oc = f.spec ? COL.ancest.ice : COL.ancest.orb;
     ctx.fillStyle = hexA(oc, 0.14);
-    ctx.beginPath(); ctx.arc(topX, topY, orbR * 2.3, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(ox, oy, orbR * 2.2, 0, 6.2832); ctx.fill();
     ctx.fillStyle = hexA(oc, 0.35);
-    ctx.beginPath(); ctx.arc(topX, topY, orbR * 1.45, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(ox, oy, orbR * 1.4, 0, 6.2832); ctx.fill();
     ctx.fillStyle = oc;
-    ctx.beginPath(); ctx.arc(topX, topY, orbR, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(ox, oy, orbR, 0, 6.2832); ctx.fill();
 
     if (f.flash > 0.05) {
       ctx.fillStyle = hexA('#ff3b30', f.flash * 0.22);
@@ -1324,32 +1259,6 @@ checkMoon();
   io.observe(section);
 })();
 
-/* ---------- email: assembled at runtime so scrapers never see it ---------- */
-
-(function initEmail() {
-  const a = document.getElementById('email-link');
-  if (!a) return;
-  const rot13 = s => s.replace(/[a-z]/g, c =>
-    String.fromCharCode((c.charCodeAt(0) - 97 + 13) % 26 + 97));
-  const addr = rot13('znephf') + String.fromCharCode(64) + rot13('qrnpbaqrif') + '.' + rot13('pbz');
-  let revealed = false;
-  a.addEventListener('click', e => {
-    if (revealed) return; // second click follows the real mailto
-    e.preventDefault();
-    revealed = true;
-    a.href = 'mailto:' + addr;
-    a.textContent = addr;
-    a.title = 'click again to open your mail app';
-    clogUnlock('email-reveal');
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(addr).then(() => {
-        a.textContent = addr + ' · copied';
-        setTimeout(() => { a.textContent = addr; }, 1600);
-      }, () => {});
-    }
-  });
-})();
-
 /* ---------- OSRS xp drops on click ---------- */
 
 let xpTotal = 0;
@@ -1378,23 +1287,31 @@ document.addEventListener('click', e => {
   const box = document.getElementById('npc');
   if (!box) return;
 
-  // chibi hooded Marcus for the dialogue head
+  // pixel-art Marcus for the dialogue head — hooded, gold crest, red eyes
   const face = document.getElementById('npc-face');
   if (face) {
     const f = face.getContext('2d');
-    f.fillStyle = '#211b17';
-    f.beginPath(); f.arc(34, 38, 28, 0, 6.2832); f.fill();
-    f.fillStyle = '#c8956c';
-    f.beginPath(); f.arc(41, 40, 17, 0, 6.2832); f.fill();
-    f.strokeStyle = 'rgba(210,161,60,.6)';
-    f.lineWidth = 3;
-    f.beginPath(); f.arc(34, 38, 28, 0, 6.2832); f.stroke();
-    f.fillStyle = '#2a1d12';
-    f.fillRect(36, 36, 3, 4);
-    f.fillRect(46, 36, 3, 4);
-    f.strokeStyle = '#2a1d12';
-    f.lineWidth = 2;
-    f.beginPath(); f.moveTo(38, 49); f.quadraticCurveTo(42, 52, 47, 49); f.stroke();
+    const HEAD = [
+      '...GGG...',
+      '..HGGGH..',
+      '.HGGGGGH.',
+      '.HBBBBBH.',
+      '.HBEBEBH.',
+      '.HMMMMMH.',
+      '..MMMMM..',
+      '..RRRRR..',
+      '.RRRRRRR.',
+    ];
+    const P = { G: '#d9a821', H: '#1d1a19', B: '#26221f', E: '#d93025', M: '#5f7370', R: '#8a2c22' };
+    const cell = 8;
+    HEAD.forEach((row, ry) => {
+      for (let rx = 0; rx < row.length; rx++) {
+        const k = row[rx];
+        if (k === '.') continue;
+        f.fillStyle = P[k];
+        f.fillRect(rx * cell, ry * cell, cell, cell);
+      }
+    });
   }
 
   const LINES = [
