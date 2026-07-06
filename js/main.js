@@ -809,7 +809,7 @@ function applyTheme(t) {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = PAL.muted;
-    ctx.fillText('avg £' + avg.toFixed(0), pad + 2, Y(avg) - 8);
+    ctx.fillText('avg £' + avg.toFixed(0), pad + 6, Y(avg) - 8);
 
     const grad = ctx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, hexA(PAL.accent, 0.16));
@@ -864,6 +864,7 @@ function applyTheme(t) {
     const io = new IntersectionObserver(entries => {
       const vis = entries.some(e => e.isIntersecting);
       if (vis && !running) {
+        if (canvas.width !== Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) size();
         running = true;
         if (!raf) raf = requestAnimationFrame(frame);
       } else if (!vis) {
@@ -990,7 +991,7 @@ function applyTheme(t) {
   }
 
   function drawWatch(scanP) {
-    const r = Math.min(H * 0.4, 48);
+    const r = Math.min(H * 0.4, 62);
     const cx = 16 + r, cy = H / 2;
     // case
     ctx.lineWidth = 3;
@@ -1130,7 +1131,7 @@ function applyTheme(t) {
     const io = new IntersectionObserver(entries => {
       const vis = entries.some(e => e.isIntersecting);
       if (vis && !running) {
-        if (!W || !H) size();
+        if (canvas.width !== Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) size();
         running = true;
         if (!raf) raf = requestAnimationFrame(frame);
       } else if (!vis) {
