@@ -182,8 +182,10 @@ function applyTheme(t) {
     }
   }
 
-  // the scene follows the visitor's actual time of day
+  // the scene follows the visitor's actual time of day — dark theme only,
+  // celestial bodies look out of place on the paper theme
   function drawSky(t) {
+    if (!dark()) return;
     const now = new Date();
     const tod = now.getHours() + now.getMinutes() / 60;
     const night = tod >= 19 || tod < 5;
@@ -1211,11 +1213,35 @@ function applyTheme(t) {
       const c = list[0];
       if (!c) return;
       let msg = (c.commit.message || '').split('\n')[0];
-      if (msg.length > 48) msg = msg.slice(0, 47) + '…';
+      if (msg.length > 72) msg = msg.slice(0, 71) + '…';
+      document.getElementById('ge-msg').textContent = msg;
       document.getElementById('ge-sha').textContent = c.sha.slice(0, 7);
-      document.getElementById('ge-msg').textContent = '“' + msg + '”';
-      document.getElementById('ge-when').textContent = 'offer filled ' + rel(c.commit.author.date);
+      document.getElementById('ge-when').textContent = rel(c.commit.author.date);
       el.hidden = false;
+      // the offer fills GE-style once it scrolls into view
+      const bar = document.getElementById('ge-bar');
+      const fill = document.getElementById('ge-fill');
+      const state = document.getElementById('ge-state');
+      const complete = () => {
+        bar.classList.add('done');
+        state.textContent = 'offer complete';
+      };
+      if (REDUCED || !('IntersectionObserver' in window)) {
+        fill.style.transition = 'none';
+        fill.style.width = '100%';
+        complete();
+        return;
+      }
+      state.textContent = 'filling offer…';
+      const io = new IntersectionObserver(entries => {
+        if (entries.some(e => e.isIntersecting)) {
+          io.disconnect();
+          requestAnimationFrame(() => { fill.style.width = '100%'; });
+          fill.addEventListener('transitionend', complete, { once: true });
+          setTimeout(complete, 2200); // safety if the transition event is missed
+        }
+      }, { threshold: 0.4 });
+      io.observe(el);
     })
     .catch(() => { /* rate-limited or offline — show nothing rather than fake data */ });
 })();
