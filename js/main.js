@@ -957,6 +957,191 @@ function applyTheme(t) {
   repaints.push(() => { size(); if (played) draw(1); });
 })();
 
+/* ---------- dial: watch scan & valuation ---------- */
+
+(function initWatch() {
+  const canvas = document.getElementById('watch-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const WATCHES = [
+    { name: 'diver',  dial: '#12395a', hand: '#e9e7e0', mark: '#7fd4c1', low: 2850, est: 3120, high: 3480 },
+    { name: 'chrono', dial: '#17171a', hand: '#e9e7e0', mark: '#d2a13c', low: 4200, est: 4680, high: 5150 },
+    { name: 'field',  dial: '#2b2620', hand: '#e9e7e0', mark: '#c8b98a', low: 640,  est: 730,  high: 815 },
+    { name: 'dress',  dial: '#e9e4d6', hand: '#2a2723', mark: '#8a7c52', low: 1150, est: 1280, high: 1420 },
+  ];
+  let W = 0, H = 0, running = false, raf = 0;
+  let wi = 0, cur = WATCHES[0], phase = 'idle', phaseT0 = 0;
+
+  function jitter(w) {
+    // wobble the "market" a little so every scan reads differently
+    const f = 0.98 + Math.random() * 0.04;
+    const r10 = v => Math.round(v * f / 10) * 10;
+    return { name: w.name, dial: w.dial, hand: w.hand, mark: w.mark, low: r10(w.low), est: r10(w.est), high: r10(w.high) };
+  }
+
+  function size() {
+    W = canvas.clientWidth;
+    H = canvas.clientHeight;
+    if (!W || !H) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawWatch(scanP) {
+    const r = Math.min(H * 0.4, 48);
+    const cx = 16 + r, cy = H / 2;
+    // case
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = PAL.muted;
+    ctx.beginPath(); ctx.arc(cx, cy, r + 2.5, 0, 6.2832); ctx.stroke();
+    // dial
+    ctx.fillStyle = cur.dial;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+    // hour markers
+    for (let i = 0; i < 12; i++) {
+      const a = i * Math.PI / 6;
+      const big = i % 3 === 0;
+      ctx.strokeStyle = hexA(cur.mark, big ? 0.95 : 0.5);
+      ctx.lineWidth = big ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * r * 0.8, cy + Math.sin(a) * r * 0.8);
+      ctx.lineTo(cx + Math.cos(a) * r * 0.92, cy + Math.sin(a) * r * 0.92);
+      ctx.stroke();
+    }
+    // hands run on real local time, seconds sweep
+    const now = new Date();
+    const s = now.getSeconds() + (REDUCED ? 0 : now.getMilliseconds() / 1000);
+    const m = now.getMinutes() + s / 60;
+    const h = (now.getHours() % 12) + m / 60;
+    const hand = (ang, len, lw, color) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lw;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx - Math.cos(ang) * len * 0.18, cy - Math.sin(ang) * len * 0.18);
+      ctx.lineTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len);
+      ctx.stroke();
+    };
+    hand(h * Math.PI / 6 - Math.PI / 2, r * 0.5, 3, cur.hand);
+    hand(m * Math.PI / 30 - Math.PI / 2, r * 0.72, 2.2, cur.hand);
+    hand(s * Math.PI / 30 - Math.PI / 2, r * 0.82, 1, PAL.accent);
+    ctx.fillStyle = PAL.accent;
+    ctx.beginPath(); ctx.arc(cx, cy, 2.2, 0, 6.2832); ctx.fill();
+    // scan beam sweeping the dial
+    if (scanP !== null) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.clip();
+      const bx = cx - r + 2 * r * scanP;
+      const g = ctx.createLinearGradient(bx - r * 0.5, 0, bx, 0);
+      g.addColorStop(0, hexA(PAL.accent, 0));
+      g.addColorStop(1, hexA(PAL.accent, 0.28));
+      ctx.fillStyle = g;
+      ctx.fillRect(bx - r * 0.5, cy - r, r * 0.5, r * 2);
+      ctx.fillStyle = hexA(PAL.accent, 0.9);
+      ctx.fillRect(bx, cy - r, 1.5, r * 2);
+      ctx.restore();
+    }
+    return { cx, cy, r };
+  }
+
+  function drawReadout(rx, t, revealP) {
+    const w2 = W - rx - 14;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = '500 9px "IBM Plex Mono", monospace';
+    ctx.fillStyle = PAL.muted;
+    ctx.fillText('scan · ' + cur.name, rx, H * 0.22);
+    if (revealP === null) {
+      const dots = '.'.repeat(1 + Math.floor((t / 300) % 3));
+      ctx.font = '600 18px "IBM Plex Mono", monospace';
+      ctx.fillStyle = PAL.muted;
+      ctx.fillText('scanning' + dots, rx, H * 0.5);
+      return;
+    }
+    const p = easeOut(revealP);
+    ctx.font = '600 20px "IBM Plex Mono", monospace';
+    ctx.fillStyle = PAL.fg;
+    ctx.fillText('£' + Math.round(cur.est * p).toLocaleString('en-GB'), rx, H * 0.5);
+    ctx.font = '500 9px "IBM Plex Mono", monospace';
+    ctx.fillStyle = PAL.muted;
+    ctx.fillText(w2 > 150 ? 'est. from the 20 cheapest listings' : 'lowest-20 estimate', rx, H * 0.5 + 14);
+    // low—high range bar with the estimate marker
+    const by = H * 0.78, bw = Math.max(60, w2 - 4);
+    ctx.strokeStyle = PAL.line;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(rx, by); ctx.lineTo(rx + bw, by); ctx.stroke();
+    const frac = (cur.est - cur.low) / (cur.high - cur.low);
+    ctx.strokeStyle = PAL.accent;
+    ctx.beginPath(); ctx.moveTo(rx, by); ctx.lineTo(rx + bw * frac * p, by); ctx.stroke();
+    ctx.fillStyle = PAL.accent;
+    ctx.beginPath(); ctx.arc(rx + bw * frac * p, by, 3, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = PAL.muted;
+    ctx.font = '500 8.5px "IBM Plex Mono", monospace';
+    ctx.fillText('£' + cur.low.toLocaleString('en-GB'), rx, by + 12);
+    ctx.textAlign = 'right';
+    ctx.fillText('£' + cur.high.toLocaleString('en-GB'), rx + bw, by + 12);
+    ctx.textAlign = 'left';
+  }
+
+  function render(t) {
+    if (!W || !H) return;
+    ctx.clearRect(0, 0, W, H);
+    const el = t - phaseT0;
+    const scanP = phase === 'scan' ? Math.min(1, el / 900) : null;
+    const face = drawWatch(scanP);
+    if (phase === 'reveal') {
+      const p = Math.min(1, el / 800);
+      ctx.strokeStyle = hexA(PAL.accent, (1 - p) * 0.7);
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(face.cx, face.cy, face.r + 5 + p * 4, 0, 6.2832); ctx.stroke();
+    }
+    const revealP = phase === 'scan' ? null : phase === 'reveal' ? Math.min(1, el / 800) : 1;
+    drawReadout(face.cx + face.r + 22, t, revealP);
+  }
+
+  function frame(t) {
+    if (!running) { raf = 0; return; }
+    if (!phaseT0) phaseT0 = t;
+    const el = t - phaseT0;
+    if (phase === 'idle' && el > 3400) {
+      phase = 'scan';
+      phaseT0 = t;
+      wi = (wi + 1) % WATCHES.length;
+      cur = jitter(WATCHES[wi]);
+    } else if (phase === 'scan' && el > 900) {
+      phase = 'reveal';
+      phaseT0 = t;
+    } else if (phase === 'reveal' && el > 800) {
+      phase = 'idle';
+      phaseT0 = t;
+    }
+    render(t);
+    raf = requestAnimationFrame(frame);
+  }
+
+  size();
+  if (REDUCED) {
+    phaseT0 = 1;
+    render(1);
+  } else {
+    const io = new IntersectionObserver(entries => {
+      const vis = entries.some(e => e.isIntersecting);
+      if (vis && !running) {
+        if (!W || !H) size();
+        running = true;
+        if (!raf) raf = requestAnimationFrame(frame);
+      } else if (!vis) {
+        running = false;
+      }
+    }, { threshold: 0.2 });
+    io.observe(canvas);
+  }
+  repaints.push(() => { size(); render(phaseT0 || 1); });
+})();
+
 /* ---------- quest log ---------- */
 
 (function initQuests() {
