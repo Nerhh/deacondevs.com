@@ -133,7 +133,7 @@ function applyTheme(t) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   let W = 0, H = 0, SC = 1, raf = 0, running = false, last = 0;
-  let tufts = [];
+  let tufts = [], stars = [];
 
   const dark = () => root.getAttribute('data-theme') === 'dark';
   const gy = () => H - Math.max(22, H * 0.09);
@@ -176,6 +176,53 @@ function applyTheme(t) {
     mage.x = Math.min(W * 0.76, W - 76);
     tufts = [];
     for (let i = 0; i < Math.floor(W / 60); i++) tufts.push(Math.random() * W);
+    stars = [];
+    for (let i = 0; i < 26; i++) {
+      stars.push({ x: Math.random() * W, y: Math.random() * H * 0.45, s: Math.random() < 0.3 ? 2 : 1.4, p: Math.random() * 6.28 });
+    }
+  }
+
+  // the scene follows the visitor's actual time of day
+  function drawSky(t) {
+    const now = new Date();
+    const tod = now.getHours() + now.getMinutes() / 60;
+    const night = tod >= 19 || tod < 5;
+    const golden = (tod >= 5 && tod < 7.5) || (tod >= 16.5 && tod < 19);
+    if (night) {
+      for (const st of stars) {
+        const tw = REDUCED ? 0.75 : 0.55 + 0.45 * Math.sin(t / 900 + st.p);
+        ctx.globalAlpha = 0.22 * tw;
+        ctx.fillStyle = PAL.fg;
+        ctx.fillRect(st.x, st.y, st.s, st.s);
+      }
+      ctx.globalAlpha = 1;
+      const frac = Math.min(1, ((tod - 19 + 24) % 24) / 10);
+      const mx = W * (0.12 + 0.76 * frac);
+      const my = 34 + (1 - Math.sin(Math.PI * frac)) * 40;
+      const mr = 11 * SC;
+      ctx.fillStyle = hexA('#d8d4c8', 0.5);
+      ctx.beginPath(); ctx.arc(mx, my, mr, 0, 6.2832); ctx.fill();
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath(); ctx.arc(mx + mr * 0.45, my - mr * 0.2, mr * 0.85, 0, 6.2832); ctx.fill();
+      ctx.restore();
+    } else {
+      const frac = Math.max(0, Math.min(1, (tod - 5) / 14));
+      const sx = W * (0.12 + 0.76 * frac);
+      const sy = 34 + (1 - Math.sin(Math.PI * frac)) * 46;
+      const sr = 13 * SC;
+      ctx.fillStyle = hexA('#e8c25a', 0.1);
+      ctx.beginPath(); ctx.arc(sx, sy, sr * 2.1, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = hexA('#e8c25a', dark() ? 0.55 : 0.75);
+      ctx.beginPath(); ctx.arc(sx, sy, sr, 0, 6.2832); ctx.fill();
+    }
+    if (golden) {
+      const grad = ctx.createLinearGradient(0, gy() - 70, 0, gy());
+      grad.addColorStop(0, hexA('#e8955a', 0));
+      grad.addColorStop(1, hexA('#e8955a', 0.08));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, gy() - 70, W, 70);
+    }
   }
 
   /* ----- combat direction ----- */
@@ -653,6 +700,8 @@ function applyTheme(t) {
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     if (shake > 0.02) ctx.translate((Math.random() - 0.5) * shake * 7, (Math.random() - 0.5) * shake * 5);
+
+    drawSky(t);
 
     // ground
     ctx.strokeStyle = PAL.line;
@@ -1141,6 +1190,34 @@ function applyTheme(t) {
     io.observe(canvas);
   }
   repaints.push(() => { size(); render(phaseT0 || 1); });
+})();
+
+/* ---------- grand exchange: live ledger from the GitHub API ---------- */
+
+(function initTicker() {
+  const el = document.getElementById('ge-ticker');
+  if (!el || !window.fetch) return;
+  const rel = iso => {
+    const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 90) return 'just now';
+    const m = s / 60, h = m / 60, d = h / 24;
+    if (m < 90) return Math.round(m) + ' min ago';
+    if (h < 36) return Math.round(h) + ' hr ago';
+    return Math.round(d) + ' days ago';
+  };
+  fetch('https://api.github.com/repos/Nerhh/deacondevs.com/commits?per_page=1')
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(list => {
+      const c = list[0];
+      if (!c) return;
+      let msg = (c.commit.message || '').split('\n')[0];
+      if (msg.length > 48) msg = msg.slice(0, 47) + '…';
+      document.getElementById('ge-sha').textContent = c.sha.slice(0, 7);
+      document.getElementById('ge-msg').textContent = '“' + msg + '”';
+      document.getElementById('ge-when').textContent = 'offer filled ' + rel(c.commit.author.date);
+      el.hidden = false;
+    })
+    .catch(() => { /* rate-limited or offline — show nothing rather than fake data */ });
 })();
 
 /* ---------- quest log ---------- */
