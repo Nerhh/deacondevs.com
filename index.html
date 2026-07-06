@@ -109,10 +109,14 @@
           <a class="ge-link" href="https://github.com/Nerhh/deacondevs.com/commits/main" target="_blank" rel="noopener" data-xp="25">full ledger ↗</a>
         </div>
         <div class="ge-offer">
-          <svg class="ge-coins" viewBox="0 0 14 14" shape-rendering="crispEdges" aria-hidden="true">
-            <rect x="2" y="10" width="10" height="3" fill="#d2a13c"/><rect x="2" y="10" width="10" height="1" fill="#e8c25a"/><rect x="1" y="10" width="1" height="3" fill="#8a6d1d"/><rect x="12" y="10" width="1" height="3" fill="#8a6d1d"/>
-            <rect x="2" y="6" width="10" height="3" fill="#d2a13c"/><rect x="2" y="6" width="10" height="1" fill="#e8c25a"/><rect x="1" y="6" width="1" height="3" fill="#8a6d1d"/><rect x="12" y="6" width="1" height="3" fill="#8a6d1d"/>
-            <rect x="3" y="2" width="8" height="3" fill="#d2a13c"/><rect x="3" y="2" width="8" height="1" fill="#e8c25a"/><rect x="2" y="2" width="1" height="3" fill="#8a6d1d"/><rect x="11" y="2" width="1" height="3" fill="#8a6d1d"/>
+          <svg class="ge-item" viewBox="0 0 14 14" shape-rendering="crispEdges" aria-hidden="true">
+            <rect x="2" y="6" width="1" height="1" fill="#c99aeb"/><rect x="7" y="6" width="1" height="1" fill="#c99aeb"/><rect x="12" y="6" width="1" height="1" fill="#c99aeb"/>
+            <rect x="1" y="7" width="3" height="1" fill="#a05fd0"/><rect x="6" y="7" width="3" height="1" fill="#a05fd0"/><rect x="11" y="7" width="3" height="1" fill="#a05fd0"/>
+            <rect x="1" y="8" width="13" height="1" fill="#a05fd0"/>
+            <rect x="1" y="9" width="13" height="1" fill="#a05fd0"/>
+            <rect x="1" y="10" width="13" height="1" fill="#a05fd0"/>
+            <rect x="1" y="11" width="13" height="1" fill="#6f3f96"/>
+            <text x="0" y="4.5" font-family="'IBM Plex Mono', monospace" font-size="5" font-weight="700" fill="#ffe600">42</text>
           </svg>
           <div class="ge-body">
             <div class="ge-title" id="ge-msg"></div>
@@ -160,6 +164,12 @@
       </ul>
     </section>
 
+    <section id="clog" class="section">
+      <h2 class="section-h reveal"><span class="slash">//</span> collection log <span class="total">logged <b id="clog-count">0</b>/<span id="clog-total">9</span></span></h2>
+      <p class="section-note reveal">Things a visitor can discover on this page. Progress lives only in your browser.</p>
+      <ul class="clog-grid reveal" id="clog-grid"></ul>
+    </section>
+
     <section id="about" class="section">
       <h2 class="section-h reveal"><span class="slash">//</span> about</h2>
       <div class="about-col">
@@ -173,6 +183,23 @@
     <section id="contact" class="section section-last">
       <h2 class="section-h reveal"><span class="slash">//</span> contact</h2>
       <p class="section-note reveal">Say hello. XP is awarded on click.</p>
+
+      <div class="npc reveal" id="npc">
+        <canvas class="npc-face" id="npc-face" width="72" height="72" aria-hidden="true"></canvas>
+        <div class="npc-body">
+          <div class="npc-name">Marcus Deacon</div>
+          <p class="npc-line" id="npc-line">Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.</p>
+          <div class="npc-options" id="npc-options" hidden>
+            <span class="npc-opt-title">Select an option</span>
+            <a href="https://x.com/nerhhx" target="_blank" rel="noopener" data-xp="42">1. Message me on X</a>
+            <a href="https://open.spotify.com/user/z4c56k3259wkjrmovv3xabag4" target="_blank" rel="noopener" data-xp="27">2. What are you listening to?</a>
+            <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="84">3. Show me the code</a>
+            <button type="button" id="npc-email" data-xp="120">4. What’s your email?</button>
+          </div>
+          <button type="button" class="npc-continue" id="npc-continue">Click here to continue</button>
+        </div>
+      </div>
+
       <ul class="contact-list reveal">
         <li><a href="https://x.com/nerhhx" target="_blank" rel="noopener" data-xp="42">x / twitter ↗</a></li>
         <li><a href="https://open.spotify.com/user/z4c56k3259wkjrmovv3xabag4" target="_blank" rel="noopener" data-xp="27">spotify ↗</a></li>

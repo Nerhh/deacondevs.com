@@ -123,8 +123,63 @@ function applyTheme(t) {
     const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore */ }
     applyTheme(next);
+    clogUnlock('theme-flip');
+    checkMoon();
   });
 }
+
+/* ---------- collection log: what has this visitor discovered? ---------- */
+
+const CLOG_ENTRIES = [
+  { id: 'spec-marcus', name: "Marcus's special attack", hint: 'unleash it in the duel' },
+  { id: 'spec-deacon', name: "Deacon's special attack", hint: 'the mage answers too' },
+  { id: 'duel-death', name: 'A fighter falls', hint: 'watch a duel to the end' },
+  { id: 'watch-scan', name: 'A full dial scan', hint: 'let the watch finish its reading' },
+  { id: 'theme-flip', name: 'Flipped the lights', hint: 'try the other theme' },
+  { id: 'email-reveal', name: 'The secret email', hint: 'scrapers never find it' },
+  { id: 'ge-ledger', name: 'The full ledger', hint: 'inspect the grand exchange' },
+  { id: 'xp-100', name: '100 XP earned', hint: 'keep clicking things' },
+  { id: 'moon', name: 'The night sky', hint: 'after dark, lights off' },
+];
+let clogState = {};
+try { clogState = JSON.parse(localStorage.getItem('dd-clog') || '{}'); } catch (e) { /* ignore */ }
+
+function clogRender() {
+  const grid = document.getElementById('clog-grid');
+  const count = document.getElementById('clog-count');
+  const total = document.getElementById('clog-total');
+  if (!grid) return;
+  grid.innerHTML = CLOG_ENTRIES.map(en => {
+    const done = !!clogState[en.id];
+    return '<li class="clog-item' + (done ? ' done' : '') + '"><span class="clog-mark">' + (done ? '✓' : '?') +
+      '</span><div><h3>' + en.name + '</h3><p>' + en.hint + '</p></div></li>';
+  }).join('');
+  if (count) count.textContent = String(CLOG_ENTRIES.filter(en => clogState[en.id]).length);
+  if (total) total.textContent = String(CLOG_ENTRIES.length);
+}
+
+function clogUnlock(id) {
+  if (clogState[id] || !CLOG_ENTRIES.some(en => en.id === id)) return;
+  clogState[id] = Date.now();
+  try { localStorage.setItem('dd-clog', JSON.stringify(clogState)); } catch (e) { /* ignore */ }
+  clogRender();
+  if (REDUCED) return;
+  const entry = CLOG_ENTRIES.find(en => en.id === id);
+  const t = document.createElement('div');
+  t.className = 'clog-toast';
+  t.textContent = 'Collection log: ' + entry.name;
+  document.body.appendChild(t);
+  t.addEventListener('animationend', () => t.remove());
+  setTimeout(() => t.remove(), 4500);
+}
+
+function checkMoon() {
+  const h = new Date().getHours();
+  if ((h >= 19 || h < 5) && root.getAttribute('data-theme') === 'dark') clogUnlock('moon');
+}
+
+clogRender();
+checkMoon();
 
 /* ---------- hero: Marcus (range, Masori) vs Deacon (mage, Ancestral) ---------- */
 
@@ -316,6 +371,7 @@ function applyTheme(t) {
       pr.from.hopV = -3.4 * SC;
       pr.from.hopY = -0.1;
       burst(tgt.x, gy() - 5 * 4 * SC, dark() ? '#d8d4c8' : '#6a6456', 14, true);
+      clogUnlock('duel-death');
     }
   }
 
@@ -766,6 +822,7 @@ function applyTheme(t) {
     if (f.dead || respawnAt) return;
     specReady = now + 1800;
     startAttack(f, now, true);
+    clogUnlock(f === ranger ? 'spec-marcus' : 'spec-deacon');
   });
 
   let rt;
@@ -1169,6 +1226,7 @@ function applyTheme(t) {
     } else if (phase === 'reveal' && el > 800) {
       phase = 'idle';
       phaseT0 = t;
+      clogUnlock('watch-scan');
     }
     render(t);
     raf = requestAnimationFrame(frame);
@@ -1199,6 +1257,8 @@ function applyTheme(t) {
 (function initTicker() {
   const el = document.getElementById('ge-ticker');
   if (!el || !window.fetch) return;
+  const ledger = el.querySelector('.ge-link');
+  if (ledger) ledger.addEventListener('click', () => clogUnlock('ge-ledger'));
   const rel = iso => {
     const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
     if (s < 90) return 'just now';
@@ -1280,6 +1340,7 @@ function applyTheme(t) {
     a.href = 'mailto:' + addr;
     a.textContent = addr;
     a.title = 'click again to open your mail app';
+    clogUnlock('email-reveal');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(addr).then(() => {
         a.textContent = addr + ' · copied';
@@ -1291,10 +1352,16 @@ function applyTheme(t) {
 
 /* ---------- OSRS xp drops on click ---------- */
 
+let xpTotal = 0;
+try { xpTotal = parseInt(localStorage.getItem('dd-xp'), 10) || 0; } catch (e) { /* ignore */ }
+
 document.addEventListener('click', e => {
-  if (REDUCED) return;
   const el = e.target.closest('[data-xp]');
   if (!el) return;
+  xpTotal += parseInt(el.dataset.xp, 10) || 0;
+  try { localStorage.setItem('dd-xp', String(xpTotal)); } catch (e2) { /* ignore */ }
+  if (xpTotal >= 100) clogUnlock('xp-100');
+  if (REDUCED) return;
   const d = document.createElement('span');
   d.className = 'xp-drop';
   d.textContent = '+' + el.dataset.xp + ' xp';
@@ -1304,6 +1371,64 @@ document.addEventListener('click', e => {
   d.addEventListener('animationend', () => d.remove());
   setTimeout(() => d.remove(), 1500);
 });
+
+/* ---------- npc contact dialogue ---------- */
+
+(function initDialogue() {
+  const box = document.getElementById('npc');
+  if (!box) return;
+
+  // chibi hooded Marcus for the dialogue head
+  const face = document.getElementById('npc-face');
+  if (face) {
+    const f = face.getContext('2d');
+    f.fillStyle = '#211b17';
+    f.beginPath(); f.arc(34, 38, 28, 0, 6.2832); f.fill();
+    f.fillStyle = '#c8956c';
+    f.beginPath(); f.arc(41, 40, 17, 0, 6.2832); f.fill();
+    f.strokeStyle = 'rgba(210,161,60,.6)';
+    f.lineWidth = 3;
+    f.beginPath(); f.arc(34, 38, 28, 0, 6.2832); f.stroke();
+    f.fillStyle = '#2a1d12';
+    f.fillRect(36, 36, 3, 4);
+    f.fillRect(46, 36, 3, 4);
+    f.strokeStyle = '#2a1d12';
+    f.lineWidth = 2;
+    f.beginPath(); f.moveTo(38, 49); f.quadraticCurveTo(42, 52, 47, 49); f.stroke();
+  }
+
+  const LINES = [
+    'Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.',
+    'I’m Marcus. I build the sort of tools you just scrolled past — and the occasional LEGO city.',
+    'Want to talk tickets, watches, wealth or bricks?',
+  ];
+  let idx = 0;
+  const line = document.getElementById('npc-line');
+  const opts = document.getElementById('npc-options');
+  const cont = document.getElementById('npc-continue');
+
+  function show() {
+    line.textContent = LINES[idx];
+    const last = idx >= LINES.length - 1;
+    opts.hidden = !last;
+    cont.hidden = last;
+  }
+  show();
+  cont.addEventListener('click', () => {
+    idx = Math.min(idx + 1, LINES.length - 1);
+    show();
+  });
+
+  opts.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => { line.textContent = 'Safe travels, adventurer.'; });
+  });
+  document.getElementById('npc-email').addEventListener('click', () => {
+    const rot13 = s => s.replace(/[a-z]/g, c => String.fromCharCode((c.charCodeAt(0) - 97 + 13) % 26 + 97));
+    const addr = rot13('znephf') + String.fromCharCode(64) + rot13('qrnpbaqrif') + '.' + rot13('pbz');
+    line.innerHTML = 'You can write to me at <a href="mailto:' + addr + '">' + addr + '</a>. Tell them the duel sent you.';
+    clogUnlock('email-reveal');
+  });
+})();
 
 /* ---------- scroll reveal ---------- */
 

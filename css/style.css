@@ -163,7 +163,7 @@ main { max-width: 980px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
 .ge-link:hover { color: var(--accent); }
 
 .ge-offer { display: flex; align-items: center; gap: 14px; }
-.ge-coins { width: 34px; height: 34px; flex-shrink: 0; }
+.ge-item { width: 34px; height: 34px; flex-shrink: 0; }
 .ge-body { flex: 1; min-width: 0; }
 .ge-title { font-size: 13px; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ge-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -288,6 +288,73 @@ main { max-width: 980px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
 .quest-done .q-tag { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
 .quest-active .q-tag { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .quest-locked { opacity: 0.65; }
+
+/* ---------- collection log ---------- */
+
+.clog-grid {
+  list-style: none; padding: 0; margin-top: 26px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;
+}
+.clog-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  border: 1px solid var(--line); background: var(--bg2); border-radius: 8px;
+  padding: 10px 12px; opacity: 0.62;
+  transition: opacity 0.3s, border-color 0.3s;
+}
+.clog-item.done { opacity: 1; border-color: color-mix(in srgb, #a05fd0 45%, var(--line)); }
+.clog-mark { width: 16px; text-align: center; flex-shrink: 0; color: var(--muted); font-weight: 700; }
+.clog-item.done .clog-mark { color: #b678e8; }
+.clog-item h3 { font-size: 12.5px; font-weight: 600; }
+.clog-item p { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.clog-toast {
+  position: fixed; top: 62px; left: 50%; z-index: 99;
+  background: var(--bg2); border: 1px solid #a05fd0; border-radius: 8px;
+  color: #b678e8; font: 600 12px var(--mono);
+  padding: 8px 14px; pointer-events: none;
+  animation: clog-in 4s ease forwards;
+}
+@keyframes clog-in {
+  0% { opacity: 0; transform: translate(-50%, -10px); }
+  8% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -8px); }
+}
+
+/* ---------- npc contact dialogue ---------- */
+
+.npc {
+  display: flex; gap: 16px; align-items: center;
+  max-width: 640px; margin-top: 24px;
+  background: #d6c7a1;
+  border: 2px solid #4a3b28; border-radius: 4px;
+  box-shadow: inset 0 0 0 2px #b3a179;
+  padding: 16px 18px;
+}
+.npc-face { width: 72px; height: 72px; flex-shrink: 0; }
+.npc-body { flex: 1; min-width: 0; }
+.npc-name { color: #7f1d0f; font-weight: 700; font-size: 15px; margin-bottom: 5px; }
+.npc-line { color: #1a1206; font-size: 13.5px; line-height: 1.55; min-height: 42px; }
+.npc-line a { color: #1f3fd8; text-decoration-color: #1f3fd8; }
+.npc-continue {
+  display: block; margin: 10px auto 0;
+  background: none; border: none; cursor: pointer;
+  color: #1f3fd8; font: 600 12px var(--mono);
+}
+.npc-continue:hover { color: #7f1d0f; }
+.npc-options { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; }
+.npc-opt-title { color: #7f1d0f; font-weight: 700; font-size: 13px; }
+.npc-options a, .npc-options button {
+  background: none; border: none; padding: 2px 0; cursor: pointer;
+  text-align: left; text-decoration: none;
+  color: #1a1206; font: 500 13px var(--mono);
+}
+.npc-options a:hover, .npc-options button:hover { color: #7f1d0f; }
+.npc-options[hidden], .npc-continue[hidden] { display: none; }
+
+@media (max-width: 640px) {
+  .npc { flex-direction: column; align-items: flex-start; }
+}
 
 /* ---------- about / contact / footer ---------- */
 
