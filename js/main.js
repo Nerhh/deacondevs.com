@@ -215,7 +215,7 @@ checkMoon();
   const mage = mkFighter('Deacon', 'mage', -1);
   const fighters = [ranger, mage];
 
-  let projectiles = [], particles = [], splats = [], xpFloats = [];
+  let projectiles = [], particles = [], splats = [], xpFloats = [], aoes = [];
   let shake = 0, nextAttack = 0, turn = 0, specReady = 0, respawnAt = 0;
 
   function size() {
@@ -294,7 +294,7 @@ checkMoon();
   }
 
   function rollDamage(spec) {
-    if (spec) return 10 + Math.floor(Math.random() * 7);
+    if (spec) return 12 + Math.floor(Math.random() * 7);
     if (Math.random() < 0.18) return 0;
     return 1 + Math.floor(Math.random() * 8);
   }
@@ -307,12 +307,17 @@ checkMoon();
     const tx = target.x;
     const ty = gy() - 8 * u;
     if (f.kind === 'range') {
-      const shots = f.spec ? 2 : 1;
-      for (let i = 0; i < shots; i++) {
+      if (f.spec) {
         projectiles.push({
-          kind: 'arrow', from: f, to: target, spec: f.spec,
-          sx, sy: sy - i * 1.6 * u, tx, ty, t0: t + i * 130, dur: 400,
-          dmg: rollDamage(f.spec),
+          kind: 'dragon', from: f, to: target, spec: true,
+          sx, sy: sy - 2 * u, tx, ty, t0: t, dur: 780,
+          dmg: rollDamage(true),
+        });
+      } else {
+        projectiles.push({
+          kind: 'arrow', from: f, to: target, spec: false,
+          sx, sy, tx, ty, t0: t, dur: 400,
+          dmg: rollDamage(false),
         });
       }
     } else {
@@ -328,7 +333,7 @@ checkMoon();
 
   function projPos(pr, t) {
     const p = Math.max(0, Math.min(1, (t - pr.t0) / pr.dur));
-    const arc = (pr.kind === 'orb' ? 24 : 12) * SC;
+    const arc = (pr.kind === 'orb' ? 24 : pr.kind === 'dragon' ? 16 : 12) * SC;
     return {
       p,
       x: pr.sx + (pr.tx - pr.sx) * p,
@@ -362,7 +367,19 @@ checkMoon();
       burst(tgt.x, gy() - 8 * 4 * SC, pr.kind === 'orb' ? COL.ancest.orb : COL.masori.trim, pr.spec ? 16 : 9);
       xpFloats.push({ x: pr.from.x, y: gy() - 25 * 4 * SC, t0: t, txt: '+' + pr.dmg * 4 + 'xp' });
       if (pr.spec || pr.dmg >= 7) shake = Math.min(1, shake + 0.7);
-      if (pr.kind === 'orb' && pr.spec) tgt.freeze = 1;
+      if (pr.kind === 'dragon') {
+        // dragonfire detonation
+        burst(tgt.x, gy() - 8 * 4 * SC, '#e67e22', 22);
+        burst(tgt.x, gy() - 6 * 4 * SC, '#c0392b', 12, true);
+        shake = Math.min(1.3, shake + 1.1);
+      }
+      if (pr.kind === 'orb' && pr.spec) {
+        // barrage: freeze plus an expanding icy blast
+        tgt.freeze = 1;
+        aoes.push({ x: tgt.x, t0: t });
+        burst(tgt.x, gy() - 4 * 4 * SC, COL.ancest.ice, 18, true);
+        shake = Math.min(1.3, shake + 0.9);
+      }
     }
     if (tgt.hp <= 0 && !tgt.dead) {
       tgt.dead = true;
@@ -418,6 +435,15 @@ checkMoon();
           color: pr.spec ? COL.ancest.ice : COL.ancest.orb,
         });
       }
+      if (pr.kind === 'dragon' && pos.p > 0 && pos.p < 1) {
+        // fire streaming off the dragon
+        particles.push({
+          x: pos.x - pr.from.dir * 10 * SC, y: pos.y + (Math.random() - 0.5) * 8 * SC,
+          vx: -pr.from.dir * (0.5 + Math.random()), vy: (Math.random() - 0.5) * 0.6,
+          g: -0.01, life: 340, max: 340, size: (1.6 + Math.random() * 2) * SC,
+          color: Math.random() < 0.5 ? '#e67e22' : '#c0392b',
+        });
+      }
       if (pos.p >= 1) { impact(pr, t); projectiles.splice(i, 1); }
     }
     for (let i = particles.length - 1; i >= 0; i--) {
@@ -429,6 +455,7 @@ checkMoon();
     }
     splats = splats.filter(s => t - s.t0 < 800);
     xpFloats = xpFloats.filter(s => t - s.t0 < 750);
+    aoes = aoes.filter(a => t - a.t0 < 700);
     if (respawnAt && t > respawnAt) {
       for (const f of fighters) {
         if (f.dead) burst(f.x, gy() - 6 * 4 * SC, '#ffffff', 16, true);
@@ -471,19 +498,19 @@ checkMoon();
     '....HHHH........',
     '....HHHGG.......',
     '....HHHGG.......',
-    '....HBBE....WW..',
-    '....HBMMM..Ww.s.',
-    '....RRRR...W..s.',
-    '..CCGGGG..wW..s.',
-    '..CCGgGGS.WW..s.',
-    '..CCGgGGSVWW..s.',
-    '..CCGgGG.VWW..s.',
-    '..CCGGGG..WW..s.',
-    '..CCBBBB..Ww..s.',
-    '..CCBBBB..WW..s.',
-    '..CCBRBB...W..s.',
-    '.CC.BBBB...Ww.s.',
-    '....BB.BB...WW..',
+    '....HBBE..WW....',
+    '....HBMMM.sWw...',
+    '....RRRR..s.W...',
+    '..CCGGGG..s.WW..',
+    '..CCGgGGSSs..W..',
+    '..CCGgGGSVV.WW..',
+    '..CCGgGG.VV.WW..',
+    '..CCGGGG..s.WW..',
+    '..CCBBBB..s..W..',
+    '..CCBBBB..s.wW..',
+    '..CCBRBB..s.W...',
+    '....BBBB..sWW...',
+    '....BB.BB.WW....',
     '....BB.BB.......',
     '...VVV.VVV......',
     '...VVV.VVVV.....',
@@ -520,6 +547,23 @@ checkMoon();
     A: '#b9c4d2', a: '#4a5f96', X: '#7b5fd0',
   };
 
+  // the ranger's special: arrows become dragons (two wing frames)
+  const DRAGON_A = [
+    '..d......d..',
+    '..dd....dd..',
+    '..dDDDDDDd..',
+    'ddDDDDDDDDDe',
+    '..dDDDDDDdO.',
+  ];
+  const DRAGON_B = [
+    '............',
+    '..dDDDDDDd..',
+    'ddDDDDDDDDDe',
+    '..dDDDDDDdO.',
+    '..dd....dd..',
+  ];
+  const DRAGON_PAL = { D: '#c0392b', d: '#8e2418', e: '#ffd23f', O: '#e67e22' };
+
   function drawSprite(map, pal, cx, feetY, cell, d) {
     const rows = map.length, cols = map[0].length;
     const top = feetY - rows * cell;
@@ -547,9 +591,9 @@ checkMoon();
     ctx.globalAlpha = deathTransform(f, t);
     drawSprite(RANGER_MAP, RANGER_PAL, x, y, c, d);
     if (wp > 0.15) {
-      // pixel arrow, drawn back as he winds up
+      // pixel arrow nocked on the string, drawn back as he winds up
       const ay = Math.round(y - 10 * c);
-      const tail = x + d * (6 - wp * 3) * c;
+      const tail = x + d * (2 - wp * 3.5) * c;
       const ah = Math.ceil(c * 0.7);
       ctx.fillStyle = COL.masori.arrow;
       for (let i = 0; i < 4; i++) ctx.fillRect(Math.round(tail + d * i * c - (d === -1 ? c : 0)), ay, Math.ceil(c), ah);
@@ -610,6 +654,12 @@ checkMoon();
   function drawProjectile(pr, t) {
     const pos = projPos(pr, t);
     if (pos.p <= 0 || pos.p >= 1) return;
+    if (pr.kind === 'dragon') {
+      const frame = Math.floor(t / 110) % 2 === 0 ? DRAGON_A : DRAGON_B;
+      const cell = 3 * SC;
+      drawSprite(frame, DRAGON_PAL, pos.x, pos.y + 2.5 * cell, cell, pr.from.dir);
+      return;
+    }
     if (pr.kind === 'arrow') {
       const prev = projPos(pr, t - 40);
       const a = Math.atan2(pos.y - prev.y, pos.x - prev.x);
@@ -719,6 +769,28 @@ checkMoon();
     drawMage(mage, t);
 
     for (const pr of projectiles) drawProjectile(pr, t);
+
+    // ice barrage AoE rings
+    const ua = 4 * SC;
+    for (const a of aoes) {
+      const p = Math.min(1, (t - a.t0) / 700);
+      const e = easeOut(p);
+      ctx.strokeStyle = hexA(COL.ancest.ice, (1 - p) * 0.8);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(a.x, gy() - 2 * ua, e * 13 * ua, e * 5 * ua, 0, 0, 6.2832);
+      ctx.stroke();
+      ctx.strokeStyle = hexA('#e8f4ff', (1 - p) * 0.5);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(a.x, gy() - 2 * ua, e * 9 * ua, e * 3.4 * ua, 0, 0, 6.2832);
+      ctx.stroke();
+      ctx.fillStyle = hexA(COL.ancest.ice, (1 - p) * 0.15);
+      ctx.beginPath();
+      ctx.ellipse(a.x, gy(), e * 11 * ua, e * 2.4 * ua, 0, 0, 6.2832);
+      ctx.fill();
+    }
+
     for (const p of particles) {
       ctx.globalAlpha = Math.max(0, p.life / p.max);
       ctx.fillStyle = p.color;
@@ -743,8 +815,13 @@ checkMoon();
     if (!running) { raf = 0; return; }
     const dt = Math.min(50, last ? t - last : 16);
     last = t;
-    update(t, dt);
-    render(t);
+    try {
+      update(t, dt);
+      render(t);
+    } catch (err) {
+      // never let one bad frame kill the duel — log it and carry on
+      if (window.console && console.error) console.error('duel frame error:', err);
+    }
     raf = requestAnimationFrame(loop);
   }
 
@@ -776,13 +853,15 @@ checkMoon();
     }
     const io = new IntersectionObserver(entries => {
       const vis = entries.some(en => en.isIntersecting);
-      if (vis && !running) {
+      if (vis) {
         if (!W || !H) size(); // fonts can resolve before first layout
         running = true;
         last = 0;
         if (!nextAttack) scheduleNext(performance.now() + 400);
-        if (!raf) raf = requestAnimationFrame(loop);
-      } else if (!vis) {
+        // cancel-then-request makes restarts idempotent even after a bad frame
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(loop);
+      } else {
         running = false;
       }
     }, { threshold: 0.15 });
