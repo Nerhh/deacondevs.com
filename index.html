@@ -25,13 +25,14 @@
   <div class="noise" aria-hidden="true"></div>
 
   <header class="site-head">
-    <a class="wordmark" href="#top" data-xp="12">~/deacondevs</a>
+    <a class="wordmark" href="#top" data-xp="12" data-ex="The front door. Mind the hitsplats.">~/deacondevs</a>
     <nav>
       <a href="#projects" data-xp="15">projects</a>
       <a href="#quests" data-xp="15">quests</a>
+      <a href="/log/" data-xp="15">log</a>
       <a href="#about" data-xp="15">about</a>
       <a href="#contact" data-xp="15">contact</a>
-      <button id="theme-toggle" aria-label="Toggle colour theme" title="Toggle theme">☀</button>
+      <button id="theme-toggle" aria-label="Toggle colour theme" data-ex="Let there be light. Or not.">☀</button>
     </nav>
   </header>
 
@@ -39,9 +40,9 @@
 
     <section class="hero">
       <h1 class="sr-only">Marcus Deacon</h1>
-      <canvas id="hero-canvas" aria-hidden="true"></canvas>
+      <canvas id="hero-canvas" aria-hidden="true" data-ex="Two halves of the same adventurer, settling it properly."></canvas>
       <noscript><p class="hero-noscript">MARCUS DEACON</p></noscript>
-      <p class="hero-sub reveal">software developer · UK born · father · <span class="lvl-badge" data-xp="30" title="Combat level">Lvl 30</span></p>
+      <p class="hero-sub reveal">software developer · UK born · father · <span class="lvl-badge" data-xp="30" data-ex="He's older than he looks.">Lvl 30</span></p>
       <p class="hero-line reveal">I build tools that do the boring work — watching ticket prices, tracking net worth, automating the rest.</p>
       <p class="status reveal"><span class="prompt">$</span> now building <a href="#p-vestra">vestra</a> — personal wealth management<span class="cursor">█</span></p>
       <p class="hero-hint" aria-hidden="true">click a fighter to unleash their special attack</p>
@@ -52,7 +53,7 @@
       <p class="section-note reveal">The demos below are real, live-rendered on canvas — not screenshots.</p>
       <div class="cards">
 
-        <article class="card reveal" id="p-stubhub">
+        <article class="card reveal" id="p-stubhub" data-ex="It watches ticket prices so you don't have to.">
           <header class="card-head">
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>stubhub lens</h3>
@@ -63,7 +64,7 @@
           <ul class="tags"><li>chrome-extension</li><li>javascript</li><li>price-analysis</li></ul>
         </article>
 
-        <article class="card reveal" id="p-vestra">
+        <article class="card reveal" id="p-vestra" data-ex="A ledger for people who count their coins.">
           <header class="card-head">
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>vestra</h3>
@@ -77,7 +78,7 @@
           <ul class="tags"><li>node</li><li>sqlite</li><li>pwa</li></ul>
         </article>
 
-        <article class="card reveal" id="p-dial">
+        <article class="card reveal" id="p-dial" data-ex="Point it at a watch, learn the truth.">
           <header class="card-head">
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>dial</h3>
@@ -88,7 +89,7 @@
           <ul class="tags"><li>expo</li><li>react-native</li><li>node</li></ul>
         </article>
 
-        <article class="card reveal card-queued">
+        <article class="card reveal card-queued" data-ex="Empty... for now.">
           <header class="card-head">
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>next build</h3>
@@ -106,10 +107,10 @@
       <div class="ge" id="ge-ticker" hidden>
         <div class="ge-head">
           <span class="ge-label">◆ grand exchange</span>
-          <a class="ge-link" href="https://github.com/Nerhh/deacondevs.com/commits/main" target="_blank" rel="noopener" data-xp="25">full ledger ↗</a>
+          <a class="ge-link" href="https://github.com/Nerhh/deacondevs.com/commits/main" target="_blank" rel="noopener" data-xp="25" data-ex="Buy low, sell high.">full ledger ↗</a>
         </div>
         <div class="ge-offer">
-          <svg class="ge-item" viewBox="0 0 14 14" shape-rendering="crispEdges" aria-hidden="true">
+          <svg class="ge-item" viewBox="0 0 14 14" shape-rendering="crispEdges" aria-hidden="true" data-ex="A relic of a more festive age.">
             <rect x="2" y="6" width="1" height="1" fill="#c99aeb"/><rect x="7" y="6" width="1" height="1" fill="#c99aeb"/><rect x="12" y="6" width="1" height="1" fill="#c99aeb"/>
             <rect x="1" y="7" width="3" height="1" fill="#a05fd0"/><rect x="6" y="7" width="3" height="1" fill="#a05fd0"/><rect x="11" y="7" width="3" height="1" fill="#a05fd0"/>
             <rect x="1" y="8" width="13" height="1" fill="#a05fd0"/>
@@ -184,7 +185,7 @@
       <p class="section-note reveal">Say hello. XP is awarded on click.</p>
 
       <div class="npc reveal" id="npc">
-        <canvas class="npc-face" id="npc-face" width="72" height="72" aria-hidden="true"></canvas>
+        <canvas class="npc-face" id="npc-face" width="72" height="72" aria-hidden="true" data-ex="It's him. The man himself."></canvas>
         <div class="npc-body">
           <div class="npc-name">Marcus Deacon</div>
           <p class="npc-line" id="npc-line">Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.</p>
@@ -203,7 +204,7 @@
 
   </main>
 
-  <footer>© 2026 Marcus Deacon · marcus.gg · built brick by brick — no frameworks harmed</footer>
+  <footer data-ex="No frameworks were harmed in the making.">© 2026 Marcus Deacon · marcus.gg · built brick by brick — no frameworks harmed</footer>
 
   <script src="js/main.js"></script>
 </body>

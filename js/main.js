@@ -51,7 +51,9 @@ const SPLAT_COLS = {
   miss: { r: '#2951c4', d: '#0f2166' },
 };
 function drawSplatPixels(g, x, y, cell, kind) {
-  const cols = SPLAT_COLS[kind] || SPLAT_COLS.hit;
+  let cols = SPLAT_COLS[kind] || SPLAT_COLS.hit;
+  // gilded mode: hits land in gold, max-hit style
+  if (kind === 'hit' && root.classList.contains('gilded')) cols = { r: '#d9a821', d: '#8a6d1d' };
   for (let ry = 0; ry < SPLAT_MAP.length; ry++) {
     const row = SPLAT_MAP[ry];
     for (let rx = 0; rx < row.length; rx++) {
@@ -158,11 +160,17 @@ function clogRender() {
   if (total) total.textContent = String(CLOG_ENTRIES.length);
 }
 
+function clogComplete() {
+  return CLOG_ENTRIES.every(en => clogState[en.id]);
+}
+
 function clogUnlock(id) {
   if (clogState[id] || !CLOG_ENTRIES.some(en => en.id === id)) return;
   clogState[id] = Date.now();
   try { localStorage.setItem('dd-clog', JSON.stringify(clogState)); } catch (e) { /* ignore */ }
   clogRender();
+  const finished = clogComplete() && !root.classList.contains('gilded');
+  if (finished) root.classList.add('gilded');
   if (REDUCED) return;
   const entry = CLOG_ENTRIES.find(en => en.id === id);
   const t = document.createElement('div');
@@ -171,6 +179,16 @@ function clogUnlock(id) {
   document.body.appendChild(t);
   t.addEventListener('animationend', () => t.remove());
   setTimeout(() => t.remove(), 4500);
+  if (finished) {
+    setTimeout(() => {
+      const t2 = document.createElement('div');
+      t2.className = 'clog-toast gilded-toast';
+      t2.textContent = 'Collection log complete — gilded mode unlocked';
+      document.body.appendChild(t2);
+      t2.addEventListener('animationend', () => t2.remove());
+      setTimeout(() => t2.remove(), 5000);
+    }, 1200);
+  }
 }
 
 function checkMoon() {
@@ -179,6 +197,7 @@ function checkMoon() {
 }
 
 clogRender();
+if (clogComplete()) root.classList.add('gilded');
 checkMoon();
 
 /* ---------- hero: Marcus (range, Masori) vs Deacon (mage, Ancestral) ---------- */
@@ -1425,6 +1444,36 @@ document.addEventListener('click', e => {
     line.innerHTML = 'You can write to me at <a href="mailto:' + addr + '">' + addr + '</a>. Tell them the duel sent you.';
     clogUnlock('email-reveal');
   });
+})();
+
+/* ---------- examine tooltips ---------- */
+
+(function initExamine() {
+  if (!window.matchMedia || !matchMedia('(hover: hover)').matches) return;
+  const tip = document.createElement('div');
+  tip.className = 'examine';
+  document.body.appendChild(tip);
+  let showing = false;
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-ex]');
+    if (!el) {
+      if (showing) { tip.classList.remove('on'); showing = false; }
+      return;
+    }
+    tip.textContent = el.dataset.ex;
+    tip.classList.add('on');
+    showing = true;
+  });
+  document.addEventListener('mousemove', e => {
+    if (!showing) return;
+    let x = e.clientX + 14, y = e.clientY + 18;
+    const r = tip.getBoundingClientRect();
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 10;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 10;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  });
+  document.addEventListener('click', () => { tip.classList.remove('on'); showing = false; });
 })();
 
 /* ---------- scroll reveal ---------- */

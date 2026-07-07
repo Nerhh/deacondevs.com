@@ -2,7 +2,7 @@
 
 My corner of the internet — [marcus.gg](https://marcus.gg).
 
-Hand-built, on purpose: no frameworks, no build step, no dependencies. One HTML file, one stylesheet, one JavaScript file.
+Hand-built, on purpose: no frameworks, no build step, no dependencies. Hand-written HTML, one stylesheet, one JavaScript file.
 
 ## Bits I'm fond of
 

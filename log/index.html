@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adventure log — marcus.gg</title>
+  <meta name="description" content="Build notes from Marcus Deacon's workshop — what got built, what broke, and what's next.">
+  <meta property="og:title" content="Adventure log — marcus.gg">
+  <meta property="og:description" content="Build notes from the workshop.">
+  <meta property="og:url" content="https://marcus.gg/log/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://marcus.gg/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
+  <meta name="theme-color" content="#0e0e11">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15' shape-rendering='crispEdges'%3E%3Crect x='4' y='2' width='7' height='11' fill='%23c0281a'/%3E%3Crect x='2' y='4' width='11' height='7' fill='%23c0281a'/%3E%3Crect x='1' y='7' width='1' height='2' fill='%236f100a'/%3E%3Crect x='13' y='6' width='1' height='2' fill='%236f100a'/%3E%3Crect x='7' y='1' width='2' height='1' fill='%236f100a'/%3E%3Crect x='6' y='13' width='2' height='1' fill='%236f100a'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <header class="site-head">
+    <a class="wordmark" href="/" data-xp="12" data-ex="The way home.">~/deacondevs</a>
+    <nav>
+      <a href="/#projects" data-xp="15">projects</a>
+      <a href="/#quests" data-xp="15">quests</a>
+      <a href="/log/" data-xp="15">log</a>
+      <a href="/#about" data-xp="15">about</a>
+      <a href="/#contact" data-xp="15">contact</a>
+      <button id="theme-toggle" aria-label="Toggle colour theme" data-ex="Let there be light. Or not.">☀</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="section section-last">
+      <h2 class="section-h reveal"><span class="slash">//</span> adventure log</h2>
+      <p class="section-note reveal">Build notes from the workshop. Newest first. Everything here actually happened.</p>
+
+      <article class="log-entry reveal" id="building-this-place" data-ex="Where it all began.">
+        <header>
+          <h3>Entry I — Building this place</h3>
+          <time datetime="2026-07-06">6th July 2026</time>
+        </header>
+        <p>This site went from an empty folder to what you're looking at in a handful of build sessions: <strong>no frameworks, no build step</strong> — hand-written HTML, one stylesheet, and a single main.js doing everything you can see. The duel, the live charts, the quest log, the collection log: all hand-rolled canvas and vanilla JavaScript.</p>
+        <p>Some things I learned shipping it. The <strong>.gg registry publishes its zone in batches</strong>, so marcus.gg spent its first afternoon registered but invisible to the entire internet — nothing was wrong, the Channel Islands just publish on their own schedule. GitHub Pages will quietly refuse to issue an HTTPS certificate if you attach a domain before its DNS exists; removing and re-adding the domain wakes it up. And Jekyll was processing this site on every deploy for no reason at all until a <strong>.nojekyll</strong> file put a stop to it.</p>
+        <p>The fighters in the duel are modelled on my actual Old School RuneScape characters — the hood, the crest, and the twisted bow are the real loadout. If you've clicked a fighter, you've met the dragon.</p>
+        <p>The quest log on the front page is the honest ledger of what's in progress. More entries here as more things get built.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer data-ex="No frameworks were harmed in the making.">© 2026 Marcus Deacon · marcus.gg · built brick by brick — no frameworks harmed</footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>
