@@ -265,9 +265,10 @@ checkMoon();
       ctx.restore();
     } else {
       const frac = Math.max(0, Math.min(1, (tod - 5) / 14));
-      const sx = W * (0.12 + 0.76 * frac);
-      const sy = 34 + (1 - Math.sin(Math.PI * frac)) * 46;
       const sr = 13 * SC;
+      const sx = W * (0.12 + 0.76 * frac);
+      // keep the full halo inside the canvas at the top of its arc
+      const sy = sr * 2.2 + 8 + (1 - Math.sin(Math.PI * frac)) * 42;
       ctx.fillStyle = hexA('#e8c25a', 0.1);
       ctx.beginPath(); ctx.arc(sx, sy, sr * 2.1, 0, 6.2832); ctx.fill();
       ctx.fillStyle = hexA('#e8c25a', dark() ? 0.55 : 0.75);
