@@ -748,3 +748,13 @@ html:not(.cine) .hero-title { display: none; }
   will-change: transform;
 }
 .cine .cards.h-on .card { width: clamp(420px, 44vw, 720px); flex: 0 0 auto; }
+
+/* the cinema plays full-bleed: the pinned hero must own the whole viewport,
+   not the 1080px column (GSAP freezes the computed width at pin time) */
+.cine { overflow-x: hidden; }
+.cine body { overflow-x: hidden; }
+.cine .hero {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+}
