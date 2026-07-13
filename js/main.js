@@ -110,6 +110,8 @@ function applyTheme(t) {
   root.setAttribute('data-theme', t);
   const btn = document.getElementById('theme-toggle');
   if (btn) btn.textContent = t === 'dark' ? '☀' : '☾';
+  const tc = document.querySelector('meta[name="theme-color"]');
+  if (tc) tc.setAttribute('content', t === 'dark' ? '#05060b' : '#f2efe7');
   refreshPalette();
   repaints.forEach(fn => fn());
 }
@@ -206,11 +208,21 @@ checkMoon();
   const canvas = document.getElementById('hero-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
+  const heroEl = canvas.parentElement;
+  const watermark = document.querySelector('.watermark');
   let W = 0, H = 0, SC = 1, raf = 0, running = false, last = 0;
-  let tufts = [], stars = [];
+  let stars = [], motes = [], caches = null, THEME = null, lastNight = null;
+  let surgeT0 = -99999;
+  const flare = { r: -99999, m: -99999 };
+  const cam = { x: 0, y: 0 };
+  let ptx = 0, pty = 0;
+
+  const GOLD = '#f5c518'; /* OSRS-GOLD: canvas only */
+  const IVORY = '#dfe6ff';
 
   const dark = () => root.getAttribute('data-theme') === 'dark';
-  const gy = () => H - Math.max(22, H * 0.09);
+  const gy = () => Math.round(H * 0.62);
+  const isNight = () => { const h = new Date().getHours(); return h >= 19 || h < 5; };
 
   const COL = {
     skin: '#c8956c',
@@ -238,68 +250,415 @@ checkMoon();
   let shake = 0, nextAttack = 0, turn = 0, specReady = 0, respawnAt = 0;
 
   function size() {
-    W = canvas.clientWidth;
-    H = canvas.clientHeight;
-    if (!W || !H) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
+    const w2 = canvas.clientWidth, h2 = canvas.clientHeight;
+    if (!w2 || !h2) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.5 : 2);
+    // mobile URL-bar show/hide fires resize without changing anything that matters —
+    // don't reshuffle the starfield for it
+    if (w2 === W && h2 === H && caches && canvas.width === Math.round(w2 * dpr)) return;
+    W = w2;
+    H = h2;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    SC = Math.max(0.5, Math.min(1.6, Math.min(H / 210, W / 420)));
-    ranger.x = Math.max(W * 0.24, 76);
-    mage.x = Math.min(W * 0.76, W - 76);
-    tufts = [];
-    for (let i = 0; i < Math.floor(W / 60); i++) tufts.push(Math.random() * W);
+    SC = Math.max(0.5, Math.min(W >= 640 ? 1.9 : 1.4, Math.min(H / 240, W / 420)));
+    const sep = Math.max(W * 0.12, 8 * 4 * SC + 24);
+    ranger.x = Math.round(W / 2 - sep);
+    mage.x = Math.round(W / 2 + sep);
     stars = [];
     for (let i = 0; i < 26; i++) {
-      stars.push({ x: Math.random() * W, y: Math.random() * H * 0.45, s: Math.random() < 0.3 ? 2 : 1.4, p: Math.random() * 6.28 });
+      stars.push({ x: Math.random() * W, y: Math.random() * H * 0.4, s: Math.random() < 0.3 ? 2 : 1, p: Math.random() * 6.28 });
+    }
+    motes = [];
+    for (let i = 0; i < 36; i++) {
+      motes.push({ y: Math.random() * gy(), k: Math.random(), spd: 4 + Math.random() * 5, ph: Math.random() * 6.28, a: 0.04 + Math.random() * 0.06 });
+    }
+    buildCaches();
+  }
+
+  // ---- offscreen caches: rebuilt only on resize / theme / day-night flip ----
+  function buildCaches() {
+    if (!W || !H) return;
+    const dk = dark();
+    const night = isNight();
+    lastNight = night;
+    THEME = dk ? {
+      skyA: 0.6, plinth: 'rgba(125,141,187,0.35)', reflA: 0.10,
+      rim: 'rgba(223,230,255,0.28)',
+      glowRest: 0.06, glowAmp: 0.02, glowFlare: 0.18,
+      steel: 'rgba(125,141,187,0.7)', label: 'rgba(234,230,218,0.7)', num: '#d9b45b',
+      shadowA: 0.35, skyText: 'rgba(139,143,160,0.6)', celestial: IVORY,
+    } : {
+      skyA: 1, plinth: '#cfc7b2', reflA: 0.06,
+      rim: 'rgba(110,87,33,0.30)',
+      glowRest: 0.05, glowAmp: 0.01, glowFlare: 0.12,
+      steel: 'rgba(109,122,158,0.8)', label: 'rgba(29,27,22,0.7)', num: '#9a7a28',
+      shadowA: 0.16, skyText: 'rgba(109,106,94,0.7)', celestial: '#8a6d3b',
+    };
+    const mk = (w2, h2) => { const c2 = document.createElement('canvas'); c2.width = Math.max(1, Math.round(w2)); c2.height = Math.max(1, Math.round(h2)); return c2; };
+    caches = {};
+
+    // vignette + spotlight cone + floor pool
+    const vig = mk(W, H);
+    const vg = vig.getContext('2d');
+    const gyv = gy();
+    const core = vg.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.45, W * 0.55);
+    if (dk) {
+      core.addColorStop(0, '#151a2e');
+      core.addColorStop(1, 'rgba(21,26,46,0)');
+    } else {
+      core.addColorStop(0, 'rgba(255,255,255,0.55)');
+      core.addColorStop(1, 'rgba(255,255,255,0)');
+    }
+    vg.fillStyle = core;
+    vg.fillRect(0, 0, W, H);
+    if (dk) {
+      const coneCol = night ? '#b8cdf2' : IVORY;
+      const cone = vg.createLinearGradient(0, 0, 0, gyv);
+      cone.addColorStop(0, hexA(coneCol, 0.05));
+      cone.addColorStop(1, hexA(coneCol, 0));
+      vg.fillStyle = cone;
+      vg.beginPath();
+      vg.moveTo(W * 0.46, 0); vg.lineTo(W * 0.54, 0);
+      vg.lineTo(W * 0.73, gyv); vg.lineTo(W * 0.27, gyv);
+      vg.closePath(); vg.fill();
+    }
+    vg.save();
+    vg.translate(W * 0.5, gyv);
+    vg.scale(1, 0.15);
+    const pool = vg.createRadialGradient(0, 0, 0, 0, 0, W * 0.2);
+    pool.addColorStop(0, hexA(dk ? IVORY : '#ffffff', dk ? 0.07 : 0.5));
+    pool.addColorStop(1, hexA(dk ? IVORY : '#ffffff', 0));
+    vg.fillStyle = pool;
+    vg.beginPath(); vg.arc(0, 0, W * 0.2, 0, 6.2832); vg.fill();
+    vg.restore();
+    caches.vig = vig;
+
+    // surge blob (themed: navy stage-light in the dark, warm flare in the light)
+    const cor = mk(256, 256);
+    const cg = cor.getContext('2d');
+    const cgr = cg.createRadialGradient(128, 128, 0, 128, 128, 128);
+    if (dk) {
+      cgr.addColorStop(0, hexA(IVORY, 0.12));
+      cgr.addColorStop(0.4, hexA('#151a2e', 0.5));
+      cgr.addColorStop(1, 'rgba(21,26,46,0)');
+    } else {
+      cgr.addColorStop(0, 'rgba(255,255,255,0.55)');
+      cgr.addColorStop(0.4, hexA('#e8c25a', 0.3));
+      cgr.addColorStop(1, 'rgba(255,255,255,0)');
+    }
+    cg.fillStyle = cgr;
+    cg.fillRect(0, 0, 256, 256);
+    caches.core = cor;
+
+    // Gielinor skyline silhouette (2x width for parallax headroom)
+    const skH = Math.max(34, Math.round(H * 0.1));
+    const tw = W * 2;
+    const sky2 = mk(tw, skH);
+    const sg = sky2.getContext('2d');
+    sg.fillStyle = dk ? '#0a0f1d' : '#cfc7b2';
+    sg.beginPath();
+    sg.moveTo(0, skH);
+    sg.lineTo(0, skH * 0.8);
+    let xx = 0;
+    let seed = 7;
+    while (xx < tw * 0.42) {
+      seed = (seed * 16807) % 2147483647;
+      const step = 50 + (seed % 100);
+      seed = (seed * 16807) % 2147483647;
+      const hgt = skH * (0.15 + (seed % 100) / 100 * 0.45);
+      xx += step;
+      sg.lineTo(xx, skH - hgt);
+      seed = (seed * 16807) % 2147483647;
+      xx += 30 + (seed % 60);
+      sg.lineTo(xx, skH - hgt);
+    }
+    sg.lineTo(xx, skH);
+    sg.closePath();
+    sg.fill();
+    // wizards' tower
+    const tx0 = tw * 0.55, shH = skH * 0.72;
+    sg.fillRect(tx0, skH - shH, 10, shH);
+    sg.fillRect(tx0 - 4, skH - shH - 6, 18, 6);
+    sg.fillRect(tx0 + 4, skH - shH - 13, 2, 7);
+    // lumbridge keep
+    const kx = tw * 0.72, kh = skH * 0.5;
+    sg.fillRect(kx, skH - kh, 46, kh);
+    for (let i = 0; i < 4; i++) sg.fillRect(kx + i * 12, skH - kh - 5, 6, 5);
+    caches.sky = sky2;
+    caches.skyH = skH;
+
+    // mist tiles
+    const mkMist = sd => {
+      const m = mk(512, 48);
+      const mg = m.getContext('2d');
+      mg.fillStyle = hexA(dk ? '#9fb4d8' : '#ffffff', dk ? 0.05 : 0.08);
+      for (let i = 0; i < 6; i++) {
+        const cx2 = (sd * 97 + i * 131) % 512;
+        const cy2 = 16 + ((sd * 31 + i * 57) % 18);
+        const rx = 90 + ((i * 73 + sd * 13) % 90);
+        const ry = 9 + ((i * 37) % 9);
+        for (const off of [-512, 0, 512]) {
+          mg.beginPath();
+          mg.ellipse(cx2 + off, cy2, rx, ry, 0, 0, 6.2832);
+          mg.fill();
+        }
+      }
+      return m;
+    };
+    caches.mistA = mkMist(3);
+    caches.mistB = mkMist(11);
+
+    // under-glow radials
+    const mkGlow = col => {
+      const g2 = mk(128, 128);
+      const gg = g2.getContext('2d');
+      const gr = gg.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, hexA(col, 1));
+      gr.addColorStop(1, hexA(col, 0));
+      gg.fillStyle = gr;
+      gg.fillRect(0, 0, 128, 128);
+      return g2;
+    };
+    caches.glowG = mkGlow('#d9b45b');
+    caches.glowV = mkGlow('#a05fd0');
+
+    // rim-light edge cells (maps are initialised by the time size() runs)
+    caches.rimR = computeRim(RANGER_MAP);
+    caches.rimM = computeRim(MAGE_MAP);
+
+    // reflection dissolve strip
+    const gr2 = mk(16, 64);
+    const gg2 = gr2.getContext('2d');
+    const lg = gg2.createLinearGradient(0, 0, 0, 64);
+    const bgc = dk ? '#05060b' : '#f2efe7';
+    lg.addColorStop(0, hexA(bgc, 0.25));
+    lg.addColorStop(1, bgc);
+    gg2.fillStyle = lg;
+    gg2.fillRect(0, 0, 16, 64);
+    caches.grad = gr2;
+  }
+
+  // the visitor's actual sky, restyled as an instrument complication
+  const UTC_LABEL = (() => {
+    const m = -new Date().getTimezoneOffset();
+    return 'GMT' + (m >= 0 ? '+' : '−') + Math.floor(Math.abs(m) / 60);
+  })();
+
+  function drawSkyMarks(t) {
+    const night = isNight();
+    if (night !== lastNight) buildCaches();
+    const inset = W >= 640 ? 24 : 12;
+    const cx2 = W - inset - 78 + cam.x * 3;
+    const cy2 = inset + 62 + cam.y * 1.8;
+    if (night && dark()) {
+      for (const st of stars) {
+        const tw = REDUCED ? 0.7 : 0.5 + 0.5 * Math.sin(t / 900 + st.p);
+        ctx.globalAlpha = 0.08 + 0.08 * tw;
+        ctx.fillStyle = IVORY;
+        ctx.fillRect((st.x + cam.x * 3) | 0, (st.y + cam.y * 1.8) | 0, st.s, st.s);
+      }
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = hexA(IVORY, 0.22);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx2, cy2, 13, 0, 6.2832); ctx.stroke();
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath(); ctx.arc(cx2 + 6, cy2 - 3, 11.5, 0, 6.2832); ctx.fill();
+      ctx.restore();
+    } else if (!night) {
+      ctx.strokeStyle = hexA(THEME.celestial, 0.24);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx2, cy2, 12, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = hexA(THEME.celestial, 0.08);
+      ctx.beginPath(); ctx.arc(cx2, cy2, 12, 0, 6.2832); ctx.fill();
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        ctx.beginPath();
+        ctx.moveTo(cx2 + Math.cos(a) * 16, cy2 + Math.sin(a) * 16);
+        ctx.lineTo(cx2 + Math.cos(a) * 19, cy2 + Math.sin(a) * 19);
+        ctx.stroke();
+      }
+    } else {
+      return; // night, light theme: the gallery keeps its walls bare
+    }
+    ctx.font = '9px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = THEME.skyText;
+    ctx.fillText('LOCAL SKY · ' + UTC_LABEL, cx2, cy2 + 32);
+    ctx.textAlign = 'left';
+  }
+
+  // ---- atmosphere ----
+  function drawMist(t) {
+    if (REDUCED || !caches.mistA) return;
+    const wrap = v => ((v % 512) + 512) % 512;
+    const xa = wrap(t * 0.006 + cam.x * 8);
+    const xb = wrap(-t * 0.01 + cam.x * 8);
+    for (let off = -512; off < W + 512; off += 512) {
+      ctx.drawImage(caches.mistA, off - xa, gy() - 46);
+      ctx.drawImage(caches.mistB, off - xb, gy() - 27);
     }
   }
 
-  // the scene follows the visitor's actual time of day — dark theme only,
-  // celestial bodies look out of place on the paper theme
-  function drawSky(t) {
-    if (!dark()) return;
-    const now = new Date();
-    const tod = now.getHours() + now.getMinutes() / 60;
-    const night = tod >= 19 || tod < 5;
-    const golden = (tod >= 5 && tod < 7.5) || (tod >= 16.5 && tod < 19);
-    if (night) {
-      for (const st of stars) {
-        const tw = REDUCED ? 0.75 : 0.55 + 0.45 * Math.sin(t / 900 + st.p);
-        ctx.globalAlpha = 0.22 * tw;
-        ctx.fillStyle = PAL.fg;
-        ctx.fillRect(st.x, st.y, st.s, st.s);
+  function drawMotes(t) {
+    if (REDUCED) return;
+    const surging = surgeVal(t) > 0.3;
+    for (const m of motes) {
+      const half = W * 0.04 + (W * 0.19) * (m.y / gy());
+      const x = W * 0.5 + (m.k - 0.5) * 2 * half + Math.sin(t / 1000 + m.ph) * 3 + cam.x * 10;
+      ctx.globalAlpha = m.a * (surging ? 1.6 : 1);
+      ctx.fillStyle = IVORY;
+      ctx.fillRect(x | 0, m.y | 0, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function surgeVal(t) {
+    const el = t - surgeT0;
+    if (el < 0 || el > 1200) return 0;
+    if (el < 300) return easeOut(el / 300);
+    if (el < 900) return 1;
+    return 1 - easeOut((el - 900) / 300);
+  }
+
+  // ---- lighting ----
+  // rim light: precomputed edge cells, lit from above and from stage centre
+  function computeRim(map) {
+    const cells = [];
+    for (let r = 0; r < map.length; r++) {
+      for (let c2 = 0; c2 < map[0].length; c2++) {
+        if (map[r][c2] === '.') continue;
+        const top = r === 0 || map[r - 1][c2] === '.';
+        const side = c2 === map[0].length - 1 || map[r][c2 + 1] === '.';
+        if (top || side) cells.push({ r, c: c2, top, side });
       }
-      ctx.globalAlpha = 1;
-      const frac = Math.min(1, ((tod - 19 + 24) % 24) / 10);
-      const mx = W * (0.12 + 0.76 * frac);
-      const my = 34 + (1 - Math.sin(Math.PI * frac)) * 40;
-      const mr = 11 * SC;
-      ctx.fillStyle = hexA('#d8d4c8', 0.5);
-      ctx.beginPath(); ctx.arc(mx, my, mr, 0, 6.2832); ctx.fill();
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath(); ctx.arc(mx + mr * 0.45, my - mr * 0.2, mr * 0.85, 0, 6.2832); ctx.fill();
-      ctx.restore();
-    } else {
-      const frac = Math.max(0, Math.min(1, (tod - 5) / 14));
-      const sr = 13 * SC;
-      const sx = W * (0.12 + 0.76 * frac);
-      // keep the full halo inside the canvas at the top of its arc
-      const sy = sr * 2.2 + 8 + (1 - Math.sin(Math.PI * frac)) * 42;
-      ctx.fillStyle = hexA('#e8c25a', 0.1);
-      ctx.beginPath(); ctx.arc(sx, sy, sr * 2.1, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = hexA('#e8c25a', dark() ? 0.55 : 0.75);
-      ctx.beginPath(); ctx.arc(sx, sy, sr, 0, 6.2832); ctx.fill();
     }
-    if (golden) {
-      const grad = ctx.createLinearGradient(0, gy() - 70, 0, gy());
-      grad.addColorStop(0, hexA('#e8955a', 0));
-      grad.addColorStop(1, hexA('#e8955a', 0.08));
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, gy() - 70, W, 70);
+    return cells;
+  }
+
+  function drawRimFor(f, cells) {
+    if (!cells || f.dead) return;
+    const cell = 4 * SC;
+    const ox = f.drawX !== undefined ? f.drawX : f.x;
+    const oy = f.drawY !== undefined ? f.drawY : gy() + f.hopY;
+    const top0 = oy - 19 * cell;
+    ctx.fillStyle = THEME.rim;
+    for (const rc of cells) {
+      const left = f.dir === 1 ? ox + (rc.c - 8) * cell : ox + (8 - rc.c - 1) * cell;
+      const ty = top0 + rc.r * cell;
+      if (rc.top) ctx.fillRect(Math.round(left), Math.round(ty), Math.ceil(cell), Math.ceil(cell * 0.35));
+      if (rc.side) {
+        const sx2 = f.dir === 1 ? left + cell * 0.65 : left;
+        ctx.fillRect(Math.round(sx2), Math.round(ty), Math.ceil(cell * 0.35), Math.ceil(cell));
+      }
     }
+  }
+
+  function drawGlows(t) {
+    if (!caches.glowG) return;
+    const cell = 4 * SC;
+    for (const f of fighters) {
+      const img = f === ranger ? caches.glowG : caches.glowV;
+      const fl = f === ranger ? flare.r : flare.m;
+      let a2 = THEME.glowRest + THEME.glowAmp * (Math.sin(t / 4000 * 6.2832 + (f === ranger ? 0 : 2)) + 1) / 2;
+      const since = t - fl;
+      if (since >= 0 && since < 500) a2 = Math.max(a2, THEME.glowFlare * (1 - since / 500) + a2 * (since / 500));
+      ctx.globalAlpha = a2;
+      ctx.drawImage(img, f.x - 9 * cell, gy() - 2.2 * cell, 18 * cell, 4.4 * cell);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawReflection(t) {
+    if (!caches.grad) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, gy() + 2, W, 64);
+    ctx.clip();
+    ctx.translate(0, 2 * gy() + 4);
+    ctx.scale(1, -1);
+    ctx.globalAlpha = THEME.reflA;
+    drawRanger(ranger, t);
+    drawMage(mage, t);
+    for (const pr of projectiles) drawProjectile(pr, t);
+    ctx.restore();
+    ctx.drawImage(caches.grad, 0, gy() + 2, W, 64);
+  }
+
+  function drawAdditive(t) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const pr of projectiles) {
+      if (pr.kind === 'arrow') continue;
+      ctx.globalAlpha = 0.35;
+      drawProjectile(pr, t);
+    }
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life / p.max) * 0.2;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);
+    }
+    ctx.restore();
+  }
+
+  // ---- HUD callout annotations ----
+  const CALLOUTS = [
+    { f: 'r', row: 8, col: 12, side: -1, ly: 0.3, num: '01', text: 'TWISTED BOW — DRAGONFIRE DELIVERY SYSTEM' },
+    { f: 'r', row: 1, col: 5, side: -1, ly: 0.42, num: '02', text: 'MASORI HOOD' },
+    { f: 'r', row: 10, col: 2, side: -1, ly: 0.54, num: '03', text: 'CAPE — DRAMATIC EFFECT ONLY' },
+    { f: 'm', row: 9, col: 12, side: 1, ly: 0.3, num: '01', text: 'ARCANE SPIRIT SHIELD' },
+    { f: 'm', row: 4, col: 11, side: 1, ly: 0.42, num: '02', text: 'KODAI WAND' },
+    { f: 'm', row: 13, col: 6, side: 1, ly: 0.54, num: '03', text: 'ROBES OF THE THIRD AGE… OF THIS SITE' },
+  ].map(c2 => ({ ...c2, sx: 0, sy: 0 }));
+
+  function drawCallouts(t) {
+    const maxN = W < 640 ? 1 : 3;
+    const inset = W >= 640 ? 24 : 12;
+    ctx.font = '10px "IBM Plex Mono", monospace';
+    ctx.textBaseline = 'bottom';
+    for (const co of CALLOUTS) {
+      if (parseInt(co.num, 10) > maxN) continue;
+      const f = co.f === 'r' ? ranger : mage;
+      if (f.dead || f.freeze > 0) continue;
+      const cell = 4 * SC;
+      const ax = f.dir === 1 ? f.x + (co.col - 8) * cell + cell / 2 : f.x + (8 - co.col - 1) * cell + cell / 2;
+      const ay = gy() + f.hopY - 19 * cell + co.row * cell + cell / 2;
+      if (REDUCED || !co.sx) { co.sx = ax; co.sy = ay; }
+      else { co.sx += (ax - co.sx) * 0.08; co.sy += (ay - co.sy) * 0.08; }
+      const alpha = f.phase === 'windup' ? 0.25 : 1;
+      const born = REDUCED ? 1 : Math.min(1, Math.max(0, (t - 1000 - parseInt(co.num, 10) * 140) / 800));
+      if (born <= 0) continue;
+      const sx2 = co.sx | 0, sy2 = co.sy | 0;
+      const lx = co.side === -1 ? inset + 16 : W - inset - 16;
+      // separate rails on phones so the two 01 labels never overprint
+      const railLy = W < 640 ? (co.side === -1 ? 0.24 : 0.36) : co.ly;
+      const ly = Math.round(H * railLy + cam.y * 2);
+      const elbowX = sx2 + co.side * 36;
+      const len = Math.hypot(elbowX - sx2, ly - sy2) + Math.abs(lx - elbowX);
+      ctx.globalAlpha = alpha * born * 0.9;
+      ctx.strokeStyle = THEME.steel;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([len]);
+      ctx.lineDashOffset = len * (1 - born);
+      ctx.beginPath();
+      ctx.moveTo(sx2, sy2);
+      ctx.lineTo(elbowX, ly);
+      ctx.lineTo(lx, ly);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = THEME.steel;
+      ctx.fillRect(sx2 - 1, sy2 - 1, 3, 3);
+      ctx.textAlign = co.side === -1 ? 'left' : 'right';
+      const numGap = ctx.measureText(co.num + ' ').width;
+      ctx.fillStyle = THEME.num;
+      ctx.fillText(co.num, lx, ly - 5);
+      ctx.fillStyle = THEME.label;
+      ctx.fillText(co.text, co.side === -1 ? lx + numGap : lx - numGap, ly - 5);
+    }
+    ctx.globalAlpha = 1;
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
   }
 
   /* ----- combat direction ----- */
@@ -307,10 +666,11 @@ checkMoon();
   function scheduleNext(t) { nextAttack = t + 1200 + Math.random() * 900; }
 
   function startAttack(f, t, spec) {
-    if (f.dead || f.phase !== 'idle' || respawnAt) return;
+    if (f.dead || f.phase !== 'idle' || respawnAt) return false;
     f.phase = 'windup';
     f.phaseT = t;
     f.spec = spec;
+    return true;
   }
 
   function rollDamage(spec) {
@@ -384,6 +744,7 @@ checkMoon();
     splats.push({ x: tgt.x + (Math.random() - 0.5) * 8 * SC, y: gy() - 8.5 * 4 * SC, t0: t, dmg: pr.dmg, miss: pr.dmg === 0 });
     if (pr.dmg > 0) {
       tgt.flash = 1;
+      if (pr.from === ranger) flare.r = t; else flare.m = t;
       burst(tgt.x, gy() - 8 * 4 * SC, pr.kind === 'orb' ? COL.ancest.orb : COL.masori.trim, pr.spec ? 16 : 9);
       xpFloats.push({ x: pr.from.x, y: gy() - 25 * 4 * SC, t0: t, txt: '+' + pr.dmg * 4 + 'xp' });
       if (pr.spec || pr.dmg >= 7) shake = Math.min(1, shake + 0.7);
@@ -496,9 +857,13 @@ checkMoon();
 
   function drawShadow(f) {
     const u = 4 * SC;
-    ctx.fillStyle = dark() ? 'rgba(0,0,0,.35)' : 'rgba(0,0,0,.14)';
+    ctx.fillStyle = 'rgba(0,0,0,' + THEME.shadowA + ')';
     ctx.beginPath();
-    ctx.ellipse(f.x, gy() + 0.5 * u, 4.2 * u, u, 0, 0, 6.2832);
+    ctx.ellipse(f.x, gy() + 2, 5 * u, 0.85 * u, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,' + (THEME.shadowA * 0.5) + ')';
+    ctx.beginPath();
+    ctx.ellipse(f.x, gy() + 2, 7.5 * u, 1.25 * u, 0, 0, 6.2832);
     ctx.fill();
   }
 
@@ -608,7 +973,8 @@ checkMoon();
     const y = gy() + f.hopY + bob;
 
     ctx.save();
-    ctx.globalAlpha = deathTransform(f, t);
+    ctx.globalAlpha *= deathTransform(f, t);
+    f.drawX = x; f.drawY = y; // rim light must reuse the exact draw origin (jitter is random per frame)
     drawSprite(RANGER_MAP, RANGER_PAL, x, y, c, d);
     if (wp > 0.15) {
       // pixel arrow nocked on the string, drawn back as he winds up
@@ -636,7 +1002,8 @@ checkMoon();
     const y = gy() + f.hopY + bob;
 
     ctx.save();
-    ctx.globalAlpha = deathTransform(f, t);
+    ctx.globalAlpha *= deathTransform(f, t);
+    f.drawX = x; f.drawY = y;
     drawSprite(MAGE_MAP, MAGE_PAL, x, y, c, d);
     // orb at the wand tip above the shield; grows while casting
     const ox = x + d * 3 * c, oy = y - 16 * c;
@@ -761,32 +1128,39 @@ checkMoon();
 
   function render(t) {
     ctx.clearRect(0, 0, W, H);
+    if (!caches || !caches.vig) return;
+
+    // the room: bolted down, never shakes
+    ctx.drawImage(caches.vig, 0, 0);
+    const sv = surgeVal(t);
+    if (sv > 0.01) {
+      ctx.globalAlpha = 0.6 * sv;
+      ctx.drawImage(caches.core, W * 0.5 - W * 0.55, H * 0.45 - H * 0.5, W * 1.1, H);
+      ctx.globalAlpha = 1;
+    }
+    drawSkyMarks(t);
+    ctx.globalAlpha = THEME.skyA;
+    ctx.drawImage(caches.sky, Math.round(-W * 0.5 + cam.x * 4), gy() - caches.skyH);
+    ctx.globalAlpha = 1;
+    drawMist(t);
+    drawMotes(t);
+
+    // the stage: only its contents jolt
     ctx.save();
     if (shake > 0.02) ctx.translate((Math.random() - 0.5) * shake * 7, (Math.random() - 0.5) * shake * 5);
 
-    drawSky(t);
+    const inset = W >= 640 ? 24 : 12;
+    ctx.fillStyle = THEME.plinth;
+    ctx.fillRect(inset, gy() + 1, W - inset * 2, 1);
 
-    // ground
-    ctx.strokeStyle = PAL.line;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0, gy() + 3 * SC);
-    ctx.lineTo(W, gy() + 3 * SC);
-    ctx.stroke();
-    ctx.lineWidth = 1;
-    for (const tx of tufts) {
-      ctx.beginPath();
-      ctx.moveTo(tx, gy() + 3 * SC);
-      ctx.lineTo(tx - 1.5, gy() - 3 * SC);
-      ctx.moveTo(tx + 2.5, gy() + 3 * SC);
-      ctx.lineTo(tx + 3.5, gy() - 2 * SC);
-      ctx.stroke();
-    }
-
+    drawReflection(t);
+    drawGlows(t);
     drawShadow(ranger);
     drawShadow(mage);
     drawRanger(ranger, t);
     drawMage(mage, t);
+    drawRimFor(ranger, caches.rimR);
+    drawRimFor(mage, caches.rimM);
 
     for (const pr of projectiles) drawProjectile(pr, t);
 
@@ -817,24 +1191,35 @@ checkMoon();
       ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     }
     ctx.globalAlpha = 1;
+    drawAdditive(t);
     for (const s of splats) drawSplat(s, t);
     drawUI(t);
     for (const s of xpFloats) {
       const age = t - s.t0;
       ctx.globalAlpha = Math.max(0, 1 - age / 750);
-      ctx.fillStyle = PAL.accent;
+      ctx.fillStyle = GOLD; /* OSRS-GOLD: game artifact */
       ctx.font = `${Math.max(11, 13 * SC)}px VT323, "IBM Plex Mono", monospace`;
       ctx.textAlign = 'center';
       ctx.fillText(s.txt, s.x, s.y - age * 0.025);
     }
     ctx.globalAlpha = 1;
     ctx.restore();
+
+    drawCallouts(t);
   }
 
   function loop(t) {
     if (!running) { raf = 0; return; }
     const dt = Math.min(50, last ? t - last : 16);
     last = t;
+    // camera: pointer intent + slow idle drift, environment only
+    const ix = REDUCED ? 0 : 0.15 * Math.sin(t / 9000 * 6.2832);
+    const iy = REDUCED ? 0 : 0.1 * Math.sin(t / 13000 * 6.2832 + 1.3);
+    cam.x += ((ptx + ix) - cam.x) * 0.06;
+    cam.y += ((pty + iy) - cam.y) * 0.06;
+    if (watermark && !REDUCED) {
+      watermark.style.transform = 'translate3d(' + (cam.x * 6).toFixed(1) + 'px,' + (cam.y * 3.6).toFixed(1) + 'px,0)';
+    }
     try {
       update(t, dt);
       render(t);
@@ -845,24 +1230,43 @@ checkMoon();
     raf = requestAnimationFrame(loop);
   }
 
+  // parallax intent: mouse only, never touch
+  if (!REDUCED && matchMedia('(hover: hover)').matches) {
+    heroEl.addEventListener('pointermove', e => {
+      ptx = (e.clientX / Math.max(1, W) - 0.5) * 2;
+      pty = (e.clientY / Math.max(1, H) - 0.5) * 2;
+    }, { passive: true });
+    heroEl.addEventListener('pointerleave', () => { ptx = 0; pty = 0; }, { passive: true });
+  }
+
   canvas.addEventListener('click', e => {
     if (REDUCED) return;
     const now = performance.now();
     if (now < specReady) return;
     const rect = canvas.getBoundingClientRect();
     const f = (e.clientX - rect.left) < W / 2 ? ranger : mage;
-    if (f.dead || respawnAt) return;
+    if (!startAttack(f, now, true)) return; // mid-windup or dead: no dud fireworks
     specReady = now + 1800;
-    startAttack(f, now, true);
+    surgeT0 = now;
+    if (f === ranger) flare.r = now; else flare.m = now;
     clogUnlock(f === ranger ? 'spec-marcus' : 'spec-deacon');
   });
 
   let rt;
+  let lastBuild = 0;
   window.addEventListener('resize', () => {
     clearTimeout(rt);
-    rt = setTimeout(() => { size(); if (REDUCED) render(0); }, 180);
+    rt = setTimeout(() => {
+      size();
+      lastBuild = performance.now();
+      if (REDUCED || !running) render(REDUCED ? 0 : last || 0);
+    }, 180);
   });
-  repaints.push(() => { if (REDUCED) { size(); render(0); } });
+  repaints.push(() => {
+    // theme flips rebuild immediately; the global resize repaint skips the duplicate
+    if (performance.now() - lastBuild > 250) buildCaches();
+    if (REDUCED || !running) render(REDUCED ? 0 : last || 0);
+  });
 
   function start() {
     size();
@@ -874,7 +1278,8 @@ checkMoon();
     const io = new IntersectionObserver(entries => {
       const vis = entries.some(en => en.isIntersecting);
       if (vis) {
-        if (!W || !H) size(); // fonts can resolve before first layout
+        // fonts can resolve before first layout settles — re-measure on any drift
+        if (W !== canvas.clientWidth || H !== canvas.clientHeight) size();
         running = true;
         last = 0;
         if (!nextAttack) scheduleNext(performance.now() + 400);
@@ -1347,7 +1752,8 @@ checkMoon();
   const qp = document.getElementById('quest-points');
   if (!section || !qp) return;
   let total = 0;
-  section.querySelectorAll('.quest').forEach(q => { total += parseInt(q.dataset.qp, 10) || 0; });
+  // points are awarded on completion only, as the copy promises
+  section.querySelectorAll('.quest-done').forEach(q => { total += parseInt(q.dataset.qp, 10) || 0; });
   if (REDUCED) { qp.textContent = total; return; }
   const io = new IntersectionObserver(es => {
     if (es.some(e => e.isIntersecting)) {
@@ -1414,9 +1820,9 @@ document.addEventListener('click', e => {
   }
 
   const LINES = [
-    'Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.',
-    'I’m Marcus. I build the sort of tools you just scrolled past — and the occasional LEGO city.',
-    'Want to talk tickets, watches, wealth or bricks?',
+    'Ah, adventurer. You’ve reached the end of the catalogue — most viewings never make it past the plates.',
+    'I’m Marcus. Proprietor. I built everything you just scrolled past — and the occasional LEGO city.',
+    'Tickets, watches, wealth or bricks — what shall we discuss?',
   ];
   let idx = 0;
   const line = document.getElementById('npc-line');
@@ -1474,6 +1880,41 @@ document.addEventListener('click', e => {
     tip.style.top = y + 'px';
   });
   document.addEventListener('click', () => { tip.classList.remove('on'); showing = false; });
+})();
+
+/* ---------- cursor torch: the visitor carries the gallery light across the plates ---------- */
+
+(function initTorch() {
+  if (REDUCED || !window.matchMedia || !matchMedia('(hover: hover)').matches) return;
+  document.addEventListener('pointermove', e => {
+    const card = e.target.closest && e.target.closest('.card');
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  }, { passive: true });
+})();
+
+/* ---------- chrome: header state + hero scroll dim ---------- */
+
+(function initChrome() {
+  const head = document.querySelector('.site-head');
+  const hero = document.querySelector('.hero');
+  if (head && !hero) head.classList.add('scrolled');
+  let ticking = false;
+  const apply = () => {
+    ticking = false;
+    const y = window.scrollY || 0;
+    if (head && hero) head.classList.toggle('scrolled', y > 40);
+    if (hero) {
+      const k = Math.max(0, Math.min(1, y / ((hero.offsetHeight || 1) * 0.6)));
+      hero.style.setProperty('--k', k.toFixed(3));
+    }
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(apply); }
+  }, { passive: true });
+  apply();
 })();
 
 /* ---------- scroll reveal ---------- */

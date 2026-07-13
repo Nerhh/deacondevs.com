@@ -14,11 +14,11 @@
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
-  <meta name="theme-color" content="#0e0e11">
+  <meta name="theme-color" content="#05060b">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15' shape-rendering='crispEdges'%3E%3Crect x='4' y='2' width='7' height='11' fill='%23c0281a'/%3E%3Crect x='2' y='4' width='11' height='7' fill='%23c0281a'/%3E%3Crect x='1' y='7' width='1' height='2' fill='%236f100a'/%3E%3Crect x='13' y='6' width='1' height='2' fill='%236f100a'/%3E%3Crect x='7' y='1' width='2' height='1' fill='%236f100a'/%3E%3Crect x='6' y='13' width='2' height='1' fill='%236f100a'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400;500&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -38,34 +38,43 @@
 
   <main id="top">
 
-    <section class="hero">
-      <h1 class="sr-only">Marcus Deacon</h1>
+    <section class="hero" id="hero">
+      <h1 class="watermark" aria-label="Marcus Deacon">Marcus</h1>
       <canvas id="hero-canvas" aria-hidden="true" data-ex="Two halves of the same adventurer, settling it properly."></canvas>
+      <div class="plate-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="plate-cap cap-tl" data-ex="Level 30. Also his age. The maths checks out.">Marcus Deacon — software developer, UK · father of one · lvl 30</div>
+      <div class="plate-cap cap-tr" aria-hidden="true">marcus.gg</div>
+      <div class="plate-cap cap-br" aria-hidden="true">edition nº 001 / 001</div>
+      <div class="hero-editorial">
+        <p class="hero-bio">Tools that do the boring work: ticket prices watched, net worth tracked, the rest automated.</p>
+        <p class="status"><span class="prompt">$</span> now building <a href="#p-vestra">vestra</a> — personal wealth management<span class="cursor">█</span></p>
+        <p class="hero-hint" aria-hidden="true">Click a fighter to commission his special attack</p>
+      </div>
+      <div class="hero-dim" aria-hidden="true"></div>
       <noscript><p class="hero-noscript">MARCUS DEACON</p></noscript>
-      <p class="hero-sub reveal">software developer · UK born · father · <span class="lvl-badge" data-xp="30" data-ex="He's older than he looks.">Lvl 30</span></p>
-      <p class="hero-line reveal">I build tools that do the boring work — watching ticket prices, tracking net worth, automating the rest.</p>
-      <p class="status reveal"><span class="prompt">$</span> now building <a href="#p-vestra">vestra</a> — personal wealth management<span class="cursor">█</span></p>
-      <p class="hero-hint" aria-hidden="true">click a fighter to unleash their special attack</p>
     </section>
 
     <section id="projects" class="section">
-      <h2 class="section-h reveal"><span class="slash">//</span> projects</h2>
-      <p class="section-note reveal">The demos below are real, live-rendered on canvas — not screenshots.</p>
+      <h2 class="section-h reveal"><span class="eyebrow">plate 01 — the catalogue</span>Selected works</h2>
+      <p class="section-note reveal">Each work is exhibited with a live canvas render, drawn as you watch. Nothing here is a screenshot.</p>
       <div class="cards">
 
         <article class="card reveal" id="p-stubhub" data-ex="It watches ticket prices so you don't have to.">
           <header class="card-head">
+            <span class="plate-index">Nº 01</span>
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>stubhub lens</h3>
             <span class="badge">in development</span>
           </header>
           <div class="demo"><canvas id="spark-canvas" role="img" aria-label="Animated demo: live ticket price chart with rolling average and deal detection"></canvas></div>
-          <p>A Chrome extension that sits on StubHub listings and does the maths for you — live price tracking, rolling averages and deal alerts, before you overpay for tickets.</p>
+          <p class="fig">fig. 01 — live render, canvas 2d. not a screenshot.</p>
+          <p>A Chrome extension that attends StubHub listings and does the arithmetic — live price tracking, rolling averages, and a quiet word before you overpay for tickets.</p>
           <ul class="tags"><li>chrome-extension</li><li>javascript</li><li>price-analysis</li></ul>
         </article>
 
         <article class="card reveal" id="p-vestra" data-ex="A ledger for people who count their coins.">
           <header class="card-head">
+            <span class="plate-index">Nº 02</span>
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>vestra</h3>
             <span class="badge badge-active">active</span>
@@ -74,23 +83,27 @@
             <canvas id="donut-canvas" role="img" aria-label="Animated demo: portfolio allocation donut chart"></canvas>
             <ul class="legend" id="donut-legend"></ul>
           </div>
-          <p>A wealth-management app for people who like their money where they can see it — accounts, holdings, savings habits and a monthly “Wrapped” for your net worth. <span class="muted">(demo data, sadly)</span></p>
+          <p class="fig">fig. 02 — allocation, drawn live. demo data.</p>
+          <p>A private ledger for people who like their money where they can see it — accounts, holdings, savings habits, and a monthly Wrapped for your net worth. <span class="muted">(Exhibited with demo data.)</span></p>
           <ul class="tags"><li>node</li><li>sqlite</li><li>pwa</li></ul>
         </article>
 
         <article class="card reveal" id="p-dial" data-ex="Point it at a watch, learn the truth.">
           <header class="card-head">
+            <span class="plate-index">Nº 03</span>
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>dial</h3>
             <span class="badge">prototype</span>
           </header>
           <div class="demo"><canvas id="watch-canvas" role="img" aria-label="Animated demo: a ticking watch face is scanned and valued from live market listings"></canvas></div>
-          <p>Point a camera at a watch and get a straight answer on price — valuations built from the 20 cheapest live listings, not dealer optimism. <span class="muted">(demo data)</span></p>
+          <p class="fig">fig. 03 — real local time on the dial. demo prices.</p>
+          <p>Point a camera at a watch and receive a straight answer on price — valuations built from the twenty cheapest live listings, not dealer optimism. <span class="muted">(Demo data.)</span></p>
           <ul class="tags"><li>expo</li><li>react-native</li><li>node</li></ul>
         </article>
 
         <article class="card reveal card-queued" data-ex="Empty... for now.">
           <header class="card-head">
+            <span class="plate-index">Nº 04</span>
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>next build</h3>
             <span class="badge">queued</span>
@@ -98,7 +111,8 @@
           <div class="demo demo-dashed" aria-hidden="true">
             <span class="qbrick"></span><span class="qbrick"></span><span class="qbrick"></span>
           </div>
-          <p>Reserved for whatever gets built next. Bricks sorted, instructions open.</p>
+          <p class="fig">fig. 04 — lot pending.</p>
+          <p>Reserved for whatever gets built next — bricks sorted, instructions open.</p>
           <ul class="tags"><li>???</li></ul>
         </article>
 
@@ -106,7 +120,7 @@
 
       <div class="ge" id="ge-ticker" hidden>
         <div class="ge-head">
-          <span class="ge-label">◆ grand exchange</span>
+          <span class="ge-label">provenance — grand exchange</span>
           <a class="ge-link" href="https://github.com/Nerhh/deacondevs.com/commits/main" target="_blank" rel="noopener" data-xp="25" data-ex="Buy low, sell high.">full ledger ↗</a>
         </div>
         <div class="ge-offer">
@@ -128,8 +142,8 @@
     </section>
 
     <section id="quests" class="section">
-      <h2 class="section-h reveal"><span class="slash">//</span> quest log <span class="total">quest points <b id="quest-points">—</b></span></h2>
-      <p class="section-note reveal">A quest log instead of a skills grid — things shipped and things in progress, no self-assigned levels.</p>
+      <h2 class="section-h reveal"><span class="eyebrow">plate 02 — record of works</span>Quest log <span class="total">quest points <b id="quest-points">—</b></span></h2>
+      <p class="section-note reveal">A quest log in place of a skills grid — work shipped and work in progress. No self-assigned levels; points are awarded on completion only, as is proper.</p>
       <ul class="quests">
         <li class="quest quest-done reveal" data-qp="2">
           <span class="q-status" aria-hidden="true">✓</span>
@@ -165,30 +179,30 @@
     </section>
 
     <section id="clog" class="section">
-      <h2 class="section-h reveal"><span class="slash">//</span> collection log <span class="total">logged <b id="clog-count">0</b>/<span id="clog-total">9</span></span></h2>
-      <p class="section-note reveal">Things a visitor can discover on this page. Progress lives only in your browser.</p>
+      <h2 class="section-h reveal"><span class="eyebrow">plate 03 — for the observant</span>Collection log <span class="total">logged <b id="clog-count">0</b>/<span id="clog-total">9</span></span></h2>
+      <p class="section-note reveal">Nine discoveries hidden on this page for the observant visitor. Progress lives in your browser, and nowhere else.</p>
       <ul class="clog-grid reveal" id="clog-grid"></ul>
     </section>
 
     <section id="about" class="section">
-      <h2 class="section-h reveal"><span class="slash">//</span> about</h2>
+      <h2 class="section-h reveal"><span class="eyebrow">plate 04 — the proprietor</span>About</h2>
       <div class="about-col">
-        <p class="reveal"><strong>I'm Marcus Deacon</strong> — 30, UK born and raised, and a father, which means my patience has been professionally load-tested.</p>
-        <p class="reveal">By day I build software: browser tooling, data-heavy apps, and small sharp utilities that quietly save people money. Current obsessions are <a href="#p-stubhub">ticket-price analysis</a> and <a href="#p-vestra">personal wealth tracking</a>.</p>
+        <p class="reveal"><strong>I'm Marcus Deacon</strong> — thirty, UK born and raised, father of one. My patience has been professionally load-tested and performs within tolerance.</p>
+        <p class="reveal">By day I build software: browser tooling, data-heavy applications, and small sharp utilities that quietly save people money. Current preoccupations — <a href="#p-stubhub">ticket-price analysis</a> and <a href="#p-vestra">personal wealth tracking</a>.</p>
         <p class="reveal">Off the clock it's <strong>LEGO</strong> — proper sets and freeform builds — and <strong>Old School RuneScape</strong>, which taught me everything I know about long-term incremental progress. The grind is the point.</p>
-        <p class="reveal">This site is hand-built: no frameworks, no build step — just HTML, CSS and vanilla JavaScript doing every animation you can see.</p>
+        <p class="reveal">This site is hand-built: no frameworks, no build step — HTML, CSS and vanilla JavaScript drawing every animation you can see. Every pixel placed on purpose.</p>
       </div>
     </section>
 
     <section id="contact" class="section section-last">
-      <h2 class="section-h reveal"><span class="slash">//</span> contact</h2>
-      <p class="section-note reveal">Say hello. XP is awarded on click.</p>
+      <h2 class="section-h reveal"><span class="eyebrow">plate 05 — enquiries</span>Contact</h2>
+      <p class="section-note reveal">The proprietor will see you now. Select an option — XP is awarded on click, as a courtesy.</p>
 
       <div class="npc reveal" id="npc">
-        <canvas class="npc-face" id="npc-face" width="72" height="72" aria-hidden="true" data-ex="It's him. The man himself."></canvas>
+        <canvas class="npc-face" id="npc-face" width="72" height="72" aria-hidden="true" data-ex="It's him. The proprietor himself."></canvas>
         <div class="npc-body">
           <div class="npc-name">Marcus Deacon</div>
-          <p class="npc-line" id="npc-line">Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.</p>
+          <p class="npc-line" id="npc-line">Ah, adventurer. You’ve reached the end of the catalogue — most viewings never make it past the plates.</p>
           <div class="npc-options" id="npc-options" hidden>
             <span class="npc-opt-title">Select an option</span>
             <a href="https://x.com/nerhhx" target="_blank" rel="noopener" data-xp="42">1. Message me on X</a>
@@ -204,7 +218,7 @@
 
   </main>
 
-  <footer data-ex="No frameworks were harmed in the making.">© 2026 Marcus Deacon · marcus.gg · built brick by brick — no frameworks harmed</footer>
+  <footer data-ex="No frameworks were harmed. None were used.">© 2026 Marcus Deacon · marcus.gg · hand-built, no frameworks, no build step — every pixel placed on purpose. Edition of one.</footer>
 
   <script src="js/main.js"></script>
 </body>
