@@ -601,3 +601,150 @@ footer {
   .section-h::before { transform: scaleX(1); }
   .plate-frame, .plate-cap, .hero-editorial { transform: none; }
 }
+
+/* ---------- scroll cinema (GSAP running, motion allowed) ---------- */
+
+.cine .reveal { opacity: 1; transform: none; transition: none; }
+.cine .section { perspective: 1100px; }
+
+/* chapter tint: a colour wash behind the page that follows the story */
+.tint-layer {
+  position: fixed; inset: 0; z-index: -1;
+  pointer-events: none;
+  background-color: transparent;
+}
+[data-theme="light"] .tint-layer { opacity: 0; }
+
+/* film grain breathes in the cinema */
+.cine .noise { inset: -60px; animation: grain 900ms steps(6) infinite; }
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-28px, 14px); }
+  40% { transform: translate(16px, -22px); }
+  60% { transform: translate(-12px, -30px); }
+  80% { transform: translate(24px, 20px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ---------- act I: the title card ---------- */
+
+.hero-title {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center;
+  pointer-events: none;
+}
+html:not(.cine) .hero-title { display: none; }
+.ht-eyebrow {
+  font: 500 11px var(--mono); letter-spacing: 0.34em; text-transform: uppercase;
+  color: var(--accent);
+}
+.ht-logo {
+  font: 400 clamp(58px, 11vw, 150px)/0.95 'VT323', var(--mono); /* OSRS-GOLD: game artifact */
+  color: #f5c518;
+  text-shadow: 0 3px 0 #7a5510, 0 6px 0 rgba(0, 0, 0, 0.55), 0 24px 60px rgba(245, 197, 24, 0.18);
+}
+[data-theme="light"] .ht-logo { color: #7a5f13; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18); }
+.ht-sub {
+  font: 500 12px var(--mono); letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--muted);
+}
+.ht-hint {
+  margin-top: 28px;
+  font: 400 16px 'VT323', var(--mono); letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--fg) 60%, transparent);
+  animation: htPulse 1.6s ease-in-out infinite;
+}
+@keyframes htPulse { 50% { opacity: 0.35; transform: translateY(4px); } }
+
+/* ---------- the playable duel ---------- */
+
+.challenge-btn {
+  position: absolute; z-index: 5;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--frame-inset, 24px) + 18px);
+  font: 400 20px 'VT323', var(--mono); letter-spacing: 0.08em; /* OSRS-GOLD: game artifact */
+  color: #f5c518;
+  background: rgba(5, 6, 11, 0.72);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 2px; padding: 10px 24px; cursor: pointer;
+  transition: border-color var(--d-micro) var(--ease), box-shadow var(--d-std) var(--ease);
+}
+.challenge-btn:hover { border-color: var(--accent); box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 30%, transparent); }
+[data-theme="light"] .challenge-btn { color: #7a5f13; background: rgba(255, 255, 255, 0.72); }
+
+.duel-ui {
+  position: absolute; z-index: 5;
+  left: 50%; bottom: calc(var(--frame-inset, 24px) + 14px);
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 18px;
+}
+.duel-ui[hidden] { display: none; }
+
+.orb {
+  --p: 0;
+  position: relative;
+  width: 62px; height: 62px; border-radius: 50%;
+  border: none; padding: 0; cursor: pointer;
+  background: conic-gradient(var(--accent) calc(var(--p) * 1turn), color-mix(in srgb, var(--fg) 12%, transparent) 0);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.orb::before {
+  content: ''; position: absolute; inset: 3px; border-radius: 50%;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border: 1px solid var(--line);
+}
+.orb b, .orb span { position: relative; z-index: 1; }
+.orb b { font-size: 19px; line-height: 1; color: var(--fg); font-weight: 400; }
+.orb span {
+  margin-top: 3px;
+  font: 500 8px var(--mono); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted);
+}
+.orb.ready { box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 40%, transparent); }
+.orb-spec.ready { animation: orbPulse 1.2s ease-in-out infinite; }
+@keyframes orbPulse { 50% { box-shadow: 0 0 32px color-mix(in srgb, var(--accent) 65%, transparent); } }
+
+.duel-exit {
+  font: 500 10px var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); background: none;
+  border: 1px solid var(--line); border-radius: 2px;
+  padding: 9px 14px; cursor: pointer;
+  transition: color var(--d-micro) var(--ease), border-color var(--d-micro) var(--ease);
+}
+.duel-exit:hover { color: var(--red); border-color: currentColor; }
+
+.duel-banner {
+  position: absolute; z-index: 6;
+  left: 0; right: 0; top: 28%;
+  text-align: center; pointer-events: none;
+  font: 400 clamp(36px, 6vw, 64px)/1 'VT323', var(--mono); /* OSRS-GOLD: game artifact */
+  color: #f5c518;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.6);
+}
+.duel-banner.lose { color: #d93025; }
+.duel-banner[hidden] { display: none; }
+
+/* ---------- the catalogue as a pinned horizontal gallery ---------- */
+
+.cine #projects.wide {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding-left: clamp(20px, 4vw, 48px);
+  padding-right: 0;
+  overflow: hidden;
+}
+.cine #projects.wide .section-h,
+.cine #projects.wide .section-note,
+.cine #projects.wide .ge {
+  max-width: 984px;
+  margin-left: auto; margin-right: auto;
+}
+.cine .cards.h-on {
+  display: flex; flex-wrap: nowrap; gap: 28px;
+  width: max-content;
+  padding-right: clamp(48px, 8vw, 160px);
+  will-change: transform;
+}
+.cine .cards.h-on .card { width: clamp(420px, 44vw, 720px); flex: 0 0 auto; }

@@ -44,7 +44,7 @@
           <h3>Entry I — Building this place</h3>
           <time datetime="2026-07-06">6th July 2026</time>
         </header>
-        <p>This site went from an empty folder to what you're looking at in a handful of build sessions: <strong>no frameworks, no build step</strong> — hand-written HTML, one stylesheet, and a single main.js doing everything you can see. The duel, the live charts, the quest log, the collection log: all hand-rolled canvas and vanilla JavaScript.</p>
+        <p>This site went from an empty folder to what you're looking at in a handful of build sessions: <strong>hand-written HTML, one stylesheet, no build step</strong> — the duel, the live charts, the quest log and the collection log are all hand-rolled canvas and vanilla JavaScript, with GSAP brought in later to conduct the scroll cinematography.</p>
         <p>Some things I learned shipping it. The <strong>.gg registry publishes its zone in batches</strong>, so marcus.gg spent its first afternoon registered but invisible to the entire internet — nothing was wrong, the Channel Islands just publish on their own schedule. GitHub Pages will quietly refuse to issue an HTTPS certificate if you attach a domain before its DNS exists; removing and re-adding the domain wakes it up. And Jekyll was processing this site on every deploy for no reason at all until a <strong>.nojekyll</strong> file put a stop to it.</p>
         <p>The fighters in the duel are modelled on my actual Old School RuneScape characters — the hood, the crest, and the twisted bow are the real loadout. If you've clicked a fighter, you've met the dragon.</p>
         <p>The quest log on the front page is the honest ledger of what's in progress. More entries here as more things get built.</p>
@@ -52,8 +52,12 @@
     </section>
   </main>
 
-  <footer data-ex="No frameworks were harmed. None were used.">© 2026 Marcus Deacon · marcus.gg · hand-built, no frameworks, no build step — every pixel placed on purpose. Edition of one.</footer>
+  <footer data-ex="Hand-rolled canvas, GSAP cinematography. Credits where due.">© 2026 Marcus Deacon · marcus.gg · hand-built, no build step — GSAP drives the cinematography, everything else is from scratch. Edition of one.</footer>
 
+  <script src="/js/vendor/gsap.min.js"></script>
+  <script src="/js/vendor/ScrollTrigger.min.js"></script>
+  <script src="/js/vendor/lenis.min.js"></script>
   <script src="/js/main.js"></script>
+  <script src="/js/cinema.js"></script>
 </body>
 </html>

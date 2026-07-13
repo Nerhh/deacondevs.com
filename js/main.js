@@ -138,6 +138,7 @@ const CLOG_ENTRIES = [
   { id: 'spec-marcus', name: "Marcus's special attack", hint: 'unleash it in the duel' },
   { id: 'spec-deacon', name: "Deacon's special attack", hint: 'the mage answers too' },
   { id: 'duel-death', name: 'A fighter falls', hint: 'watch a duel to the end' },
+  { id: 'duel-won', name: 'Duel victor', hint: 'challenge Deacon and win' },
   { id: 'watch-scan', name: 'A full dial scan', hint: 'let the watch finish its reading' },
   { id: 'theme-flip', name: 'Flipped the lights', hint: 'try the other theme' },
   { id: 'email-reveal', name: 'The secret email', hint: 'scrapers never find it' },
@@ -216,6 +217,10 @@ checkMoon();
   const flare = { r: -99999, m: -99999 };
   const cam = { x: 0, y: 0 };
   let ptx = 0, pty = 0;
+  let camZ = 0;                    // scroll-driven dolly into the fight (0 wide, 1 close)
+  let mode = 'auto';               // 'auto' spectator | 'player' you are Marcus
+  let duelResult = null;
+  const playerCd = { atk: 0, spec: 0 };
 
   const GOLD = '#f5c518'; /* OSRS-GOLD: canvas only */
   const IVORY = '#dfe6ff';
@@ -622,8 +627,11 @@ checkMoon();
       const f = co.f === 'r' ? ranger : mage;
       if (f.dead || f.freeze > 0) continue;
       const cell = 4 * SC;
-      const ax = f.dir === 1 ? f.x + (co.col - 8) * cell + cell / 2 : f.x + (8 - co.col - 1) * cell + cell / 2;
-      const ay = gy() + f.hopY - 19 * cell + co.row * cell + cell / 2;
+      const zc = 1 + 0.5 * camZ; // anchors track the scroll dolly's zoom
+      let ax = f.dir === 1 ? f.x + (co.col - 8) * cell + cell / 2 : f.x + (8 - co.col - 1) * cell + cell / 2;
+      let ay = gy() + f.hopY - 19 * cell + co.row * cell + cell / 2;
+      ax = (ax - W / 2) * zc + W / 2;
+      ay = (ay - gy()) * zc + gy();
       if (REDUCED || !co.sx) { co.sx = ax; co.sy = ay; }
       else { co.sx += (ax - co.sx) * 0.08; co.sy += (ay - co.sy) * 0.08; }
       const alpha = f.phase === 'windup' ? 0.25 : 1;
@@ -770,6 +778,11 @@ checkMoon();
       pr.from.hopY = -0.1;
       burst(tgt.x, gy() - 5 * 4 * SC, dark() ? '#d8d4c8' : '#6a6456', 14, true);
       clogUnlock('duel-death');
+      if (mode === 'player') {
+        duelResult = tgt === mage ? 'won' : 'lost';
+        if (duelResult === 'won') clogUnlock('duel-won');
+        if (window.__duel && window.__duel.onResult) window.__duel.onResult(duelResult);
+      }
     }
   }
 
@@ -777,8 +790,13 @@ checkMoon();
 
   function update(t, dt) {
     if (t > nextAttack && !ranger.dead && !mage.dead && !respawnAt) {
-      startAttack(turn === 0 ? ranger : mage, t, false);
-      turn ^= 1;
+      if (mode === 'player') {
+        // Deacon fights back on his own; Marcus waits for your orders
+        startAttack(mage, t, Math.random() < 0.18);
+      } else {
+        startAttack(turn === 0 ? ranger : mage, t, false);
+        turn ^= 1;
+      }
       scheduleNext(t);
     }
     for (const f of fighters) {
@@ -1148,6 +1166,13 @@ checkMoon();
     // the stage: only its contents jolt
     ctx.save();
     if (shake > 0.02) ctx.translate((Math.random() - 0.5) * shake * 7, (Math.random() - 0.5) * shake * 5);
+    // scroll dolly: the camera pushes into the fight as the visitor scrolls
+    if (camZ > 0.001) {
+      const z = 1 + 0.5 * camZ;
+      ctx.translate(W / 2, gy());
+      ctx.scale(z, z);
+      ctx.translate(-W / 2, -gy());
+    }
 
     const inset = W >= 640 ? 24 : 12;
     ctx.fillStyle = THEME.plinth;
@@ -1242,6 +1267,7 @@ checkMoon();
   canvas.addEventListener('click', e => {
     if (REDUCED) return;
     const now = performance.now();
+    if (mode === 'player') { playerAttack(false); return; }
     if (now < specReady) return;
     const rect = canvas.getBoundingClientRect();
     const f = (e.clientX - rect.left) < W / 2 ? ranger : mage;
@@ -1251,6 +1277,45 @@ checkMoon();
     if (f === ranger) flare.r = now; else flare.m = now;
     clogUnlock(f === ranger ? 'spec-marcus' : 'spec-deacon');
   });
+
+  function playerAttack(spec) {
+    if (mode !== 'player' || REDUCED) return false;
+    const now = performance.now();
+    if (now < (spec ? playerCd.spec : playerCd.atk)) return false;
+    if (!startAttack(ranger, now, !!spec)) return false;
+    if (spec) {
+      playerCd.spec = now + 8000;
+      surgeT0 = now;
+      flare.r = now;
+      clogUnlock('spec-marcus');
+    } else {
+      playerCd.atk = now + 1200;
+    }
+    return true;
+  }
+
+  // the scroll cinema and the duel HUD drive the fight through this
+  window.__duel = {
+    setCam(p) { camZ = Math.max(0, Math.min(1, p || 0)); },
+    challenge(on) {
+      mode = on ? 'player' : 'auto';
+      duelResult = null;
+      playerCd.atk = 0;
+      playerCd.spec = performance.now() + 3000; // the special charges up first
+    },
+    playerAttack,
+    getState() {
+      const now = performance.now();
+      return {
+        mode,
+        result: duelResult,
+        atk: Math.max(0, Math.min(1, 1 - (playerCd.atk - now) / 1200)),
+        spec: Math.max(0, Math.min(1, 1 - (playerCd.spec - now) / 8000)),
+        marcusHp: ranger.hp, deaconHp: mage.hp, maxHp: ranger.maxHp,
+      };
+    },
+    onResult: null,
+  };
 
   let rt;
   let lastBuild = 0;
@@ -1900,13 +1965,15 @@ document.addEventListener('click', e => {
 (function initChrome() {
   const head = document.querySelector('.site-head');
   const hero = document.querySelector('.hero');
+  const cine = !REDUCED && !!(window.gsap && window.ScrollTrigger);
   if (head && !hero) head.classList.add('scrolled');
   let ticking = false;
   const apply = () => {
     ticking = false;
     const y = window.scrollY || 0;
     if (head && hero) head.classList.toggle('scrolled', y > 40);
-    if (hero) {
+    if (hero && !cine) {
+      // the scroll cinema owns the hero dim when it's running
       const k = Math.max(0, Math.min(1, y / ((hero.offsetHeight || 1) * 0.6)));
       hero.style.setProperty('--k', k.toFixed(3));
     }
@@ -1921,7 +1988,8 @@ document.addEventListener('click', e => {
 
 (function initReveal() {
   const els = Array.from(document.querySelectorAll('.reveal'));
-  if (REDUCED || !('IntersectionObserver' in window)) {
+  if (REDUCED || !('IntersectionObserver' in window) || (window.gsap && window.ScrollTrigger)) {
+    // reduced motion, ancient browsers, or the scroll cinema running the show
     els.forEach(el => el.classList.add('in'));
     return;
   }
