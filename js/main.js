@@ -588,7 +588,8 @@ checkMoon();
     drawMage(mage, t);
     for (const pr of projectiles) drawProjectile(pr, t);
     ctx.restore();
-    ctx.drawImage(caches.grad, 0, gy() + 2, W, 64);
+    // the dissolve strip is opaque — in film mode it would blot out the world canvas beneath
+    if (!root.classList.contains('film')) ctx.drawImage(caches.grad, 0, gy() + 2, W, 64);
   }
 
   function drawAdditive(t) {
@@ -1147,21 +1148,27 @@ checkMoon();
   function render(t) {
     ctx.clearRect(0, 0, W, H);
     if (!caches || !caches.vig) return;
+    // in film mode the film canvas paints the world; this canvas carries only the fight
+    const FILM = root.classList.contains('film');
 
-    // the room: bolted down, never shakes
-    ctx.drawImage(caches.vig, 0, 0);
+    if (!FILM) {
+      // the room: bolted down, never shakes
+      ctx.drawImage(caches.vig, 0, 0);
+    }
     const sv = surgeVal(t);
     if (sv > 0.01) {
       ctx.globalAlpha = 0.6 * sv;
       ctx.drawImage(caches.core, W * 0.5 - W * 0.55, H * 0.45 - H * 0.5, W * 1.1, H);
       ctx.globalAlpha = 1;
     }
-    drawSkyMarks(t);
-    ctx.globalAlpha = THEME.skyA;
-    ctx.drawImage(caches.sky, Math.round(-W * 0.5 + cam.x * 4), gy() - caches.skyH);
-    ctx.globalAlpha = 1;
-    drawMist(t);
-    drawMotes(t);
+    if (!FILM) {
+      drawSkyMarks(t);
+      ctx.globalAlpha = THEME.skyA;
+      ctx.drawImage(caches.sky, Math.round(-W * 0.5 + cam.x * 4), gy() - caches.skyH);
+      ctx.globalAlpha = 1;
+      drawMist(t);
+      drawMotes(t);
+    }
 
     // the stage: only its contents jolt
     ctx.save();
@@ -1174,9 +1181,11 @@ checkMoon();
       ctx.translate(-W / 2, -gy());
     }
 
-    const inset = W >= 640 ? 24 : 12;
-    ctx.fillStyle = THEME.plinth;
-    ctx.fillRect(inset, gy() + 1, W - inset * 2, 1);
+    if (!FILM) {
+      const inset = W >= 640 ? 24 : 12;
+      ctx.fillStyle = THEME.plinth;
+      ctx.fillRect(inset, gy() + 1, W - inset * 2, 1);
+    }
 
     drawReflection(t);
     drawGlows(t);

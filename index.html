@@ -38,7 +38,7 @@
 
   <main id="top">
 
-    <section class="hero" id="hero">
+    <section class="hero fallback-only" id="hero">
       <h1 class="watermark" aria-label="Marcus Deacon">Marcus</h1>
       <canvas id="hero-canvas" aria-hidden="true" data-ex="Two halves of the same adventurer, settling it properly."></canvas>
       <div class="plate-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -50,24 +50,97 @@
         <p class="status"><span class="prompt">$</span> now building <a href="#p-vestra">vestra</a> — personal wealth management<span class="cursor">█</span></p>
         <p class="hero-hint" aria-hidden="true">Click a fighter to commission his special attack</p>
       </div>
-      <div class="hero-title" id="hero-title" aria-hidden="true">
-        <p class="ht-eyebrow">marcus.gg presents</p>
-        <p class="ht-logo">Marcus Deacon</p>
-        <p class="ht-sub">software developer · duelist · father of one</p>
-        <p class="ht-hint">▼ scroll to enter ▼</p>
+      <div class="hero-dim" aria-hidden="true"></div>
+      <noscript><p class="hero-noscript">MARCUS DEACON</p></noscript>
+    </section>
+
+    <!-- ================= THE FILM: one fixed stage, scroll is the timeline ================= -->
+    <div class="film-stage" id="film-stage">
+      <canvas id="film-canvas" aria-hidden="true"></canvas>
+
+      <div class="scene-ov" data-scene="0">
+        <p class="sc-tag">[ 01 · the duel ]</p>
+        <div class="sc-head">
+          <p class="sc-kicker">marcus.gg presents</p>
+          <p class="sc-h1">Marcus<br>Deacon</p>
+          <p class="sc-sub">Software developer. Duelist. Father of one. Tools that do the boring work — ticket prices watched, net worth tracked, the rest automated.</p>
+        </div>
+        <p class="sc-cap">great britain · gmt+1 · lvl 30<br>click a fighter for his special attack<br><span class="sc-hint">▼ scroll to roll the catalogue</span></p>
       </div>
-      <button class="challenge-btn" id="challenge-btn" hidden data-ex="Winner keeps the domain.">⚔ challenge deacon</button>
+
+      <div class="scene-ov" data-scene="1">
+        <p class="sc-tag">[ 02 · the catalogue ]</p>
+        <div class="sc-head">
+          <h2>Selected works</h2>
+          <p class="sc-sub">Three tools in active development, each exhibited as a living scene — drawn in canvas as you watch. Nothing here is a screenshot.</p>
+        </div>
+        <p class="sc-cap">the dragon knows the way</p>
+      </div>
+
+      <div class="scene-ov" data-scene="2">
+        <p class="sc-tag">[ 03 · tickets ]</p>
+        <div class="sc-head">
+          <p class="sc-index">nº 01 · chrome extension · in development</p>
+          <h2>StubHub Lens</h2>
+          <p class="sc-sub">Watches ticket prices so you don't have to — live tracking, rolling averages, and a quiet word before you overpay.</p>
+          <ul class="sc-tags"><li>chrome-extension</li><li>javascript</li><li>price-analysis</li></ul>
+        </div>
+        <p class="sc-cap">live price feed · rolling average<br>deal detection · demo data</p>
+      </div>
+
+      <div class="scene-ov" data-scene="3">
+        <p class="sc-tag">[ 04 · wealth ]</p>
+        <div class="sc-head">
+          <p class="sc-index">nº 02 · node · sqlite · pwa · active</p>
+          <h2>Vestra</h2>
+          <p class="sc-sub">A private ledger for people who like their money where they can see it — accounts, holdings, savings habits, and a monthly Wrapped for your net worth.</p>
+          <ul class="sc-tags"><li>node</li><li>sqlite</li><li>pwa</li></ul>
+        </div>
+        <p class="sc-cap">the allocation halo · demo data</p>
+      </div>
+
+      <div class="scene-ov" data-scene="4">
+        <p class="sc-tag">[ 05 · watches ]</p>
+        <div class="sc-head">
+          <p class="sc-index">nº 03 · expo · react-native · prototype</p>
+          <h2>Dial</h2>
+          <p class="sc-sub">Point a camera at a watch and get a straight answer on price — valued from the twenty cheapest live listings, not dealer optimism.</p>
+          <ul class="sc-tags"><li>expo</li><li>react-native</li><li>node</li></ul>
+        </div>
+        <p class="sc-cap">real local time on the dial<br>lowest-20 estimate · demo prices</p>
+      </div>
+
+      <div class="scene-ov" data-scene="5">
+        <p class="sc-tag">[ 06 · record of works ]</p>
+        <div class="sc-head">
+          <h2>Quest log</h2>
+          <p class="sc-sub">A quest log in place of a skills grid. No self-assigned levels — points are awarded on completion only, as is proper.</p>
+        </div>
+        <div id="quest-slot"></div>
+      </div>
+
+      <nav class="film-dots" aria-label="Scenes">
+        <button data-ex="The duel" aria-label="Scene 1 — the duel"></button>
+        <button data-ex="The catalogue" aria-label="Scene 2 — the catalogue"></button>
+        <button data-ex="StubHub Lens" aria-label="Scene 3 — StubHub Lens"></button>
+        <button data-ex="Vestra" aria-label="Scene 4 — Vestra"></button>
+        <button data-ex="Dial" aria-label="Scene 5 — Dial"></button>
+        <button data-ex="Quest log" aria-label="Scene 6 — quest log"></button>
+      </nav>
+
+      <button class="film-pill" id="film-pill" data-ex="Winner keeps the domain."><span>⚔ challenge deacon</span></button>
       <div class="duel-ui" id="duel-ui" hidden>
         <button class="orb" id="orb-atk" style="--p:1" aria-label="Attack — click, or press A"><b>⚔</b><span>attack</span></button>
         <button class="orb orb-spec" id="orb-spec" style="--p:0" aria-label="Special attack — press Space"><b>✦</b><span>special</span></button>
         <button class="duel-exit" id="duel-exit" data-ex="Nobody has to know.">flee</button>
       </div>
       <div class="duel-banner" id="duel-banner" hidden></div>
-      <div class="hero-dim" aria-hidden="true"></div>
-      <noscript><p class="hero-noscript">MARCUS DEACON</p></noscript>
-    </section>
+    </div>
+    <div class="film-track" id="film-track" aria-hidden="true"></div>
+    <!-- ================= /film ================= -->
 
-    <section id="projects" class="section">
+
+    <section id="projects" class="section fallback-only">
       <h2 class="section-h reveal"><span class="eyebrow">plate 01 — the catalogue</span>Selected works</h2>
       <p class="section-note reveal">Each work is exhibited with a live canvas render, drawn as you watch. Nothing here is a screenshot.</p>
       <div class="cards">
@@ -130,7 +203,9 @@
         </article>
 
       </div>
+    </section>
 
+    <section id="provenance" class="section tail">
       <div class="ge" id="ge-ticker" hidden>
         <div class="ge-head">
           <span class="ge-label">provenance — grand exchange</span>
@@ -191,13 +266,13 @@
       </ul>
     </section>
 
-    <section id="clog" class="section">
+    <section id="clog" class="section tail">
       <h2 class="section-h reveal"><span class="eyebrow">plate 03 — for the observant</span>Collection log <span class="total">logged <b id="clog-count">0</b>/<span id="clog-total">10</span></span></h2>
       <p class="section-note reveal">Ten discoveries hidden on this page for the observant visitor. Progress lives in your browser, and nowhere else.</p>
       <ul class="clog-grid reveal" id="clog-grid"></ul>
     </section>
 
-    <section id="about" class="section">
+    <section id="about" class="section tail">
       <h2 class="section-h reveal"><span class="eyebrow">plate 04 — the proprietor</span>About</h2>
       <div class="about-col">
         <p class="reveal"><strong>I'm Marcus Deacon</strong> — thirty, UK born and raised, father of one. My patience has been professionally load-tested and performs within tolerance.</p>
@@ -207,7 +282,7 @@
       </div>
     </section>
 
-    <section id="contact" class="section section-last">
+    <section id="contact" class="section section-last tail">
       <h2 class="section-h reveal"><span class="eyebrow">plate 05 — enquiries</span>Contact</h2>
       <p class="section-note reveal">The proprietor will see you now. Select an option — XP is awarded on click, as a courtesy.</p>
 
@@ -237,6 +312,6 @@
   <script src="js/vendor/ScrollTrigger.min.js"></script>
   <script src="js/vendor/lenis.min.js"></script>
   <script src="js/main.js"></script>
-  <script src="js/cinema.js"></script>
+  <script src="js/film.js"></script>
 </body>
 </html>
