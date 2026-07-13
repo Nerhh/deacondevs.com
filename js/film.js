@@ -2013,6 +2013,18 @@ if (pill && duelUi && banner && window.__duel) {
   };
 }
 
+/* ---------- verification hook: seek the timeline directly ---------- */
+
+window.__film = {
+  seek(v) {
+    const val = clamp01(v);
+    scrollTo(0, Math.round(track.offsetTop + trackLen() * val));
+    ScrollTrigger.update();
+    p = val;
+  },
+  get p() { return p; },
+};
+
 /* ---------- theme flips repaint the film ---------- */
 
 const themeBtn = document.getElementById('theme-toggle');
