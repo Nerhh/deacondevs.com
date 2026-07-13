@@ -52,6 +52,8 @@
 * { box-sizing: border-box; margin: 0; }
 
 html { scroll-behavior: smooth; }
+/* Lenis owns the easing in the cinema — browser smoothing on top of it double-damps every frame */
+html.cine { scroll-behavior: auto; }
 
 body {
   background: var(--bg);
