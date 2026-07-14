@@ -1098,4 +1098,4 @@ html.smooth { scroll-behavior: auto; }
 .film #clog .clog-item.done h3 { color: #3cd93c; }
 
 /* the chat window fills its slot — properly centred */
-.film #npc { width: 100%; }
+.film #npc { width: 100%; max-width: none; margin: 0 auto; }
