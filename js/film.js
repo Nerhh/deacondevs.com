@@ -2081,7 +2081,7 @@ function paintMarketScape(ctx, f) {
   var yv = [];
   for (i = 0; i < N; i++) yv.push(midY + pv(i) * 2 * amp);
   var s = (ms * 0.0075) % SW;      // slow leftward scroll — the market never sleeps
-  var sc = ex;                      // exit: ridge flattens toward midline
+  var sc = 1 - ex;                  // exit: ridge flattens toward midline
   // deal beacons: deepest local price minima (largest y), min separation
   var vals = [];
   for (i = 1; i < N - 1; i++) if (yv[i] > yv[i - 1] && yv[i] >= yv[i + 1]) vals.push(i);
@@ -2151,7 +2151,7 @@ function paintMarketScape(ctx, f) {
       var sx = Math.round(b * step - s) + cp * SW;
       if (sx < -40 || sx > W + 40) continue;
       var sy = midY + (wy - midY) * sc;
-      var lfx = lf(sx) * (0.15 + 0.85 * ex);
+      var lfx = lf(sx) * (0.15 + 0.85 * (1 - ex));
       for (k = 0; k < 2; k++) {
         var ph = ((ms / 1600) + i * 0.41 + k * 0.5) % 1;
         var pr = 3 + ph * H * 0.035;
@@ -2207,13 +2207,13 @@ function paintMarketScape(ctx, f) {
   if (ei < 0.999) {
     node(W * ei, ridgeY(W * ei), 2.2, 0.8 + 0.2 * Math.sin(ms / 90));
   }
-  var na = clamp01((ei - 0.87) * 8) * ex;
+  var na = clamp01((ei - 0.87) * 8) * (1 - ex);
   if (na > 0.02) {
     node(W * 0.86, ridgeY(W * 0.86), 1.8, (0.75 + 0.25 * Math.sin(ms / 260)) * na);
   }
 
   // foreground pines + grass silhouettes
-  ctx.globalAlpha = A * ei * (0.25 + 0.75 * ex);
+  ctx.globalAlpha = A * ei * (0.25 + 0.75 * (1 - ex));
   ctx.drawImage(pines, 0, H - pineH, W, pineH);
   ctx.restore();
 }
