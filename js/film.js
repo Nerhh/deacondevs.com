@@ -901,6 +901,46 @@ function paintGielinorFlyover(ctx, f) {
   var nbY = yNear + nearL.hgt;
   if (nbY < H) ctx.fillRect(0, nbY - 1, W, H - nbY + 1);
 
+  // price tags pinned to the summits — the chart means something again
+  if (entN > 0.4) {
+    var chartOff = mod(scroll * 0.62 + ms * 0.019, TW);
+    ctx.font = '16px VT323, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    var deepest = -1, deepY = -1, q2;
+    for (q2 = 0; q2 < 5; q2++) {
+      var yr0 = ridgeY(303, 10, H * 0.09, (q2 + 0.5) * TW / 5);
+      if (yr0 > deepY) { deepY = yr0; deepest = q2; }
+    }
+    for (q2 = 0; q2 < 5; q2++) {
+      var su = (q2 + 0.5) * TW / 5;
+      var yr = ridgeY(303, 10, H * 0.09, su);
+      var price = Math.round(128 - (yr / (H * 0.09)) * 92) + ((f.rnd(q2 * 13 + ((ms / 2200) | 0)) * 3) | 0);
+      var isDeal = q2 === deepest;
+      var label = (isDeal ? 'deal £' : '£') + price;
+      var tw3 = ctx.measureText(label).width + 12;
+      var sxb = su - chartOff;
+      for (var rep = 0; rep < 2; rep++) {
+        var sxx = sxb + rep * TW;
+        if (sxx < -60 || sxx > W + 60) continue;
+        var syy = yNear + nearL.baseY + yr - 20;
+        al(entN * 0.92);
+        ctx.fillStyle = 'rgba(6,8,12,0.85)';
+        ctx.fillRect(sxx - tw3 / 2, syy - 10, tw3, 20);
+        ctx.strokeStyle = isDeal ? 'rgba(156,199,255,0.6)' : 'rgba(217,180,91,0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sxx - tw3 / 2 + 0.5, syy - 9.5, tw3 - 1, 19);
+        ctx.fillStyle = isDeal ? '#9cc7ff' : '#f5c518';
+        ctx.fillText(label, sxx, syy + 1);
+        ctx.strokeStyle = isDeal ? 'rgba(156,199,255,0.35)' : 'rgba(217,180,91,0.3)';
+        ctx.beginPath();
+        ctx.moveTo(sxx, syy + 10);
+        ctx.lineTo(sxx, yNear + nearL.baseY + yr - 2);
+        ctx.stroke();
+      }
+    }
+  }
+
   // ---- pine silhouette band, fastest layer ----
   var pinH = Math.ceil(H * 0.2);
   var pines = f.cache(K + 'pines:' + DIM, TW, pinH, function (c) {
@@ -2259,6 +2299,24 @@ function paintWealthHalo(ctx, f) {
     ctx.save();
     ctx.translate(ox, oy);
     ctx.scale(os, os);
+    // the label is part of the orb: one fused plate behind it, game numerals
+    var LBL = ['stocks', 'pension', 'cash', 'play'];
+    var txt = LBL[i].toUpperCase() + ' ' + pcts[i] + '%';
+    ctx.font = '17px VT323, monospace';
+    var plateW = ctx.measureText(txt).width + 20;
+    var plateH = Math.max(24, orbR * 1.1);
+    var ldx = Math.cos(oa), ldy = Math.sin(oa);
+    var pxx, pyy;
+    if (Math.abs(ldx) >= 0.35) { pxx = ldx >= 0 ? -2 : 2 - plateW; pyy = -plateH / 2; }
+    else { pxx = -plateW / 2; pyy = ldy >= 0 ? -2 : 2 - plateH; }
+    A(al * 0.95); ctx.fillStyle = '#221c13';
+    rr(pxx, pyy, plateW, plateH, plateH / 2); ctx.fill();
+    A(al); ctx.strokeStyle = '#494034'; ctx.lineWidth = 3;
+    rr(pxx, pyy, plateW, plateH, plateH / 2); ctx.stroke();
+    A(al); ctx.fillStyle = cols[i];
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    var tcx = pxx + plateW / 2 + (Math.abs(ldx) >= 0.35 ? (ldx >= 0 ? orbR * 0.45 : -orbR * 0.45) : 0);
+    ctx.fillText(txt, tcx, pyy + plateH / 2 + 1);
     A(al * 0.95); ctx.fillStyle = '#221c13';
     ctx.beginPath(); ctx.arc(0, 0, orbR, 0, TAU); ctx.fill();
     A(al * 0.6); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 2;
@@ -2281,59 +2339,6 @@ function paintWealthHalo(ctx, f) {
     ctx.beginPath(); ctx.arc(-gr * 0.33, -gr * 0.35, gr * 0.28, 0, TAU); ctx.fill();
     A(al * 0.5); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(0, 0, gr * puls, 0, TAU); ctx.stroke();
-    // named label, radially outward from its orb
-    var LBL = ['stocks', 'pension', 'cash', 'play'];
-    var txt = LBL[i] + ' ' + pcts[i] + '%';
-    ctx.font = '14px VT323, monospace';
-    var tw2 = ctx.measureText(txt).width + 16, th2 = 19;
-    var ldx = Math.cos(oa), ldy = Math.sin(oa);
-    var lx = ldx * (orbR + 12), ly = ldy * (orbR + 12);
-    var tx = ldx >= 0 ? lx + 2 : lx - tw2 - 2;
-    if (Math.abs(ldx) < 0.35) { tx = -tw2 / 2; ly = ldy * (orbR + 24); }
-    var ty = ly - th2 / 2;
-    A(al * 0.88); ctx.fillStyle = '#14100b'; rr(tx, ty, tw2, th2, 4); ctx.fill();
-    A(al * 0.7); ctx.strokeStyle = f.hexA(cols[i], 0.55); ctx.lineWidth = 1; rr(tx, ty, tw2, th2, 4); ctx.stroke();
-    A(al); ctx.fillStyle = cols[i];
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(txt, tx + tw2 / 2, ty + th2 / 2 + 1);
-    ctx.restore();
-  }
-
-  // ---------- compass rose orb, top-left rim ----------
-  var cee = f.ease(f.clamp01((f.in01 - 0.22) / 0.5));
-  if (cee > 0.001) {
-    var cAng = Math.PI + 1.05;
-    var cdet = eo * R * 0.6;
-    var ccx = cx + Math.cos(cAng) * (R * 1.05 + cdet);
-    var ccy = cy + Math.sin(cAng) * (R * 1.05 + cdet);
-    var cR = Math.max(18, R * 0.13);
-    var cal = cee * (1 - eo);
-    var cs = 0.5 + 0.5 * cee;
-    ctx.save();
-    ctx.translate(ccx, ccy);
-    ctx.scale(cs, cs);
-    A(cal * 0.95); ctx.fillStyle = '#241e15';
-    ctx.beginPath(); ctx.arc(0, 0, cR, 0, TAU); ctx.fill();
-    A(cal); ctx.strokeStyle = '#5b5142'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(0, 0, cR * 0.98, 0, TAU); ctx.stroke();
-    A(cal * 0.5); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(0, 0, cR * 1.12, 0, TAU); ctx.stroke();
-    A(cal * 0.8); ctx.strokeStyle = '#d8ccb4'; ctx.lineWidth = 1.5;
-    ctx.lineCap = 'butt';
-    for (k = 0; k < 4; k++) {
-      var ta = -Math.PI / 2 + k * Math.PI / 2;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(ta) * cR * 0.66, Math.sin(ta) * cR * 0.66);
-      ctx.lineTo(Math.cos(ta) * cR * 0.85, Math.sin(ta) * cR * 0.85);
-      ctx.stroke();
-    }
-    ctx.rotate(Math.sin(ms * 0.0006) * 0.09);
-    A(cal); ctx.fillStyle = f.gold;
-    ctx.beginPath(); ctx.moveTo(0, -cR * 0.58); ctx.lineTo(cR * 0.15, 0); ctx.lineTo(-cR * 0.15, 0); ctx.closePath(); ctx.fill();
-    A(cal * 0.85); ctx.fillStyle = f.gold2;
-    ctx.beginPath(); ctx.moveTo(0, cR * 0.42); ctx.lineTo(cR * 0.15, 0); ctx.lineTo(-cR * 0.15, 0); ctx.closePath(); ctx.fill();
-    A(cal); ctx.fillStyle = '#14100b';
-    ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, TAU); ctx.fill();
     ctx.restore();
   }
 
@@ -2363,7 +2368,7 @@ function paintWealthHalo(ctx, f) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(txt, pxc, pyc + 1);
     A(pal * 0.7);
-    ctx.font = '9px "IBM Plex Mono", monospace';
+    ctx.font = '12px VT323, monospace';
     ctx.fillStyle = f.muted;
     ctx.fillText('NET WORTH', pxc, pyc - ph2 / 2 - 7);
     if (twOn) {
@@ -2692,7 +2697,7 @@ function paintDialMacro(ctx, f) {
     ctx.lineWidth = Math.max(1, R * 0.006);
     ctx.strokeRect(x, y, tw, th);
     ctx.fillStyle = '#3a2a18';
-    ctx.font = Math.max(9, Math.round(R * 0.048)) + 'px "IBM Plex Mono", monospace';
+    ctx.font = Math.max(12, Math.round(R * 0.058)) + 'px VT323, monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(txt, x + tw / 2, y + th / 2 + 1);
   }
@@ -4021,8 +4026,6 @@ window.__film = {
 
 /* ---------- theme flips repaint the film ---------- */
 
-const themeBtn = document.getElementById('theme-toggle');
-if (themeBtn) themeBtn.addEventListener('click', () => setTimeout(readTheme, 0));
 
 addEventListener('load', () => ScrollTrigger.refresh());
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => ScrollTrigger.refresh());

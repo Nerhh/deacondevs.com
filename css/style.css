@@ -29,25 +29,7 @@
   --d-entrance: 700ms;
 }
 
-[data-theme='light'] {
-  --bg: #f2efe7;
-  --bg2: #f7f4ec;
-  --bg3: #ebe7db;
-  --fg: #1d1b16;
-  --muted: #6d6a5e;
-  --line: #d9d2c0;
-  --line2: #bfb69e;
-  --accent: #82661e;
-  --accent-bright: #9a7a28;
-  --steel: #6d7a9e;
-  --violet: #7c3aed;
-  --green: #157a52;
-  --red: #b32d32;
-  --c1: #c9a13d;
-  --c2: #6d7a9e;
-  --c3: #7c3aed;
-  --c4: #8a8266;
-}
+
 
 * { box-sizing: border-box; margin: 0; }
 
@@ -117,13 +99,6 @@ a:hover { color: var(--accent); text-decoration-color: var(--accent); }
 }
 .site-head nav a:hover { color: var(--accent); }
 
-#theme-toggle {
-  background: none; border: 1px solid var(--line); border-radius: 0;
-  color: var(--fg); font: 500 12px var(--mono);
-  padding: 3px 10px; cursor: pointer;
-  transition: border-color var(--d-micro) var(--ease), color var(--d-micro) var(--ease);
-}
-#theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- layout ---------- */
 
@@ -465,8 +440,6 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px); }
   padding: 9px 14px; pointer-events: none;
   animation: clog-in 4s var(--ease) forwards;
 }
-.clog-toast.gilded-toast { border-color: #d9b45b; border-left-color: #d9b45b; color: #ffd76a; }
-[data-theme='light'] .clog-toast.gilded-toast { color: #7a5f13; border-color: #9a7a28; border-left-color: #9a7a28; }
 @keyframes clog-in {
   0% { opacity: 0; transform: translate(-50%, -10px); }
   8% { opacity: 1; transform: translate(-50%, 0); }
@@ -512,15 +485,6 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px); }
   .npc { flex-direction: column; align-items: flex-start; }
 }
 
-/* ---------- gilded mode (collection log complete) ---------- */
-
-.gilded .card, .gilded .quest, .gilded .clog-item, .gilded .ge,
-.gilded .demo, .gilded .log-entry, .gilded .npc {
-  border-color: color-mix(in srgb, #d9b45b 40%, var(--line));
-}
-.gilded .wordmark::before { content: '♛ '; color: var(--accent); }
-.gilded .studs i { background: var(--accent); }
-.gilded ::-webkit-scrollbar-thumb { background: #8a6d1d; }
 
 /* ---------- adventure log ---------- */
 
@@ -615,7 +579,6 @@ footer {
   pointer-events: none;
   background-color: transparent;
 }
-[data-theme="light"] .tint-layer { opacity: 0; }
 
 /* film grain breathes in the cinema */
 .cine .noise { inset: -60px; animation: grain 900ms steps(6) infinite; }
@@ -646,7 +609,6 @@ html:not(.cine) .hero-title { display: none; }
   color: #f5c518;
   text-shadow: 0 3px 0 #7a5510, 0 6px 0 rgba(0, 0, 0, 0.55), 0 24px 60px rgba(245, 197, 24, 0.18);
 }
-[data-theme="light"] .ht-logo { color: #7a5f13; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18); }
 .ht-sub {
   font: 500 12px var(--mono); letter-spacing: 0.22em; text-transform: uppercase;
   color: var(--muted);
@@ -673,7 +635,6 @@ html:not(.cine) .hero-title { display: none; }
   transition: border-color var(--d-micro) var(--ease), box-shadow var(--d-std) var(--ease);
 }
 .challenge-btn:hover { border-color: var(--accent); box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 30%, transparent); }
-[data-theme="light"] .challenge-btn { color: #7a5f13; background: rgba(255, 255, 255, 0.72); }
 
 .duel-ui {
   position: absolute; z-index: 5;
@@ -867,7 +828,6 @@ html.smooth { scroll-behavior: auto; }
   transition: border-color var(--d-micro) var(--ease), box-shadow var(--d-std) var(--ease);
 }
 .film-pill:hover { border-color: var(--accent); box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 30%, transparent); }
-[data-theme="light"] .film-pill { color: #7a5f13; }
 
 .film .duel-ui { position: absolute; z-index: 7; bottom: 30px; }
 .film .duel-banner { z-index: 8; }

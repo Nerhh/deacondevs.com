@@ -51,9 +51,7 @@ const SPLAT_COLS = {
   miss: { r: '#2951c4', d: '#0f2166' },
 };
 function drawSplatPixels(g, x, y, cell, kind) {
-  let cols = SPLAT_COLS[kind] || SPLAT_COLS.hit;
-  // gilded mode: hits land in gold, max-hit style
-  if (kind === 'hit' && root.classList.contains('gilded')) cols = { r: '#d9a821', d: '#8a6d1d' };
+  const cols = SPLAT_COLS[kind] || SPLAT_COLS.hit;
   for (let ry = 0; ry < SPLAT_MAP.length; ry++) {
     const row = SPLAT_MAP[ry];
     for (let rx = 0; rx < row.length; rx++) {
@@ -108,29 +106,12 @@ function refreshPalette() {
 const THEME_KEY = 'dd-theme';
 function applyTheme(t) {
   root.setAttribute('data-theme', t);
-  const btn = document.getElementById('theme-toggle');
-  if (btn) btn.textContent = t === 'dark' ? '☀' : '☾';
   const tc = document.querySelector('meta[name="theme-color"]');
   if (tc) tc.setAttribute('content', t === 'dark' ? '#05060b' : '#f2efe7');
   refreshPalette();
   repaints.forEach(fn => fn());
 }
-{
-  let saved = null;
-  try { saved = localStorage.getItem(THEME_KEY); } catch (e) { /* private mode */ }
-  if (saved !== 'dark' && saved !== 'light') {
-    saved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  }
-  applyTheme(saved);
-  const btn = document.getElementById('theme-toggle');
-  if (btn) btn.addEventListener('click', () => {
-    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore */ }
-    applyTheme(next);
-    clogUnlock('theme-flip');
-    checkMoon();
-  });
-}
+applyTheme('dark');
 
 /* ---------- collection log: what has this visitor discovered? ---------- */
 
@@ -140,7 +121,6 @@ const CLOG_ENTRIES = [
   { id: 'duel-death', name: 'The dragon falls', hint: 'see the boss fight through' },
   { id: 'duel-won', name: 'Dragon slayer', hint: 'fell Deacon the Blue' },
   { id: 'watch-scan', name: 'A full dial scan', hint: 'let the watch finish its reading' },
-  { id: 'theme-flip', name: 'Flipped the lights', hint: 'try the other theme' },
   { id: 'email-reveal', name: 'The secret email', hint: 'scrapers never find it' },
   { id: 'ge-ledger', name: 'The full ledger', hint: 'inspect the grand exchange' },
   { id: 'xp-100', name: '100 XP earned', hint: 'keep clicking things' },
@@ -172,8 +152,6 @@ function clogUnlock(id) {
   clogState[id] = Date.now();
   try { localStorage.setItem('dd-clog', JSON.stringify(clogState)); } catch (e) { /* ignore */ }
   clogRender();
-  const finished = clogComplete() && !root.classList.contains('gilded');
-  if (finished) root.classList.add('gilded');
   if (REDUCED) return;
   const entry = CLOG_ENTRIES.find(en => en.id === id);
   const t = document.createElement('div');
@@ -182,16 +160,6 @@ function clogUnlock(id) {
   document.body.appendChild(t);
   t.addEventListener('animationend', () => t.remove());
   setTimeout(() => t.remove(), 4500);
-  if (finished) {
-    setTimeout(() => {
-      const t2 = document.createElement('div');
-      t2.className = 'clog-toast gilded-toast';
-      t2.textContent = 'Collection log complete — gilded mode unlocked';
-      document.body.appendChild(t2);
-      t2.addEventListener('animationend', () => t2.remove());
-      setTimeout(() => t2.remove(), 5000);
-    }, 1200);
-  }
 }
 
 function checkMoon() {
@@ -200,7 +168,6 @@ function checkMoon() {
 }
 
 clogRender();
-if (clogComplete()) root.classList.add('gilded');
 checkMoon();
 window.__clog = clogUnlock; // the film's boss fight reports its unlocks through this
 
