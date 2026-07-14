@@ -922,3 +922,85 @@ html.smooth { scroll-behavior: auto; }
   #ge-slot { display: none; }
   #npc-slot { left: 4vw; right: 4vw; width: auto; top: auto; bottom: 8vh; transform: none; }
 }
+
+/* ---------- OSRS interface furniture: the film's docked UI ---------- */
+
+/* the quest list becomes the quest scroll itself (Legends' Quest treatment) */
+.film #quests .quests {
+  position: relative;
+  background: linear-gradient(175deg, #e6dabb 0%, #d8ccb4 45%, #cbbc9d 100%);
+  border-radius: 4px;
+  padding: 34px 30px 30px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55), inset 0 0 46px rgba(122, 94, 58, 0.28);
+  gap: 4px;
+}
+.film #quests .quests::before,
+.film #quests .quests::after {
+  content: ''; position: absolute; left: -14px; right: -14px; height: 16px;
+  background: linear-gradient(#7a5632, #4a3420 55%, #332313);
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+.film #quests .quests::before { top: -8px; }
+.film #quests .quests::after { bottom: -8px; }
+.film #quests .quest {
+  background: transparent; border: none; border-radius: 0;
+  border-bottom: 1px solid rgba(90, 66, 40, 0.25);
+  padding: 8px 4px;
+}
+.film #quests .quest:last-child { border-bottom: none; }
+.film #quests .quest h3 { color: #2b3a9e; }
+.film #quests .quest p { color: #5a4632; }
+.film #quests .quest .q-status { color: #7a5e3a; }
+.film #quests .quest .q-tag { color: #7a5e3a; border: 1px solid rgba(90, 66, 40, 0.35); background: transparent; }
+/* completed entries are struck through in quest-scroll red, as is tradition */
+.film #quests .quest-done h3,
+.film #quests .quest-done p {
+  color: #8f1d10;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: rgba(143, 29, 16, 0.8);
+}
+.film #quests .quest-done .q-status { color: #1d7a1d; }
+.film #quests .quest-locked h3, .film #quests .quest-locked p { color: #948569; text-decoration: none; }
+
+/* collection log entries as OSRS interface stone */
+.film #clog .clog-item {
+  background: #453b2f;
+  border: 1px solid #241d15;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 0 0 1px #5c5140;
+  border-radius: 3px;
+}
+.film #clog .clog-item h3 { color: #ff981f; }
+.film #clog .clog-item p { color: #b8ab94; }
+.film #clog .clog-mark { color: #8a7a5c; }
+.film #clog .clog-item.done .clog-mark { color: #3cba3c; }
+
+/* the grand exchange ledger in the same stone */
+.film #ge-ticker {
+  background: #453b2f;
+  border: 1px solid #241d15;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 0 0 1px #5c5140;
+  border-radius: 3px;
+}
+.film #ge-ticker .ge-label { color: #ff981f; }
+.film #ge-ticker .ge-title { color: #e8dcc0; }
+.film #ge-ticker .ge-meta { color: #b8ab94; }
+.film #ge-ticker .ge-link { color: #ff981f; }
+.film #ge-ticker .ge-bar { background: #241d15; border: 1px solid #5c5140; }
+
+/* the OSRS dialogue box: parchment, maroon name, blue continue */
+.film #npc {
+  background: linear-gradient(#dfd3b8, #d0c3a4);
+  border: 2px solid #4a3c28;
+  box-shadow: inset 0 0 0 2px #937f58, 0 18px 60px rgba(0, 0, 0, 0.55);
+  border-radius: 3px;
+  color: #241a0c;
+}
+.film #npc .npc-name { color: #7f0f0f; }
+.film #npc .npc-line { color: #241a0c; }
+.film #npc .npc-line a { color: #2b3a9e; text-decoration-color: #2b3a9e; }
+.film #npc .npc-continue { color: #2b3a9e; }
+.film #npc .npc-opt-title { color: #7f0f0f; }
+.film #npc .npc-options a, .film #npc .npc-options button { color: #241a0c; }
+.film #npc .npc-options a:hover, .film #npc .npc-options button:hover { color: #7f0f0f; }

@@ -1912,1209 +1912,1440 @@ function paintCampfireFinale(ctx, f) {
 }
 
 function paintMarketScape(ctx, f) {
-  var W = f.W, H = f.H, ms = f.ms;
-  var A = f.dark ? 1 : 0.5;
-  var ein = f.ease(f.in01);
-  var flat = f.ease(f.out01);
-  var live = 1 - flat;
-  var midY = H * 0.55, amp = H * 0.2;
   var GA = ctx.globalAlpha;
-  var TAU = 6.28318530718;
+  var W = f.W, H = f.H, ms = f.ms;
+  var rnd = f.rnd, hexA = f.hexA, clamp01 = f.clamp01;
+  var A = GA * (f.dark ? 1 : 0.55);
+  var ei = f.ease(clamp01(f.in01));
+  var ex = f.ease(clamp01(f.out01));
+  var midY = H * 0.52, amp = H * 0.16, baseY = H * 0.8;
+  var N = 80, step = Math.max(4, Math.round(W / 76)), SW = N * step;
+  var tk = f.dark ? ':d' : ':l';
+  var i, k;
 
-  function noise(x, s) {
-    var i = Math.floor(x), r = x - i, k = r * r * (3 - 2 * r);
-    var a = f.rnd(i + s);
-    return a + (f.rnd(i + 1 + s) - a) * k;
-  }
-  function terrain(x) {
-    var v = (noise(x * 0.09, 1201) - 0.5) * 1.1
-          + (noise(x * 0.23, 4801) - 0.5) * 0.5
-          + (noise(x * 0.47, 9601) - 0.5) * 0.22;
-    v *= 1.6;
-    if (v > 1) v = 1; else if (v < -1) v = -1;
-    return v;
+  // periodic deterministic price walk: coarse trend + medium swing + jag
+  function pv(n) {
+    n = ((n % N) + N) % N;
+    var iA = (n / 8) | 0, fA = (n % 8) / 8;
+    var a = rnd(41 + iA) * (1 - fA) + rnd(41 + ((iA + 1) % 10)) * fA;
+    var iB = (n / 4) | 0, fB = (n % 4) / 4;
+    var b = rnd(81 + iB) * (1 - fB) + rnd(81 + ((iB + 1) % 20)) * fB;
+    return (a * 0.52 + b * 0.3 + rnd(161 + n) * 0.18) - 0.5;
   }
 
-  // ---- (e) digit rain, far background ----
-  var rainA = ein * live;
-  if (rainA > 0.02) {
-    ctx.save();
-    ctx.font = '11px "Consolas","Courier New",monospace';
-    ctx.textAlign = 'center';
-    var CH = '0123456789£';
-    for (var c = 0; c < 16; c++) {
-      var colx = (0.03 + 0.94 * f.rnd(c * 7 + 1)) * W;
-      var spd = 8 + f.rnd(c * 7 + 2) * 14;
-      var ca = (0.08 + 0.13 * f.rnd(c * 7 + 3)) * rainA * A;
-      ctx.fillStyle = f.hexA(f.muted, ca);
-      for (var k = 0; k < 4; k++) {
-        var ph = f.rnd(c * 31 + k * 13 + 5);
-        var gy = ((ms * 0.001 * spd) / H + ph) % 1 * H;
-        var gi = (Math.floor(ms / 800 + ph * 40) * 7 + c * 3 + k * 11) % 11;
-        ctx.fillText(CH.charAt(gi), colx, gy);
+  // ---------- caches ----------
+  var sky = f.cache('paintMarketScape:sky:' + W + 'x' + H + tk, W, H, function (c) {
+    c.fillStyle = '#020308'; c.fillRect(0, 0, W, H);
+    var g = c.createLinearGradient(0, H * 0.38, 0, H * 0.82);
+    g.addColorStop(0, hexA('#e67e22', 0));
+    g.addColorStop(0.55, hexA('#b3541a', 0.10));
+    g.addColorStop(0.82, hexA('#e67e22', 0.17));
+    g.addColorStop(1, hexA('#5a2410', 0.22));
+    c.fillStyle = g; c.fillRect(0, H * 0.38, W, H * 0.44);
+    c.fillStyle = hexA('#040303', 0.6); c.fillRect(0, H * 0.82, W, H * 0.18);
+    for (var s2 = 0; s2 < 64; s2++) {
+      var sx = rnd(700 + s2) * W;
+      var sy = rnd(800 + s2) * rnd(830 + s2) * H * 0.5;
+      var sz = rnd(950 + s2) < 0.85 ? 1 : 2;
+      c.globalAlpha = 0.1 + rnd(900 + s2) * 0.32;
+      c.fillStyle = (s2 % 7 === 0) ? '#9cc7ff' : '#e8e4d8';
+      c.fillRect(sx, sy, sz, sz);
+    }
+    c.globalAlpha = 1;
+  });
+
+  var hs = Math.ceil(baseY) + 2;
+  var strip = f.cache('paintMarketScape:range:' + W + 'x' + H + tk, SW, hs, function (c) {
+    var xs = [], ys = [], j, q;
+    for (j = 0; j <= N; j++) { xs.push(j * step); ys.push(midY + pv(j) * 2 * amp); }
+    c.save();
+    c.beginPath(); c.moveTo(xs[0], ys[0]);
+    for (j = 1; j <= N; j++) c.lineTo(xs[j], ys[j]);
+    c.lineTo(SW, baseY + 2); c.lineTo(0, baseY + 2); c.closePath();
+    c.clip();
+    // 2-3 vertical shade bands (flat low-poly banding)
+    var bands = ['#3d4e2a', '#354626', '#42532e'];
+    for (j = 0; j < 3; j++) { c.fillStyle = bands[j]; c.fillRect(SW * j / 3 - 1, 0, SW / 3 + 2, baseY + 2); }
+    var g2 = c.createLinearGradient(0, midY - amp, 0, baseY);
+    g2.addColorStop(0, hexA('#0a0f07', 0));
+    g2.addColorStop(1, hexA('#0a0f07', 0.55));
+    c.fillStyle = g2; c.fillRect(0, 0, SW, baseY + 2);
+    // faceted slope shading: dark facets on descents (right of peaks), faint lit on ascents
+    for (j = 0; j < N; j++) {
+      var d = H * (0.045 + rnd(300 + j) * 0.05);
+      c.fillStyle = (ys[j + 1] > ys[j]) ? hexA('#131a0d', 0.4) : hexA('#74884a', 0.15);
+      c.beginPath();
+      c.moveTo(xs[j], ys[j]); c.lineTo(xs[j + 1], ys[j + 1]);
+      c.lineTo(xs[j + 1], ys[j + 1] + d); c.lineTo(xs[j], ys[j] + d);
+      c.closePath(); c.fill();
+    }
+    // long right-flank shadow wedges from each peak down to its next valley
+    for (j = 1; j < N; j++) {
+      if (ys[j] < ys[j - 1] && ys[j] < ys[j + 1]) {
+        q = j + 1; while (q < N && ys[q + 1] > ys[q]) q++;
+        c.fillStyle = hexA('#0d120a', 0.26);
+        c.beginPath();
+        c.moveTo(xs[j], ys[j]); c.lineTo(xs[q], ys[q]);
+        c.lineTo(xs[q], baseY + 2); c.lineTo(xs[j], baseY + 2);
+        c.closePath(); c.fill();
       }
     }
-    ctx.restore();
-  }
-
-  // ---- (a) cached perspective wireframe floor ----
-  var floor = f.cache('marketscape_floor', W, H, function (g, w, h) {
-    var vy = h * 0.58, cx0 = w * 0.5;
-    g.lineWidth = 1;
-    var hg = g.createLinearGradient(0, vy - h * 0.10, 0, vy + h * 0.16);
-    hg.addColorStop(0, f.hexA(f.gold2, 0));
-    hg.addColorStop(0.5, f.hexA(f.gold2, 0.05 * A));
-    hg.addColorStop(1, f.hexA(f.gold2, 0));
-    g.fillStyle = hg;
-    g.fillRect(0, vy - h * 0.10, w, h * 0.26);
-    g.strokeStyle = f.hexA(f.gold2, 0.12 * A);
-    g.beginPath(); g.moveTo(0, vy + 0.5); g.lineTo(w, vy + 0.5); g.stroke();
-    for (var i = 1; i <= 13; i++) {
-      var p = i / 13, y = vy + (h - vy) * p * p;
-      g.strokeStyle = f.hexA(f.gold2, (0.03 + 0.09 * p) * A);
-      g.beginPath(); g.moveTo(0, y + 0.5); g.lineTo(w, y + 0.5); g.stroke();
+    // snow caps on the 3 tallest peaks (two flat facets each)
+    var peaks = [];
+    for (j = 1; j < N; j++) if (ys[j] < ys[j - 1] && ys[j] <= ys[j + 1]) peaks.push(j);
+    peaks.sort(function (a, b) { return ys[a] - ys[b]; });
+    var snow = 0;
+    for (j = 0; j < peaks.length && snow < 3; j++) {
+      q = peaks[j];
+      var sl = ys[q] + H * 0.034;
+      var tL = clamp01((ys[q - 1] - sl) / ((ys[q - 1] - ys[q]) || 1));
+      var xL = xs[q - 1] + (xs[q] - xs[q - 1]) * tL;
+      var yL = ys[q - 1] + (ys[q] - ys[q - 1]) * tL;
+      var tR = clamp01((ys[q + 1] - sl) / ((ys[q + 1] - ys[q]) || 1));
+      var xR = xs[q + 1] + (xs[q] - xs[q + 1]) * tR;
+      var yR = ys[q + 1] + (ys[q] - ys[q + 1]) * tR;
+      var yM = Math.max(yL, yR);
+      c.fillStyle = hexA('#e8eeee', 0.92);
+      c.beginPath(); c.moveTo(xL, yL); c.lineTo(xs[q], ys[q]); c.lineTo(xs[q], yM); c.closePath(); c.fill();
+      c.fillStyle = hexA('#b4c2c6', 0.9);
+      c.beginPath(); c.moveTo(xs[q], ys[q]); c.lineTo(xR, yR); c.lineTo(xs[q], yM); c.closePath(); c.fill();
+      snow++;
     }
-    g.strokeStyle = f.hexA(f.gold2, 0.06 * A);
-    for (var j = -14; j <= 14; j++) {
-      var xb = cx0 + j * (w * 0.085);
-      g.beginPath();
-      g.moveTo(cx0 + (xb - cx0) * 0.04, vy + (h - vy) * 0.04);
-      g.lineTo(xb, h);
-      g.stroke();
+    c.restore();
+    // dashed rolling-average line (wrapped window, seamless at tile edge)
+    var avg = [];
+    for (j = 0; j <= N; j++) {
+      var sum = 0;
+      for (q = -4; q <= 4; q++) sum += ys[(((j + q) % N) + N) % N];
+      avg.push(sum / 9);
     }
-    g.strokeStyle = f.hexA(f.gold2, 0.14 * A);
-    for (var tk = 0; tk < 13; tk++) {
-      var ty = h * 0.25 + tk * h * 0.05;
-      var tw = (tk % 4 === 0) ? 10 : 5;
-      g.beginPath(); g.moveTo(0, ty + 0.5); g.lineTo(tw, ty + 0.5); g.stroke();
+    c.strokeStyle = hexA(f.gold2, 0.75); c.lineWidth = 1.2; c.setLineDash([8, 6]);
+    c.beginPath(); c.moveTo(xs[0], avg[0]);
+    for (j = 1; j <= N; j++) c.lineTo(xs[j], avg[j]);
+    c.stroke(); c.setLineDash([]);
+    // glowing gold price line: layered translucent passes, bright core
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    var pass = [[5, 0.14], [2.6, 0.26], [1.5, 0.95]];
+    for (q = 0; q < 3; q++) {
+      c.strokeStyle = hexA(f.gold, pass[q][1]); c.lineWidth = pass[q][0];
+      c.beginPath(); c.moveTo(xs[0], ys[0]);
+      for (j = 1; j <= N; j++) c.lineTo(xs[j], ys[j]);
+      c.stroke();
     }
   });
-  ctx.globalAlpha = GA * ein * (1 - 0.5 * flat);
-  ctx.drawImage(floor, 0, 0, W, H);
-  ctx.globalAlpha = GA;
 
-  // ---- (b) price ridge: scrolling deterministic walk ----
-  var N = 90, PAD = 5, dx = W / (N - 1);
-  var u = ms * 0.0018;
-  var raw = new Array(N + 2 * PAD + 1);
-  for (var s0 = 0; s0 <= N + 2 * PAD; s0++) raw[s0] = terrain(u + s0 - PAD);
-  var ys = new Array(N + 1), ya = new Array(N + 1);
-  for (var p0 = 0; p0 <= N; p0++) {
-    var sum = 0;
-    for (var q = -4; q <= 4; q++) sum += raw[p0 + PAD + q];
-    ys[p0] = midY - amp * raw[p0 + PAD] * live;
-    ya[p0] = midY - amp * (sum / 9) * live;
+  var pineH = Math.round(H * 0.16);
+  var pines = f.cache('paintMarketScape:pines:' + W + 'x' + H, W, pineH, function (c) {
+    var g = c.createLinearGradient(0, 0, 0, pineH);
+    g.addColorStop(0, hexA('#030604', 0));
+    g.addColorStop(0.6, hexA('#040805', 0.8));
+    g.addColorStop(1, '#030504');
+    c.fillStyle = g; c.fillRect(0, 0, W, pineH);
+    var np = 16, j;
+    for (j = 0; j < np; j++) {
+      var px = (j + 0.5) * W / np + (rnd(400 + j) - 0.5) * W / np * 0.9;
+      var hh = (0.4 + rnd(430 + j) * 0.5) * pineH * (px < W * 0.34 ? 0.55 : 1);
+      var bw = hh * 0.5;
+      c.fillStyle = '#060c08';
+      c.beginPath(); c.moveTo(px, pineH - hh); c.lineTo(px + bw / 2, pineH + 1); c.lineTo(px - bw / 2, pineH + 1); c.closePath(); c.fill();
+      c.fillStyle = hexA('#020408', 0.65);
+      c.beginPath(); c.moveTo(px, pineH - hh); c.lineTo(px + bw / 2, pineH + 1); c.lineTo(px, pineH + 1); c.closePath(); c.fill();
+      c.fillStyle = '#081108';
+      c.beginPath(); c.moveTo(px, pineH - hh * 0.72); c.lineTo(px + bw * 0.3, pineH - hh * 0.2); c.lineTo(px - bw * 0.3, pineH - hh * 0.2); c.closePath(); c.fill();
+    }
+    c.strokeStyle = hexA('#0b1509', 0.9); c.lineWidth = 1;
+    c.beginPath();
+    for (j = 0; j < 26; j++) {
+      var gx = rnd(500 + j) * W, gy = 3 + rnd(520 + j) * 6;
+      c.moveTo(gx, pineH); c.lineTo(gx - 2, pineH - gy);
+      c.moveTo(gx, pineH); c.lineTo(gx + 1, pineH - gy - 2);
+      c.moveTo(gx, pineH); c.lineTo(gx + 3, pineH - gy + 2);
+    }
+    c.stroke();
+  });
+
+  var cw = Math.round(W * 0.11) + 40, ch = Math.round(H * 0.05) + 16;
+  var cloud = f.cache('paintMarketScape:cloud:' + W + 'x' + H, cw, ch, function (c) {
+    function poly(pts, col) {
+      c.fillStyle = col; c.beginPath(); c.moveTo(pts[0][0] * cw, pts[0][1] * ch);
+      for (var q = 1; q < pts.length; q++) c.lineTo(pts[q][0] * cw, pts[q][1] * ch);
+      c.closePath(); c.fill();
+    }
+    poly([[0.08, 0.62], [0.3, 0.3], [0.62, 0.24], [0.9, 0.5], [0.66, 0.62]], '#141b2e');
+    poly([[0.3, 0.3], [0.62, 0.24], [0.6, 0.55]], '#1b2440');
+    poly([[0.02, 0.72], [0.08, 0.62], [0.66, 0.62], [0.9, 0.5], [0.97, 0.68], [0.5, 0.82]], '#0e1424');
+    poly([[0.02, 0.72], [0.5, 0.82], [0.97, 0.68], [0.5, 0.9]], hexA('#e67e22', 0.16));
+  });
+
+  // ---------- per-frame series data ----------
+  var yv = [];
+  for (i = 0; i < N; i++) yv.push(midY + pv(i) * 2 * amp);
+  var s = (ms * 0.0075) % SW;      // slow leftward scroll — the market never sleeps
+  var sc = ex;                      // exit: ridge flattens toward midline
+  // deal beacons: deepest local price minima (largest y), min separation
+  var vals = [];
+  for (i = 1; i < N - 1; i++) if (yv[i] > yv[i - 1] && yv[i] >= yv[i + 1]) vals.push(i);
+  vals.sort(function (a, b) { return yv[b] - yv[a]; });
+  var bea = [];
+  for (i = 0; i < vals.length && bea.length < 3; i++) {
+    var ok = true;
+    for (k = 0; k < bea.length; k++) {
+      var dd = Math.abs(vals[i] - bea[k]); if (Math.min(dd, N - dd) < 10) { ok = false; break; }
+    }
+    if (ok) bea.push(vals[i]);
+  }
+  // campfire: midpoint of the steepest slope
+  var best = 0, bd = -1;
+  for (i = 0; i < N; i++) { var d3 = Math.abs(yv[(i + 1) % N] - yv[i]); if (d3 > bd) { bd = d3; best = i; } }
+  var fireX = (best + 0.5) * step;
+  var fireY = (yv[best] + yv[(best + 1) % N]) / 2 + 2;
+
+  function lf(x) { return clamp01((x - W * 0.3) / (W * 0.09)); } // calm left third
+  function ridgeY(x) {
+    var u = (x + s) % SW; if (u < 0) u += SW;
+    var idx = u / step, i0 = idx | 0, fr = idx - i0;
+    var wy2 = yv[i0 % N] + (yv[(i0 + 1) % N] - yv[i0 % N]) * fr;
+    return midY + (wy2 - midY) * sc;
+  }
+  function node(x, y, r, bl) {
+    ctx.fillStyle = hexA(f.gold, 0.12 * bl);
+    ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = hexA(f.gold, 0.3 * bl);
+    ctx.beginPath(); ctx.arc(x, y, r * 1.7, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = hexA('#fff3d0', 0.95 * bl);
+    ctx.beginPath(); ctx.arc(x, y, r * 0.8, 0, 6.2832); ctx.fill();
   }
 
-  var reveal = ein >= 0.999 ? W : W * ein;
-  if (reveal > 2) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, reveal, H);
-    ctx.clip();
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+  // ---------- paint ----------
+  ctx.save();
+  ctx.globalAlpha = A;
+  ctx.drawImage(sky, 0, 0, W, H);
 
-    var ridge = new Path2D();
-    ridge.moveTo(0, ys[0]);
-    for (var p1 = 1; p1 <= N; p1++) ridge.lineTo(p1 * dx, ys[p1]);
+  // drifting low-poly cloud slabs
+  for (i = 0; i < 3; i++) {
+    var csc = 0.7 + rnd(60 + i) * 0.6;
+    var per = W + cw * csc + 80;
+    var pos = (ms * (0.004 + 0.0035 * i) + i * 1370) % per;
+    var cx = W + 40 - pos;
+    var cy = H * (0.08 + 0.075 * i);
+    ctx.globalAlpha = A * 0.5 * (0.3 + 0.7 * lf(cx + cw * csc * 0.5)) * (0.25 + 0.75 * ei);
+    ctx.drawImage(cloud, cx, cy, cw * csc, ch * csc);
+  }
+  ctx.globalAlpha = A;
 
-    // area fill below the ridge
-    var grd = ctx.createLinearGradient(0, midY - amp, 0, H * 0.98);
-    grd.addColorStop(0, f.hexA(f.gold, 0.20 * A));
-    grd.addColorStop(0.45, f.hexA(f.gold, 0.05 * A));
-    grd.addColorStop(1, f.hexA(f.gold, 0));
-    ctx.fillStyle = grd;
-    ctx.beginPath();
-    ctx.moveTo(0, H * 0.98);
-    for (var p2 = 0; p2 <= N; p2++) ctx.lineTo(p2 * dx, ys[p2]);
-    ctx.lineTo(W, H * 0.98);
-    ctx.closePath();
-    ctx.fill();
+  // ridge group: entrance draws in left-to-right
+  ctx.save();
+  if (ei < 0.999) { ctx.beginPath(); ctx.rect(0, 0, W * ei, H); ctx.clip(); }
+  var dy = midY * (1 - sc), dh = hs * sc;
+  var dx1 = Math.round(-s);
+  ctx.drawImage(strip, dx1, dy, SW, dh);
+  ctx.drawImage(strip, dx1 + SW, dy, SW, dh);
 
-    // layered glow strokes (no shadowBlur)
-    var coreA = (1 - flat * 0.3) * A;
-    ctx.strokeStyle = f.hexA(f.gold, 0.05 * coreA);
-    ctx.lineWidth = 7;
-    ctx.stroke(ridge);
-    ctx.strokeStyle = f.hexA(f.gold, 0.13 * coreA);
-    ctx.lineWidth = 3;
-    ctx.stroke(ridge);
-    ctx.strokeStyle = f.hexA(f.gold, 0.85 * coreA);
-    ctx.lineWidth = 1.4;
-    ctx.stroke(ridge);
-
-    // ---- (c) rolling-average dashed line ----
-    ctx.setLineDash([7, 7]);
-    ctx.lineDashOffset = -(ms * 0.03) % 14;
-    ctx.strokeStyle = f.hexA(f.violet, 0.55 * live * A + 0.1 * A);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, ya[0]);
-    for (var p3 = 1; p3 <= N; p3++) ctx.lineTo(p3 * dx, ya[p3]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // ---- (d) price beacons at local minima below the average ----
-    var cands = [];
-    for (var b = 3; b <= N - 3; b++) {
-      if (ys[b] > ys[b - 1] && ys[b] >= ys[b + 1] && ys[b] > ys[b - 2] && ys[b] > ys[b + 2]) {
-        var depth = ys[b] - ya[b];
-        if (depth > H * 0.02) cands.push({ x: b * dx, y: ys[b], d: depth, w: Math.round(u + b) });
+  // deal beacons: pulse ring + red/white flag + price tag
+  var fs = Math.max(10, Math.round(H * 0.011));
+  var poleH = 10 + H * 0.014;
+  for (i = 0; i < bea.length; i++) {
+    var b = bea[i], wy = yv[b];
+    var price = Math.round(22 + ((midY + amp - wy) / (2 * amp)) * 68) + (((rnd(b * 7 + ((ms / 1600) | 0)) * 3) | 0) - 1);
+    for (var cp = 0; cp < 2; cp++) {
+      var sx = Math.round(b * step - s) + cp * SW;
+      if (sx < -40 || sx > W + 40) continue;
+      var sy = midY + (wy - midY) * sc;
+      var lfx = lf(sx) * (0.15 + 0.85 * ex);
+      for (k = 0; k < 2; k++) {
+        var ph = ((ms / 1600) + i * 0.41 + k * 0.5) % 1;
+        var pr = 3 + ph * H * 0.035;
+        var pa = (1 - ph) * (1 - ph) * 0.55 * lfx;
+        if (pa > 0.02) {
+          ctx.strokeStyle = hexA(f.ice, pa * 0.4); ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.ellipse(sx, sy + 2, pr, pr * 0.35, 0, 0, 6.2832); ctx.stroke();
+          ctx.strokeStyle = hexA(f.ice, pa); ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.ellipse(sx, sy + 2, pr, pr * 0.35, 0, 0, 6.2832); ctx.stroke();
+        }
+      }
+      var fa = 0.45 + 0.5 * lf(sx);
+      ctx.strokeStyle = hexA('#d8ccb4', fa); ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(sx, sy + 2); ctx.lineTo(sx, sy - poleH); ctx.stroke();
+      var wv = Math.sin(ms / 280 + i * 2.1) * 1.6;
+      var fw = 8 + H * 0.004;
+      ctx.fillStyle = hexA('#ece6d6', fa);
+      ctx.beginPath(); ctx.moveTo(sx, sy - poleH); ctx.lineTo(sx + fw, sy - poleH + 1 + wv); ctx.lineTo(sx + fw, sy - poleH + 4.5 + wv); ctx.lineTo(sx, sy - poleH + 4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = hexA(f.red, fa);
+      ctx.beginPath(); ctx.moveTo(sx, sy - poleH + 4); ctx.lineTo(sx + fw, sy - poleH + 4.5 + wv); ctx.lineTo(sx + fw, sy - poleH + 8 + wv); ctx.lineTo(sx, sy - poleH + 8); ctx.closePath(); ctx.fill();
+      if (lfx > 0.03) {
+        var bw2 = fs * 2.4, bh2 = fs + 5;
+        var ty = sy - poleH - 8 - bh2;
+        ctx.fillStyle = hexA('#221c14', 0.92 * lfx);
+        ctx.fillRect(sx - bw2 / 2, ty, bw2, bh2);
+        ctx.strokeStyle = hexA('#6a4c2e', 0.9 * lfx); ctx.lineWidth = 1;
+        ctx.strokeRect(sx - bw2 / 2 + 0.5, ty + 0.5, bw2 - 1, bh2 - 1);
+        ctx.fillStyle = hexA('#ff981f', 0.95 * lfx);
+        ctx.font = fs + 'px VT323, monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('£' + price, sx, ty + bh2 / 2 + 1);
       }
     }
-    cands.sort(function (m, n) { return n.d - m.d; });
-    var picked = [];
-    for (var ci = 0; ci < cands.length && picked.length < 3; ci++) {
-      var ok = true;
-      for (var pi = 0; pi < picked.length; pi++) {
-        if (Math.abs(picked[pi].x - cands[ci].x) < W * 0.14) { ok = false; break; }
-      }
-      if (ok) picked.push(cands[ci]);
-    }
-    for (var bi = 0; bi < picked.length; bi++) {
-      var bc = picked[bi];
-      var ef = f.clamp01(Math.min(bc.x, W - bc.x) / (W * 0.07)) * live;
-      if (ef <= 0.02) continue;
-      var pp = (ms * 0.0011 + bc.w * 0.317) % 1;
-      ctx.strokeStyle = f.hexA(f.ice, (1 - pp) * 0.55 * ef * A);
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(bc.x, bc.y, 3 + pp * 11, 0, TAU); ctx.stroke();
-      ctx.fillStyle = f.hexA(f.ice, 0.16 * ef * A);
-      ctx.beginPath(); ctx.arc(bc.x, bc.y, 6, 0, TAU); ctx.fill();
-      ctx.fillStyle = f.hexA(f.ice, 0.9 * ef * A);
-      ctx.beginPath(); ctx.arc(bc.x, bc.y, 2.2, 0, TAU); ctx.fill();
-      ctx.strokeStyle = f.hexA(f.ice, 0.3 * ef * A);
-      ctx.beginPath();
-      ctx.moveTo(bc.x + 0.5, bc.y - 9);
-      ctx.lineTo(bc.x + 0.5, bc.y - H * 0.16);
-      ctx.stroke();
-      var ty = bc.y - 13 - 3 * Math.sin(ms * 0.003 + bc.w);
-      ctx.fillStyle = f.hexA(f.ice, 0.85 * ef * A);
-      ctx.beginPath();
-      ctx.moveTo(bc.x, ty);
-      ctx.lineTo(bc.x - 4.5, ty - 7);
-      ctx.lineTo(bc.x + 4.5, ty - 7);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
   }
 
-  // draw-head spark while the ridge is revealing left-to-right
-  if (ein > 0.02 && ein < 0.995) {
-    var hj = ein * N;
-    var h0 = Math.floor(hj);
-    var h1 = h0 + 1 > N ? N : h0 + 1;
-    var hy = ys[h0] + (ys[h1] - ys[h0]) * (hj - h0);
-    ctx.fillStyle = f.hexA(f.gold, 0.18 * A);
-    ctx.beginPath(); ctx.arc(reveal, hy, 9, 0, TAU); ctx.fill();
-    ctx.fillStyle = f.hexA(f.gold, 0.9 * A);
-    ctx.beginPath(); ctx.arc(reveal, hy, 2.5, 0, TAU); ctx.fill();
+  // campfire: one warm flickering pixel cluster on the steep slope
+  for (var cp2 = 0; cp2 < 2; cp2++) {
+    var fx2 = Math.round(fireX - s) + cp2 * SW;
+    if (fx2 < -12 || fx2 > W + 12) continue;
+    var fy2 = midY + (fireY - midY) * sc;
+    var fl = 0.6 + 0.4 * rnd(11 + ((ms / 90) | 0) % 97);
+    var jx = (rnd(31 + ((ms / 130) | 0) % 89) - 0.5) * 1.4;
+    ctx.fillStyle = hexA(f.ember, 0.1 * fl);
+    ctx.beginPath(); ctx.arc(fx2 + jx, fy2, 8 + 2 * fl, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = hexA('#ff9d3a', 0.25 * fl);
+    ctx.beginPath(); ctx.arc(fx2 + jx, fy2, 3.5, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = hexA('#ffd9a0', 0.9 * fl);
+    ctx.fillRect(fx2 + jx - 1, fy2 - 1.5, 2, 2.5);
+  }
+  ctx.restore();
+
+  // pen tip while the line draws in; live tick node once settled
+  if (ei < 0.999) {
+    node(W * ei, ridgeY(W * ei), 2.2, 0.8 + 0.2 * Math.sin(ms / 90));
+  }
+  var na = clamp01((ei - 0.87) * 8) * ex;
+  if (na > 0.02) {
+    node(W * 0.86, ridgeY(W * 0.86), 1.8, (0.75 + 0.25 * Math.sin(ms / 260)) * na);
   }
 
-  ctx.globalAlpha = GA;
+  // foreground pines + grass silhouettes
+  ctx.globalAlpha = A * ei * (0.25 + 0.75 * ex);
+  ctx.drawImage(pines, 0, H - pineH, W, pineH);
+  ctx.restore();
 }
 
 function paintWealthHalo(ctx, f) {
+  var GA = ctx.globalAlpha;
+  var AM = GA * (f.dark ? 1 : 0.55);
   var W = f.W, H = f.H, ms = f.ms;
   var TAU = Math.PI * 2;
-  var dk = f.dark ? 1 : 0.5;
-  var dkLine = f.dark ? 1 : 0.75;
-  var baseA = ctx.globalAlpha;
   var cx = W * 0.62, cy = H * 0.5;
-  var R = Math.min(W, H) * 0.34;
-  var lw = 26;
-  var Ro = R + 34, Ri = R - 32;
-  var inE = f.ease(f.in01);
-  var outE = f.ease(f.out01);
-  var live = 1 - outE * 0.9;
-  var gone = 1 - outE;
-  var tRot = f.t * 0.4363; // ~25deg total scroll rotation
-  var rot = -Math.PI / 2 + tRot - (1 - inE) * 0.5;
+  var R = Math.min(W, H) * 0.30;
+  var ringW = R * 0.09;
+  var mapR = R - ringW * 0.5 + 2;
+  var ei = f.ease(f.clamp01(f.in01));
+  var eo = f.ease(f.clamp01(f.out01));
+  var live = ei * (1 - eo);
+  var i, k;
+  if (f.in01 <= 0.001) { ctx.globalAlpha = GA; return; }
 
-  var segs = [
-    [0.52, f.gold,   'INDEX 52%'],
-    [0.28, f.violet, 'PENSION 28%'],
-    [0.12, f.ice,    'CASH 12%'],
-    [0.08, f.ember,  'PLAY 8%']
-  ];
+  function A(a) { ctx.globalAlpha = Math.max(0, Math.min(1, a)) * AM; }
+  function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function fmt(n) {
+    var s = '' + Math.max(0, Math.floor(n)), o = '', L = s.length, q;
+    for (q = 0; q < L; q++) { o += s.charAt(q); var rd = L - 1 - q; if (rd > 0 && rd % 3 === 0) o += ','; }
+    return o;
+  }
 
-  ctx.save();
-
-  // ---------- soft core glow (cached radial gradient) ----------
-  var CS = Math.ceil(R * 2.6);
-  var core = f.cache('vestraHaloCore', CS, CS, function (g, w, h) {
-    var gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
-    gr.addColorStop(0, f.hexA(f.gold, 0.14));
-    gr.addColorStop(0.4, f.hexA(f.gold, 0.045));
-    gr.addColorStop(1, f.hexA(f.gold, 0));
-    g.fillStyle = gr;
-    g.fillRect(0, 0, w, h);
-  });
-  var pulse = 0.8 + 0.2 * Math.sin(ms * 0.0007);
-  ctx.globalAlpha = baseA * pulse * inE * live * dk;
-  ctx.drawImage(core, cx - CS / 2, cy - CS / 2);
-
-  // ---------- HUD furniture: orbit rings + ticks (cached, drawn rotated) ----------
-  var FS = Math.ceil((Ro + 14) * 2);
-  var furn = f.cache('vestraHaloFurn', FS, FS, function (g, w, h) {
-    var mx = w / 2, my = h / 2, k, a, major, r0, r1;
-    g.lineWidth = 1;
-    g.strokeStyle = f.hexA(f.gold2, 0.28);
-    g.beginPath(); g.arc(mx, my, Ro, 0, TAU); g.stroke();
-    g.strokeStyle = f.hexA(f.gold2, 0.18);
-    g.beginPath(); g.arc(mx, my, Ri, 0, TAU); g.stroke();
-    for (k = 0; k < 72; k++) {
-      a = k / 72 * TAU;
-      major = (k % 6 === 0);
-      r0 = Ro + 3; r1 = r0 + (major ? 8 : 3);
-      g.strokeStyle = f.hexA(f.gold2, major ? 0.42 : 0.2);
-      g.beginPath();
-      g.moveTo(mx + Math.cos(a) * r0, my + Math.sin(a) * r0);
-      g.lineTo(mx + Math.cos(a) * r1, my + Math.sin(a) * r1);
+  // ---------- cached low-poly map face ----------
+  var mapS = Math.ceil(mapR * 2.3);
+  var face = f.cache('paintWealthHalo:face:' + mapS, mapS, mapS, function (cv) {
+    var g = cv.getContext ? cv.getContext('2d') : cv;
+    var S = mapS, a, b, x, y, r0, ang2;
+    g.fillStyle = '#4c5f35';
+    g.fillRect(0, 0, S, S);
+    // faceted terrain
+    var n = 9, pts = [], greens = ['#42552c', '#4a5d33', '#52673a', '#5d7340', '#67794a', '#74884a'];
+    for (a = 0; a < n; a++) {
+      pts.push([]);
+      for (b = 0; b < n; b++) {
+        pts[a].push([
+          (a / (n - 1)) * S + (f.rnd(a * 17 + b * 3 + 5) - 0.5) * S * 0.07,
+          (b / (n - 1)) * S + (f.rnd(a * 29 + b * 11 + 9) - 0.5) * S * 0.07
+        ]);
+      }
+    }
+    for (a = 0; a < n - 1; a++) {
+      for (b = 0; b < n - 1; b++) {
+        var p00 = pts[a][b], p10 = pts[a + 1][b], p01 = pts[a][b + 1], p11 = pts[a + 1][b + 1];
+        var gi = Math.floor(f.rnd(a * 31 + b * 13) * greens.length) % greens.length;
+        var brown = f.rnd(a * 7 + b * 41) > 0.90;
+        g.fillStyle = brown ? (f.rnd(a + b * 3) > 0.5 ? '#5d5136' : '#695c3e') : greens[gi];
+        g.beginPath(); g.moveTo(p00[0], p00[1]); g.lineTo(p10[0], p10[1]); g.lineTo(p11[0], p11[1]); g.closePath(); g.fill();
+        var gj = (gi + (f.rnd(a * 3 + b * 17) > 0.5 ? 1 : greens.length - 1)) % greens.length;
+        g.fillStyle = brown ? '#5d5136' : greens[gj];
+        g.beginPath(); g.moveTo(p00[0], p00[1]); g.lineTo(p11[0], p11[1]); g.lineTo(p01[0], p01[1]); g.closePath(); g.fill();
+      }
+    }
+    // sandy path corner to corner
+    var Ax = S * 0.02, Ay = S * 0.86, Bx = S * 0.98, By = S * 0.18;
+    var pxs = [], pys = [];
+    for (a = 0; a < 6; a++) {
+      var tt = a / 5;
+      var off = (a === 0 || a === 5) ? 0 : (f.rnd(a + 30) - 0.5) * S * 0.05;
+      pxs.push(Ax + (Bx - Ax) * tt + 0.578 * off);
+      pys.push(Ay + (By - Ay) * tt + 0.816 * off);
+    }
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    var pw = [S * 0.075, S * 0.056, S * 0.028], pcol = ['#7c6c48', '#a08c62', '#b7a47a'];
+    for (b = 0; b < 3; b++) {
+      g.strokeStyle = pcol[b]; g.lineWidth = pw[b];
+      g.beginPath(); g.moveTo(pxs[0], pys[0]);
+      for (a = 1; a < 6; a++) g.lineTo(pxs[a], pys[a]);
       g.stroke();
     }
+    g.fillStyle = '#6f5f40';
+    for (a = 0; a < 9; a++) {
+      var t2 = 0.08 + 0.84 * f.rnd(a + 120);
+      x = Ax + (Bx - Ax) * t2 + (f.rnd(a + 130) - 0.5) * S * 0.03;
+      y = Ay + (By - Ay) * t2 + (f.rnd(a + 140) - 0.5) * S * 0.03;
+      g.fillRect(x, y, 2, 2);
+    }
+    // pond (upper-left of centre)
+    var pcx = S * 0.30, pcy = S * 0.38, pr = S * 0.085;
+    g.beginPath();
+    for (a = 0; a < 8; a++) {
+      ang2 = a / 8 * TAU; r0 = pr * 1.3 * (0.8 + f.rnd(a + 70) * 0.45);
+      x = pcx + Math.cos(ang2) * r0; y = pcy + Math.sin(ang2) * r0 * 0.85;
+      if (a) g.lineTo(x, y); else g.moveTo(x, y);
+    }
+    g.closePath(); g.fillStyle = '#8b7c56'; g.fill();
+    g.beginPath();
+    for (a = 0; a < 8; a++) {
+      ang2 = a / 8 * TAU; r0 = pr * (0.8 + f.rnd(a + 70) * 0.45);
+      x = pcx + Math.cos(ang2) * r0; y = pcy + Math.sin(ang2) * r0 * 0.85;
+      if (a) g.lineTo(x, y); else g.moveTo(x, y);
+    }
+    g.closePath(); g.fillStyle = '#3e5d79'; g.fill();
+    g.beginPath();
+    for (a = 0; a < 6; a++) {
+      ang2 = a / 6 * TAU; r0 = pr * 0.5 * (0.8 + f.rnd(a + 90) * 0.5);
+      x = pcx - pr * 0.15 + Math.cos(ang2) * r0; y = pcy - pr * 0.12 + Math.sin(ang2) * r0 * 0.85;
+      if (a) g.lineTo(x, y); else g.moveTo(x, y);
+    }
+    g.closePath(); g.fillStyle = '#4d6f8e'; g.fill();
+    // grey building block near centre, beside the road
+    g.save();
+    g.translate(S * 0.61, S * 0.345);
+    g.rotate(0.28);
+    g.fillStyle = '#6f6a60'; g.strokeStyle = '#4a453d'; g.lineWidth = 2;
+    g.fillRect(-S * 0.045, -S * 0.034, S * 0.09, S * 0.068);
+    g.strokeRect(-S * 0.045, -S * 0.034, S * 0.09, S * 0.068);
+    g.fillStyle = '#7e786c';
+    g.fillRect(-S * 0.045, -S * 0.034, S * 0.09, S * 0.022);
+    g.fillStyle = '#5a554c';
+    g.fillRect(S * 0.02, -S * 0.004, S * 0.042, S * 0.036);
+    g.strokeRect(S * 0.02, -S * 0.004, S * 0.042, S * 0.036);
+    g.restore();
+    // trees
+    var drawn = 0;
+    for (a = 0; a < 44 && drawn < 20; a++) {
+      x = S * (0.10 + 0.80 * f.rnd(a * 5 + 11));
+      y = S * (0.10 + 0.80 * f.rnd(a * 5 + 12));
+      var dxq = x - S * 0.5, dyq = y - S * 0.5;
+      if (dxq * dxq + dyq * dyq > (S * 0.43) * (S * 0.43)) continue;
+      var crs = Math.abs((Bx - Ax) * (y - Ay) - (By - Ay) * (x - Ax)) / (S * 1.177);
+      if (crs < S * 0.055) continue;
+      var pdx = x - pcx, pdy = y - pcy;
+      if (pdx * pdx + pdy * pdy < (S * 0.145) * (S * 0.145)) continue;
+      var bdx = x - S * 0.61, bdy = y - S * 0.345;
+      if (bdx * bdx + bdy * bdy < (S * 0.09) * (S * 0.09)) continue;
+      r0 = S * 0.017 * (0.75 + f.rnd(a * 5 + 13) * 0.6);
+      g.fillStyle = '#31431f'; g.beginPath(); g.arc(x, y, r0, 0, TAU); g.fill();
+      g.fillStyle = '#202d13'; g.beginPath(); g.arc(x + r0 * 0.18, y + r0 * 0.22, r0 * 0.55, 0, TAU); g.fill();
+      g.fillStyle = '#4a5f2c'; g.beginPath(); g.arc(x - r0 * 0.30, y - r0 * 0.32, r0 * 0.30, 0, TAU); g.fill();
+      drawn++;
+    }
+    g.fillStyle = f.hexA('#243018', 0.10);
+    g.fillRect(0, 0, S, S);
   });
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(rot * 0.5 + ms * 0.000025);
-  ctx.globalAlpha = baseA * 0.9 * inE * live * dkLine;
-  ctx.drawImage(furn, -FS / 2, -FS / 2);
-  ctx.restore();
 
-  // ---------- orbiting gold dust (70, parallax speeds, radius jitter) ----------
-  var maxRad = Math.min(R * 1.5, cx - W * 0.36); // keep the left third calm
-  var i, k;
-  ctx.fillStyle = f.gold;
-  for (i = 0; i < 70; i++) {
-    var r1 = f.rnd(i), r2 = f.rnd(i + 97), r3 = f.rnd(i + 211), r4 = f.rnd(i + 331);
-    var band = 0.55 + r1 * 0.95;
-    var rad = Math.min(R * band, maxRad);
-    rad += Math.sin(ms * 0.001 * (0.4 + r4 * 0.8) + r3 * 9) * (2 + r4 * 5);
-    rad *= 1 + outE * (0.35 + r2 * 0.5); // drift outward on exit
-    var sp = (0.05 + r2 * 0.1) / band;   // inner dust orbits faster
-    var ang = r3 * TAU + ms * 0.001 * sp + tRot;
-    var x = cx + Math.cos(ang) * rad;
-    var y = cy + Math.sin(ang) * rad;
-    var tw = 0.55 + 0.45 * Math.sin(ms * 0.0018 * (0.5 + r4) + i * 1.7);
-    var al = (0.12 + 0.5 * r2) * tw * inE * live * dk;
-    if (al < 0.01) continue;
-    var s = 1 + r4 * 1.8;
-    ctx.globalAlpha = baseA * al;
-    ctx.fillRect(x - s * 0.5, y - s * 0.5, s, s);
+  var rot = Math.sin(ms * 0.00012) * 0.06 + Math.sin(ms * 0.000047) * 0.025;
+  var mapE = f.ease(f.clamp01(f.in01 / 0.55));
+  var cols = [f.gold, f.violet, f.ice, f.ember];
+  var pcts = [52, 28, 12, 8];
+  var fracs = [0.52, 0.28, 0.12, 0.08];
+
+  // ---------- soft gold ambient halo (layered fills, no shadowBlur) ----------
+  for (k = 0; k < 4; k++) {
+    A(live * (0.016 + 0.009 * k));
+    ctx.fillStyle = f.gold;
+    ctx.beginPath(); ctx.arc(cx, cy, R * (1.55 - 0.15 * k), 0, TAU); ctx.fill();
   }
 
-  // ---------- allocation segments ----------
-  var gapA = 2 / R;               // 2px gaps
-  var avail = TAU - segs.length * gapA;
-  var hudA = f.clamp01(f.in01 * 2 - 0.8) * gone;
-  var a0 = rot;
-  ctx.lineCap = 'butt';
-  ctx.font = '600 10px ui-monospace, Menlo, Consolas, monospace';
-  ctx.textBaseline = 'middle';
-  for (i = 0; i < 4; i++) {
-    var p = segs[i][0], col = segs[i][1];
-    var span = avail * p;
-    var grow = f.ease(f.clamp01(f.in01 * 1.7 - i * 0.22)); // staggered assembly
-    var s0 = a0 + gapA * 0.5;
-    var s1 = s0 + span * grow;
-    var mid = s0 + span * 0.5;
-    var off = outE * outE * R * (0.4 + f.rnd(i + 7) * 0.35); // radial detach on exit
-    var spin = outE * (f.rnd(i + 13) - 0.5) * 0.6;
-    var ox = cx + Math.cos(mid) * off;
-    var oy = cy + Math.sin(mid) * off;
-    var segAl = 1 - outE * 0.85;
-    var b0 = s0 + spin, b1 = s1 + spin;
-    if (grow > 0.002 && b1 > b0 + 0.002) {
-      ctx.strokeStyle = col;
-      ctx.globalAlpha = baseA * 0.12 * dk * segAl;            // soft glow pass
-      ctx.lineWidth = lw + 22;
-      ctx.beginPath(); ctx.arc(ox, oy, R, b0, b1); ctx.stroke();
-      ctx.globalAlpha = baseA * 0.92 * segAl;                 // main body
-      ctx.lineWidth = lw;
-      ctx.beginPath(); ctx.arc(ox, oy, R, b0, b1); ctx.stroke();
-      ctx.globalAlpha = baseA * 0.16 * dk * segAl;            // outer edge highlight
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(ox, oy, R + lw * 0.5 - 1, b0, b1); ctx.stroke();
-    }
-    if (hudA > 0.01 && grow > 0.5) {                          // 1px tick + label
-      var mm = mid + spin;
-      var c = Math.cos(mm), sn = Math.sin(mm);
-      ctx.globalAlpha = baseA * 0.6 * hudA * dkLine;
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(ox + c * (Ro + 2), oy + sn * (Ro + 2));
-      ctx.lineTo(ox + c * (Ro + 9), oy + sn * (Ro + 9));
-      ctx.stroke();
-      ctx.globalAlpha = baseA * 0.85 * hudA * dkLine;
-      ctx.fillStyle = col;
-      var lx = ox + c * (Ro + 16), ly = oy + sn * (Ro + 16);
-      if (c > 0.35) { ctx.textAlign = 'left'; lx += 6; }
-      else if (c < -0.35) { ctx.textAlign = 'right'; lx -= 6; }
-      else { ctx.textAlign = 'center'; ly += sn > 0 ? 12 : -12; }
-      ctx.fillText(segs[i][2], lx, ly);
-    }
-    a0 += gapA + span;
-  }
-
-  // ---------- travelling highlight sweep (~30deg comet, additive) ----------
-  var sweepGate = f.clamp01(f.in01 * 2 - 1) * gone;
-  if (sweepGate > 0.01) {
-    var head = rot + (ms % 14000) / 14000 * TAU;
-    var step = 0.09;
+  // ---------- map face (iris open, slow breathing rotation) ----------
+  if (mapE > 0.001 && eo < 0.999) {
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = f.hexA('#fff3c4', 1);
-    for (k = 0; k < 7; k++) {
-      var fall = 1 - k / 7;
-      var e1 = head - k * step;
-      var e0 = e1 - step * 1.2;
-      var aa = fall * fall * 0.28 * dk * sweepGate;
-      ctx.globalAlpha = baseA * aa;
-      ctx.lineWidth = lw;
-      ctx.beginPath(); ctx.arc(cx, cy, R, e0, e1); ctx.stroke();
-      ctx.globalAlpha = baseA * aa * 0.45;
-      ctx.lineWidth = lw + 26;
-      ctx.beginPath(); ctx.arc(cx, cy, R, e0, e1); ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, mapR * (0.35 + 0.65 * mapE), 0, TAU);
+    ctx.clip();
+    A(mapE * (1 - eo));
+    ctx.fillStyle = '#1b2312';
+    ctx.fillRect(cx - mapR, cy - mapR, mapR * 2, mapR * 2);
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    A(mapE * (1 - eo));
+    ctx.drawImage(face, -mapS / 2, -mapS / 2, mapS, mapS);
+    ctx.restore();
+    // edge vignette (layered strokes)
+    ctx.lineCap = 'butt';
+    for (k = 0; k < 3; k++) {
+      A(mapE * (1 - eo) * (0.20 - 0.06 * k));
+      ctx.strokeStyle = '#0a0f06';
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(cx, cy, mapR - 3 - k * 5, 0, TAU); ctx.stroke();
     }
+    // white flag planted on the path (rotates with terrain, bobs)
+    var fpx2 = 0.1248 * mapS, fpy2 = -0.0684 * mapS;
+    var cr2 = Math.cos(rot), sr2 = Math.sin(rot);
+    var fx = cx + fpx2 * cr2 - fpy2 * sr2;
+    var fy = cy + fpx2 * sr2 + fpy2 * cr2;
+    var bob = -Math.abs(Math.sin(ms * 0.003)) * 2.5;
+    A(mapE * (1 - eo) * 0.35);
+    ctx.fillStyle = '#000000';
+    ctx.beginPath(); ctx.ellipse(fx, fy + 1, 4, 1.8, 0, 0, TAU); ctx.fill();
+    A(mapE * (1 - eo));
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(fx - 1, fy - 12 + bob, 2, 12 - bob);
+    ctx.beginPath();
+    ctx.moveTo(fx + 1, fy - 12 + bob);
+    ctx.lineTo(fx + 9, fy - 9.5 + bob);
+    ctx.lineTo(fx + 1, fy - 7 + bob);
+    ctx.closePath(); ctx.fill();
+    // white player arrow at exact centre
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.sin(ms * 0.0009) * 0.07);
+    A(mapE * (1 - eo));
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(0, -6.5); ctx.lineTo(4.6, 5.2); ctx.lineTo(0, 2.4); ctx.lineTo(-4.6, 5.2);
+    ctx.closePath(); ctx.fill();
+    A(mapE * (1 - eo) * 0.5);
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = 1;
+    ctx.stroke();
     ctx.restore();
   }
 
-  // ---------- small centre HUD ----------
-  var hud2 = f.clamp01(f.in01 * 2 - 1) * gone;
-  if (hud2 > 0.01) {
-    ctx.globalAlpha = baseA * 0.7 * hud2 * dkLine;
-    ctx.strokeStyle = f.hexA(f.gold2, 0.9);
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(cx, cy, 14, 0, TAU); ctx.stroke();
-    for (k = 0; k < 4; k++) {
-      var ca = k * Math.PI / 2 + tRot;
+  // ---------- allocation ring ----------
+  var gapA = 2.4 / R;
+  var a0 = -Math.PI / 2;
+  var rbe = f.ease(f.clamp01((f.in01 - 0.10) / 0.5));
+  if (rbe > 0.001) {
+    A(rbe * (1 - eo) * 0.9);
+    ctx.strokeStyle = '#241d13';
+    ctx.lineWidth = ringW + 4;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+  }
+  var cur = a0;
+  for (i = 0; i < 4; i++) {
+    var sw = fracs[i] * TAU - gapA;
+    var st = cur + gapA / 2;
+    cur += fracs[i] * TAU;
+    var env = f.ease(f.clamp01((f.in01 - 0.18 - i * 0.12) / 0.5));
+    if (env <= 0.001) continue;
+    var mid = st + sw / 2;
+    var fan = eo * R * (0.34 + 0.10 * i);
+    ctx.save();
+    ctx.translate(cx + Math.cos(mid) * fan, cy + Math.sin(mid) * fan);
+    ctx.rotate(eo * 0.22 * (i - 1.5));
+    var en = st + sw * env;
+    var sal = env * (1 - eo);
+    ctx.lineCap = 'butt';
+    A(sal); ctx.strokeStyle = cols[i]; ctx.lineWidth = ringW;
+    ctx.beginPath(); ctx.arc(0, 0, R, st, en); ctx.stroke();
+    A(sal * 0.35); ctx.strokeStyle = '#1a1006'; ctx.lineWidth = ringW * 0.42;
+    ctx.beginPath(); ctx.arc(0, 0, R - ringW * 0.26, st, en); ctx.stroke();
+    A(sal * 0.30); ctx.strokeStyle = '#fff6d8'; ctx.lineWidth = ringW * 0.16;
+    ctx.beginPath(); ctx.arc(0, 0, R + ringW * 0.28, st, en); ctx.stroke();
+    A(sal * 0.25); ctx.strokeStyle = '#100a04'; ctx.lineWidth = 1.5;
+    for (k = 1; k <= 2; k++) {
+      var na = st + sw * (k / 3);
+      if (na > en) break;
       ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(ca) * 18, cy + Math.sin(ca) * 18);
-      ctx.lineTo(cx + Math.cos(ca) * 24, cy + Math.sin(ca) * 24);
+      ctx.moveTo(Math.cos(na) * (R - ringW * 0.5), Math.sin(na) * (R - ringW * 0.5));
+      ctx.lineTo(Math.cos(na) * (R + ringW * 0.5), Math.sin(na) * (R + ringW * 0.5));
       ctx.stroke();
     }
-    ctx.fillStyle = f.gold;
-    ctx.globalAlpha = baseA * (0.5 + 0.3 * Math.sin(ms * 0.002)) * hud2;
-    ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  // travelling bright sweep (layered translucent arcs)
+  if (live > 0.001) {
+    var sa = (ms * 0.0003) % TAU;
+    var shalf = [0.45, 0.26, 0.12], salp = [0.05, 0.08, 0.13];
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#fff3cf';
+    ctx.lineWidth = ringW * 0.9;
+    for (k = 0; k < 3; k++) {
+      A(live * salp[k]);
+      ctx.beginPath(); ctx.arc(cx, cy, R, sa - shalf[k], sa + shalf[k]); ctx.stroke();
+    }
   }
 
-  // ---------- rising +coin sparks ----------
+  // ---------- OSRS orbs on the left arc ----------
+  var orbR = Math.max(12, R * 0.082);
+  for (i = 0; i < 4; i++) {
+    var oe = f.ease(f.clamp01((f.in01 - 0.32 - i * 0.09) / 0.45));
+    if (oe <= 0.001) continue;
+    var oa = Math.PI + 0.62 - i * 0.38;
+    var det = eo * R * (0.55 + 0.12 * i);
+    var orad = R * 1.16 + det;
+    var ox = cx + Math.cos(oa) * orad;
+    var oy = cy + Math.sin(oa) * orad;
+    var os = 0.5 + 0.5 * oe;
+    var al = oe * (1 - eo);
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.scale(os, os);
+    A(al * 0.95); ctx.fillStyle = '#221c13';
+    ctx.beginPath(); ctx.arc(0, 0, orbR, 0, TAU); ctx.fill();
+    A(al * 0.6); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, orbR, 0, TAU); ctx.stroke();
+    // crescent frame, opening toward the map
+    var op = 0.66;
+    ctx.lineCap = 'round';
+    A(al); ctx.strokeStyle = '#494034'; ctx.lineWidth = orbR * 0.30;
+    ctx.beginPath(); ctx.arc(0, 0, orbR * 0.92, oa - (Math.PI - op), oa + (Math.PI - op)); ctx.stroke();
+    A(al * 0.6); ctx.strokeStyle = '#6a5c49'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, orbR * 1.05, oa - (Math.PI - op), oa + (Math.PI - op)); ctx.stroke();
+    // coloured globe with darker lower half
+    var gr = orbR * 0.60;
+    var puls = 1 + Math.sin(ms * 0.002 + i * 1.4) * 0.03;
+    A(al); ctx.fillStyle = cols[i];
+    ctx.beginPath(); ctx.arc(0, 0, gr * puls, 0, TAU); ctx.fill();
+    A(al * 0.45); ctx.fillStyle = '#160e04';
+    ctx.beginPath(); ctx.arc(0, 0, gr * puls, 0, Math.PI); ctx.closePath(); ctx.fill();
+    A(al * 0.30); ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(-gr * 0.33, -gr * 0.35, gr * 0.28, 0, TAU); ctx.fill();
+    A(al * 0.5); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, gr * puls, 0, TAU); ctx.stroke();
+    // percentage tab to the orb's left
+    var tw2 = 34, th2 = 18;
+    var tx = -orbR - 8 - tw2, ty = -th2 / 2;
+    A(al * 0.88); ctx.fillStyle = '#14100b'; rr(tx, ty, tw2, th2, 4); ctx.fill();
+    A(al * 0.6); ctx.strokeStyle = f.hexA(cols[i], 0.5); ctx.lineWidth = 1; rr(tx, ty, tw2, th2, 4); ctx.stroke();
+    A(al); ctx.fillStyle = cols[i];
+    ctx.font = '15px VT323, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(pcts[i] + '%', tx + tw2 / 2, 1);
+    ctx.restore();
+  }
+
+  // ---------- compass rose orb, top-left rim ----------
+  var cee = f.ease(f.clamp01((f.in01 - 0.22) / 0.5));
+  if (cee > 0.001) {
+    var cAng = Math.PI + 1.05;
+    var cdet = eo * R * 0.6;
+    var ccx = cx + Math.cos(cAng) * (R * 1.06 + cdet);
+    var ccy = cy + Math.sin(cAng) * (R * 1.06 + cdet);
+    var cR = Math.max(11, R * 0.072);
+    var cal = cee * (1 - eo);
+    var cs = 0.5 + 0.5 * cee;
+    ctx.save();
+    ctx.translate(ccx, ccy);
+    ctx.scale(cs, cs);
+    A(cal * 0.95); ctx.fillStyle = '#241e15';
+    ctx.beginPath(); ctx.arc(0, 0, cR, 0, TAU); ctx.fill();
+    A(cal); ctx.strokeStyle = '#5b5142'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(0, 0, cR * 0.98, 0, TAU); ctx.stroke();
+    A(cal * 0.5); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, cR * 1.12, 0, TAU); ctx.stroke();
+    A(cal * 0.8); ctx.strokeStyle = '#d8ccb4'; ctx.lineWidth = 1.5;
+    ctx.lineCap = 'butt';
+    for (k = 0; k < 4; k++) {
+      var ta = -Math.PI / 2 + k * Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(ta) * cR * 0.66, Math.sin(ta) * cR * 0.66);
+      ctx.lineTo(Math.cos(ta) * cR * 0.85, Math.sin(ta) * cR * 0.85);
+      ctx.stroke();
+    }
+    ctx.rotate(Math.sin(ms * 0.0006) * 0.09);
+    A(cal); ctx.fillStyle = f.gold;
+    ctx.beginPath(); ctx.moveTo(0, -cR * 0.58); ctx.lineTo(cR * 0.15, 0); ctx.lineTo(-cR * 0.15, 0); ctx.closePath(); ctx.fill();
+    A(cal * 0.85); ctx.fillStyle = f.gold2;
+    ctx.beginPath(); ctx.moveTo(0, cR * 0.42); ctx.lineTo(cR * 0.15, 0); ctx.lineTo(-cR * 0.15, 0); ctx.closePath(); ctx.fill();
+    A(cal); ctx.fillStyle = '#14100b';
+    ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- net-worth XP pill, top-right rim ----------
+  var pe = f.ease(f.clamp01((f.in01 - 0.5) / 0.45));
+  if (pe > 0.001) {
+    var pdet = eo * R * 0.5;
+    var pxc = cx + 0.408 * (R * 1.12 + pdet);
+    var pyc = cy - 0.913 * (R * 1.12 + pdet) - (1 - pe) * 10;
+    var cntE = f.ease(f.clamp01((f.in01 - 0.5) / 0.48));
+    var kk = Math.floor(ms / 1600);
+    var twOn = cntE >= 0.999 && f.rnd(kk) > 0.62;
+    var twv = 6 + Math.floor(f.rnd(kk + 9) * 68);
+    var val = 127482 * cntE + (twOn ? twv : 0);
+    var txt = '£' + fmt(val);
+    ctx.font = '18px VT323, monospace';
+    var twd = ctx.measureText(txt).width;
+    var pw2 = twd + 22, ph2 = 26;
+    var pal = pe * (1 - eo);
+    A(pal * 0.92); ctx.fillStyle = '#171207';
+    rr(pxc - pw2 / 2, pyc - ph2 / 2, pw2, ph2, 6); ctx.fill();
+    A(pal * 0.9); ctx.strokeStyle = '#5b5142'; ctx.lineWidth = 1.5;
+    rr(pxc - pw2 / 2, pyc - ph2 / 2, pw2, ph2, 6); ctx.stroke();
+    A(pal * 0.5); ctx.strokeStyle = f.hexA(f.gold, 0.55); ctx.lineWidth = 1;
+    rr(pxc - pw2 / 2 + 2, pyc - ph2 / 2 + 2, pw2 - 4, ph2 - 4, 4); ctx.stroke();
+    A(pal); ctx.fillStyle = f.gold;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, pxc, pyc + 1);
+    A(pal * 0.7);
+    ctx.font = '9px "IBM Plex Mono", monospace';
+    ctx.fillStyle = f.muted;
+    ctx.fillText('NET WORTH', pxc, pyc - ph2 / 2 - 7);
+    if (twOn) {
+      var pp = (ms % 1600) / 1600;
+      A(pal * (1 - pp));
+      ctx.font = '14px VT323, monospace';
+      ctx.fillStyle = f.gold;
+      ctx.fillText('+' + twv, pxc + pw2 / 2 + 14, pyc - 6 - pp * 16);
+    }
+  }
+
+  // ---------- gold dust motes ----------
   ctx.fillStyle = f.gold;
-  for (i = 0; i < 9; i++) {
-    var q1 = f.rnd(i + 401), q2 = f.rnd(i + 503), q3 = f.rnd(i + 607);
-    var per = 5200 + q1 * 4200;
-    var u = ((ms + q2 * per * 2) % per) / per;
-    var sx = cx + (q3 - 0.5) * R * 1.7 + Math.sin(ms * 0.001 + i * 2.1) * 8;
-    var sy = cy + R * 0.62 - u * R * 1.25;
-    var al2 = Math.sin(u * Math.PI);
-    al2 = al2 * al2 * (0.35 + q1 * 0.4) * inE * gone * dk;
-    if (al2 < 0.01) continue;
-    var hs = 2.5 + q2 * 2.5;
-    ctx.globalAlpha = baseA * al2;
-    ctx.fillRect(sx - hs, sy - 1, hs * 2, 2);
-    ctx.fillRect(sx - 1, sy - hs, 2, hs * 2);
+  for (i = 0; i < 24; i++) {
+    var ma = f.rnd(i) * TAU + ms * 0.00004 * (0.4 + f.rnd(i + 40)) * (f.rnd(i + 60) > 0.5 ? 1 : -1);
+    var mr = R * (1.03 + f.rnd(i + 20) * 0.38);
+    var mx = cx + Math.cos(ma) * mr;
+    var my = cy + Math.sin(ma) * mr * 0.97 + Math.sin(ms * 0.0007 + i * 2.1) * 4;
+    var twk = Math.sin(ms * 0.0011 + i * 1.7);
+    A(live * (0.15 + 0.35 * twk * twk));
+    var msz = 1 + f.rnd(i + 80) * 1.5;
+    ctx.fillRect(mx, my, msz, msz);
   }
 
-  ctx.restore();
+  // ---------- restore state ----------
+  ctx.globalAlpha = GA;
+  ctx.lineCap = 'butt';
+  ctx.lineJoin = 'miter';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
 function paintDialMacro(ctx, f) {
+  var GA = ctx.globalAlpha;
   var W = f.W, H = f.H, ms = f.ms;
+  var ease = f.ease, clamp01 = f.clamp01, hexA = f.hexA, rnd = f.rnd;
   var TAU = Math.PI * 2;
-  var t = f.clamp01(f.t);
-  var ein = f.ease(f.clamp01(f.in01));
-  var eout = f.ease(f.clamp01(f.out01));
-  var dk = f.dark ? 1 : 0.5;
-  var R = Math.min(W, H) * 0.44;
-  var cx = W * 0.6 + eout * W * 0.18;
+  var dk = f.dark ? 1 : 0.55;
+  var inE = ease(f.in01), outE = ease(f.out01);
+  var A = GA * dk * (0.12 + 0.88 * inE) * (1 - 0.92 * outE);
+  if (A < 0.004) return;
+  var R = Math.min(W, H) * 0.42;
+  if (!(R > 4)) return;
+  var cx = W * 0.6 + outE * W * 0.09;
   var cy = H * 0.52;
-  var scl = 1.06 - 0.06 * ein;
-  var vis = ein * (1 - 0.85 * eout);
-  if (vis <= 0.004) return;
-  var baseA = ctx.globalAlpha;
+  var sc = 1.05 - 0.05 * inE + 0.03 * outE;
+  var i;
 
-  function lerp(a, b, x) { return a + (b - a) * x; }
-  function rr(g, x, y, w, h, r) {
-    g.beginPath();
-    g.moveTo(x + r, y);
-    g.arcTo(x + w, y, x + w, y + h, r);
-    g.arcTo(x + w, y + h, x, y + h, r);
-    g.arcTo(x, y + h, x, y, r);
-    g.arcTo(x, y, x + w, y, r);
-    g.closePath();
-  }
-
-  // ---------- cached: macro dust bokeh backdrop ----------
-  var PAD = 90;
-  var bokeh = f.cache('dm_bokeh', Math.ceil(W + PAD * 2), Math.ceil(H + PAD * 2), function (g, w, h) {
-    for (var i = 0; i < 42; i++) {
-      var x = f.rnd(i * 4 + 11) * w, y = f.rnd(i * 4 + 12) * h;
-      var r = 3 + f.rnd(i * 4 + 13) * 15;
-      var a = 0.02 + f.rnd(i * 4 + 14) * 0.05;
-      var col = (i % 6 === 0) ? f.ice : (i % 4 === 0) ? f.gold2 : '#7d8db0';
-      var gr = g.createRadialGradient(x, y, 0, x, y, r);
-      gr.addColorStop(0, f.hexA(col, a));
-      gr.addColorStop(0.55, f.hexA(col, a * 0.45));
-      gr.addColorStop(1, f.hexA(col, 0));
-      g.fillStyle = gr;
-      g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+  /* ---------- cached face: bezel + parchment + etchings ---------- */
+  var S = Math.ceil(R * 2.6), hs = S / 2;
+  var face = f.cache('paintDialMacro:face:' + S, S, S, function (g) {
+    if (g.getContext) g = g.getContext('2d');
+    g.save();
+    g.translate(hs, hs);
+    function circ(r, col) { g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fillStyle = col; g.fill(); }
+    /* crown stem + loop (pocket-watch) */
+    g.beginPath(); g.arc(0, -R * 1.155, R * 0.062, 0, TAU);
+    g.lineWidth = R * 0.030; g.strokeStyle = '#6a4c2e'; g.stroke();
+    g.beginPath(); g.arc(0, -R * 1.155, R * 0.062, Math.PI * 0.7, Math.PI * 1.6);
+    g.lineWidth = R * 0.012; g.strokeStyle = '#c9a25c'; g.stroke();
+    g.fillStyle = '#6a4c2e';
+    g.fillRect(-R * 0.052, -R * 1.10, R * 0.104, R * 0.18);
+    g.fillStyle = '#8a6a38';
+    g.fillRect(-R * 0.068, -R * 1.115, R * 0.136, R * 0.045);
+    g.fillStyle = '#c9a25c';
+    g.fillRect(-R * 0.068, -R * 1.115, R * 0.136, R * 0.012);
+    g.fillStyle = '#4a3420';
+    g.fillRect(-R * 0.012, -R * 1.06, R * 0.024, R * 0.13);
+    /* bronze bezel rings */
+    circ(R, '#4a3420');
+    circ(R * 0.985, '#6a4c2e');
+    circ(R * 0.945, '#8a6a38');
+    g.beginPath(); g.arc(0, 0, R * 0.965, Math.PI * 0.78, Math.PI * 1.52);
+    g.lineWidth = R * 0.018; g.strokeStyle = '#c9a25c'; g.stroke();
+    g.beginPath(); g.arc(0, 0, R * 0.965, -Math.PI * 0.18, Math.PI * 0.46);
+    g.strokeStyle = 'rgba(0,0,0,0.30)'; g.stroke();
+    circ(R * 0.885, '#5a4326');
+    circ(R * 0.868, '#3a2a18');
+    /* 8 rivets */
+    var j, a, rx, ry;
+    for (j = 0; j < 8; j++) {
+      a = j * TAU / 8 + TAU / 16;
+      rx = Math.cos(a) * R * 0.925; ry = Math.sin(a) * R * 0.925;
+      g.beginPath(); g.arc(rx + R * 0.004, ry + R * 0.005, R * 0.024, 0, TAU); g.fillStyle = '#3a2a18'; g.fill();
+      g.beginPath(); g.arc(rx, ry, R * 0.021, 0, TAU); g.fillStyle = '#8a6a38'; g.fill();
+      g.beginPath(); g.arc(rx - R * 0.006, ry - R * 0.007, R * 0.008, 0, TAU); g.fillStyle = '#c9a25c'; g.fill();
     }
-  });
-
-  // ---------- cached: the dial itself ----------
-  var D = Math.ceil(R * 2.4);
-  var dial = f.cache('dm_face', D, D, function (g, w, h) {
-    var c = w / 2, i, a;
-    // outer halo (layered strokes, no shadowBlur)
-    for (i = 5; i >= 0; i--) {
-      g.strokeStyle = f.hexA(f.ice, 0.035 * (1 - i / 6) * dk);
-      g.lineWidth = 3 + i * 6;
-      g.beginPath(); g.arc(c, c, R * 1.07 + i * 2.5, 0, TAU); g.stroke();
-    }
-    // case annulus
-    g.fillStyle = '#0a0e18';
-    g.beginPath(); g.arc(c, c, R * 1.09, 0, TAU); g.fill();
-    // bezel: thin double ring, gold2
-    g.strokeStyle = f.hexA(f.gold2, 0.9);
-    g.lineWidth = 2;
-    g.beginPath(); g.arc(c, c, R * 1.065, 0, TAU); g.stroke();
-    g.strokeStyle = f.hexA(f.gold2, 0.45);
+    /* aged parchment */
+    var pg = g.createRadialGradient(-R * 0.14, -R * 0.17, R * 0.05, 0, 0, R * 0.87);
+    pg.addColorStop(0, '#e4d8bc');
+    pg.addColorStop(0.45, '#d8ccb4');
+    pg.addColorStop(1, '#b8a888');
+    circ(R * 0.86, pg);
+    /* linen grain spokes */
+    g.strokeStyle = 'rgba(58,42,24,0.023)';
     g.lineWidth = 1;
-    g.beginPath(); g.arc(c, c, R * 1.015, 0, TAU); g.stroke();
-    // deep navy-black face
-    var fgrad = g.createRadialGradient(c - R * 0.32, c - R * 0.38, R * 0.05, c, c, R);
-    fgrad.addColorStop(0, '#131d33');
-    fgrad.addColorStop(0.55, '#0b1224');
-    fgrad.addColorStop(1, '#060a14');
-    g.fillStyle = fgrad;
-    g.beginPath(); g.arc(c, c, R * 0.985, 0, TAU); g.fill();
-    // brushed concentric rings
-    g.lineWidth = 1;
-    for (i = 0; i < 62; i++) {
-      g.strokeStyle = f.hexA('#9fb4d8', 0.018 + f.rnd(i + 40) * 0.016);
-      g.beginPath(); g.arc(c, c, R * (0.06 + 0.9 * i / 62), 0, TAU); g.stroke();
-    }
-    // faint sunburst grain
-    for (i = 0; i < 72; i++) {
-      a = i / 72 * TAU + f.rnd(i + 300) * 0.05;
-      g.strokeStyle = f.hexA('#b9c9e6', 0.012);
+    for (j = 0; j < 48; j++) {
+      a = j * TAU / 48 + 0.03;
       g.beginPath();
-      g.moveTo(c + Math.cos(a) * R * 0.1, c + Math.sin(a) * R * 0.1);
-      g.lineTo(c + Math.cos(a) * R * 0.93, c + Math.sin(a) * R * 0.93);
+      g.moveTo(Math.cos(a) * R * 0.09, Math.sin(a) * R * 0.09);
+      g.lineTo(Math.cos(a) * R * 0.84, Math.sin(a) * R * 0.84);
       g.stroke();
     }
-    // chapter hairlines
-    g.strokeStyle = f.hexA('#cfd8ea', 0.14);
-    g.beginPath(); g.arc(c, c, R * 0.955, 0, TAU); g.stroke();
-    g.beginPath(); g.arc(c, c, R * 0.865, 0, TAU); g.stroke();
-    // minute track: 60 ticks, 12 major
-    for (i = 0; i < 60; i++) {
-      a = i / 60 * TAU;
-      var maj = (i % 5 === 0);
-      var r0 = maj ? R * 0.875 : R * 0.905;
-      g.strokeStyle = maj ? f.hexA(f.gold2, 0.85) : f.hexA('#cfd8ea', 0.32);
-      g.lineWidth = maj ? 2 : 1;
+    /* concentric ruling rings */
+    g.strokeStyle = 'rgba(58,42,24,0.09)';
+    var rr = [0.28, 0.40, 0.52, 0.64, 0.745];
+    for (j = 0; j < rr.length; j++) { g.beginPath(); g.arc(0, 0, R * rr[j], 0, TAU); g.stroke(); }
+    /* minute track on rim */
+    for (j = 0; j < 60; j++) {
+      a = j * TAU / 60 - Math.PI / 2;
+      var big = j % 5 === 0;
+      g.strokeStyle = big ? 'rgba(58,42,24,0.55)' : 'rgba(58,42,24,0.30)';
+      g.lineWidth = big ? Math.max(1.4, R * 0.007) : 1;
       g.beginPath();
-      g.moveTo(c + Math.cos(a) * r0, c + Math.sin(a) * r0);
-      g.lineTo(c + Math.cos(a) * R * 0.945, c + Math.sin(a) * R * 0.945);
+      g.moveTo(Math.cos(a) * R * (big ? 0.782 : 0.80), Math.sin(a) * R * (big ? 0.782 : 0.80));
+      g.lineTo(Math.cos(a) * R * 0.838, Math.sin(a) * R * 0.838);
       g.stroke();
     }
-    // applied hour markers (skip 3 o'clock for date window)
-    for (i = 0; i < 12; i++) {
-      if (i === 3) continue;
-      a = i / 12 * TAU - Math.PI / 2;
-      g.save();
-      g.translate(c + Math.cos(a) * R * 0.76, c + Math.sin(a) * R * 0.76);
-      g.rotate(a + Math.PI / 2);
-      var mw = R * 0.045, mh = R * 0.13;
-      g.fillStyle = f.hexA(f.gold2, 0.95);
-      g.strokeStyle = f.hexA('#ffe9a8', 0.5);
-      g.lineWidth = 1;
-      if (i === 0) {
-        rr(g, -mw * 1.2, -mh / 2, mw * 0.9, mh, 2); g.fill(); g.stroke();
-        rr(g, mw * 0.3, -mh / 2, mw * 0.9, mh, 2); g.fill(); g.stroke();
-      } else {
-        rr(g, -mw / 2, -mh / 2, mw, mh, 2); g.fill(); g.stroke();
-      }
-      // faint lume-ice inner dot
-      g.fillStyle = f.hexA(f.ice, 0.9);
-      g.beginPath(); g.arc(0, mh * 0.24, 2, 0, TAU); g.fill();
-      var lg = g.createRadialGradient(0, mh * 0.24, 0, 0, mh * 0.24, 6);
-      lg.addColorStop(0, f.hexA(f.ice, 0.3));
-      lg.addColorStop(1, f.hexA(f.ice, 0));
-      g.fillStyle = lg;
-      g.beginPath(); g.arc(0, mh * 0.24, 6, 0, TAU); g.fill();
-      g.restore();
+    /* thin diagonal cross etch to rim */
+    g.strokeStyle = 'rgba(58,42,24,0.16)';
+    g.lineWidth = 1;
+    for (j = 0; j < 4; j++) {
+      a = Math.PI / 4 + j * Math.PI / 2;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * R * 0.07, Math.sin(a) * R * 0.07);
+      g.lineTo(Math.cos(a) * R * 0.76, Math.sin(a) * R * 0.76);
+      g.stroke();
     }
-    // date window at 3
+    /* bronze diamond ticks at the eighths */
+    for (j = 0; j < 4; j++) {
+      a = Math.PI / 4 + j * Math.PI / 2;
+      var ex = Math.cos(a) * R * 0.655, ey = Math.sin(a) * R * 0.655, dz = R * 0.028;
+      g.beginPath();
+      g.moveTo(ex, ey - dz); g.lineTo(ex + dz * 0.62, ey); g.lineTo(ex, ey + dz); g.closePath();
+      g.fillStyle = '#6a4c2e'; g.fill();
+      g.beginPath();
+      g.moveTo(ex, ey - dz); g.lineTo(ex, ey + dz); g.lineTo(ex - dz * 0.62, ey); g.closePath();
+      g.fillStyle = '#c9a25c'; g.fill();
+    }
+    /* cardinal letters, etched */
+    g.font = Math.round(R * 0.13) + 'px VT323, monospace';
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    var dwx = c + R * 0.76, dwy = c;
-    g.fillStyle = '#0d1322';
-    rr(g, dwx - R * 0.07, dwy - R * 0.055, R * 0.14, R * 0.11, 3);
-    g.fill();
-    g.strokeStyle = f.hexA(f.gold2, 0.6);
-    g.lineWidth = 1;
-    g.stroke();
-    g.fillStyle = f.hexA('#dfe8f5', 0.9);
-    g.font = '700 ' + Math.max(10, Math.round(R * 0.07)) + 'px ui-monospace, Consolas, monospace';
-    g.fillText(String(new Date().getDate()), dwx, dwy + 1);
-    // wordmark
-    g.fillStyle = f.hexA(f.gold2, 0.85);
-    g.font = '600 ' + Math.max(11, Math.round(R * 0.055)) + 'px Georgia, serif';
-    g.fillText('D I A L', c, c - R * 0.38);
-    g.fillStyle = f.hexA('#cfd8ea', 0.4);
-    g.font = Math.max(8, Math.round(R * 0.026)) + 'px ui-monospace, Consolas, monospace';
-    g.fillText('MACRO VALUATION', c, c - R * 0.3);
-  });
-
-  // ---------- cached: measurement tics revealed by the scan ----------
-  var tics = f.cache('dm_tics', D, D, function (g, w, h) {
-    var c = w / 2, i, n = 0;
-    g.lineWidth = 1;
-    g.strokeStyle = f.hexA(f.ice, 0.28);
-    for (i = 0; i < 150 && n < 46; i++) {
-      var x = (f.rnd(i * 9 + 501) * 2 - 1) * R * 0.9;
-      var y = (f.rnd(i * 9 + 502) * 2 - 1) * R * 0.9;
-      if (x * x + y * y > R * R * 0.72) continue;
-      n++;
-      var s = 1.5 + f.rnd(i * 9 + 503) * 2.5;
-      g.beginPath();
-      g.moveTo(c + x - s, c + y); g.lineTo(c + x + s, c + y);
-      g.moveTo(c + x, c + y - s); g.lineTo(c + x, c + y + s);
-      g.stroke();
+    var CL = [['N', 0, -1], ['E', 1, 0], ['S', 0, 1], ['W', -1, 0]];
+    for (j = 0; j < 4; j++) {
+      var lx = CL[j][1] * R * 0.62, ly = CL[j][2] * R * 0.62;
+      g.fillStyle = 'rgba(255,255,255,0.30)';
+      g.fillText(CL[j][0], lx, ly + Math.max(1, R * 0.006));
+      g.fillStyle = '#3a2a18';
+      g.fillText(CL[j][0], lx, ly);
     }
-    g.strokeStyle = f.hexA(f.ice, 0.18);
-    g.setLineDash([4, 6]);
-    g.beginPath(); g.arc(c, c, R * 0.52, 0, TAU); g.stroke();
-    g.setLineDash([]);
-    g.strokeStyle = f.hexA(f.ice, 0.25);
-    g.beginPath();
-    g.moveTo(c - R * 0.9, c); g.lineTo(c + R * 0.9, c);
-    g.moveTo(c - R * 0.9, c - 5); g.lineTo(c - R * 0.9, c + 5);
-    g.moveTo(c + R * 0.9, c - 5); g.lineTo(c + R * 0.9, c + 5);
-    g.stroke();
+    g.restore();
   });
 
-  // ---------- cached: tiny HUD boxes ----------
-  function hudBox(key, label, value, col, valCol) {
-    return f.cache(key, 120, 42, function (g, w, h) {
-      g.fillStyle = f.hexA(col, 0.07);
-      g.fillRect(0.5, 0.5, w - 1, h - 1);
-      g.strokeStyle = f.hexA(col, 0.4);
-      g.lineWidth = 1;
-      g.strokeRect(0.5, 0.5, w - 1, h - 1);
-      g.strokeStyle = f.hexA(col, 0.95);
+  /* ---------- cached compass rose ---------- */
+  var RS = Math.ceil(R * 0.5), rh = RS / 2;
+  var rose = f.cache('paintDialMacro:rose:' + RS, RS, RS, function (g) {
+    if (g.getContext) g = g.getContext('2d');
+    g.save();
+    g.translate(rh, rh);
+    var r1 = R * 0.205, r2 = R * 0.135, v = R * 0.052;
+    function pt(rr, aa) { return [Math.cos(aa) * rr, Math.sin(aa) * rr]; }
+    function facets(red, bone, solid, oy) {
+      for (var k = 0; k < 8; k++) {
+        var a = k * TAU / 8 - Math.PI / 2;
+        var L = (k % 2 === 0) ? r1 : r2;
+        var tip = pt(L, a), vl = pt(v, a - TAU / 16), vr = pt(v, a + TAU / 16);
+        g.beginPath(); g.moveTo(tip[0], tip[1] + oy); g.lineTo(vl[0], vl[1] + oy); g.lineTo(0, oy); g.closePath();
+        g.fillStyle = solid || ((k % 2 === 0) ? red : bone); g.fill();
+        g.beginPath(); g.moveTo(tip[0], tip[1] + oy); g.lineTo(vr[0], vr[1] + oy); g.lineTo(0, oy); g.closePath();
+        g.fillStyle = solid || ((k % 2 === 0) ? bone : red); g.fill();
+      }
+    }
+    facets(null, null, 'rgba(0,0,0,0.20)', Math.max(1, R * 0.008));
+    facets('#8f1d10', '#e8e6d8', null, 0);
+    g.strokeStyle = 'rgba(58,42,24,0.70)'; g.lineWidth = Math.max(1, R * 0.0035);
+    for (var k = 0; k < 8; k++) {
+      var a = k * TAU / 8 - Math.PI / 2, L = (k % 2 === 0) ? r1 : r2;
+      var tip = pt(L, a), vl = pt(v, a - TAU / 16), vr = pt(v, a + TAU / 16);
+      g.beginPath(); g.moveTo(vl[0], vl[1]); g.lineTo(tip[0], tip[1]); g.lineTo(vr[0], vr[1]); g.stroke();
+    }
+    g.beginPath(); g.arc(0, 0, R * 0.030, 0, TAU); g.fillStyle = '#e8e6d8'; g.fill();
+    g.beginPath(); g.arc(0, 0, R * 0.030, 0, TAU); g.strokeStyle = '#8f1d10'; g.lineWidth = Math.max(1, R * 0.006); g.stroke();
+    g.restore();
+  });
+
+  /* ---------- cached low-poly night terrain ---------- */
+  var TW2 = Math.ceil(W), TH2 = Math.ceil(H * 0.26);
+  var terr = f.cache('paintDialMacro:terr:' + TW2 + 'x' + TH2, TW2, TH2, function (g) {
+    if (g.getContext) g = g.getContext('2d');
+    var n = 12, xs = [], ys = [], j;
+    for (j = 0; j <= n; j++) { xs.push(TW2 * j / n); ys.push(TH2 * (0.22 + 0.5 * rnd(j * 7 + 3))); }
+    g.beginPath(); g.moveTo(0, TH2 + 2);
+    for (j = 0; j <= n; j++) g.lineTo(xs[j], ys[j]);
+    g.lineTo(TW2, TH2 + 2); g.closePath();
+    g.fillStyle = '#0a1008'; g.fill();
+    for (j = 0; j < n; j++) {
       g.beginPath();
-      g.moveTo(0.5, 7); g.lineTo(0.5, 0.5); g.lineTo(7, 0.5);
-      g.moveTo(w - 7, h - 0.5); g.lineTo(w - 0.5, h - 0.5); g.lineTo(w - 0.5, h - 7);
-      g.stroke();
-      g.font = '9px ui-monospace, Consolas, monospace';
-      g.fillStyle = f.hexA(col, 0.7);
-      g.fillText(label, 9, 15);
-      g.font = '700 13px ui-monospace, Consolas, monospace';
-      g.fillStyle = f.hexA(valCol || col, 0.95);
-      g.fillText(value, 9, 32);
-    });
-  }
-  var locked = t > 0.75;
-  var hud0 = hudBox('dm_h0', 'CASE DIAMETER', '42.0 MM', f.ice);
-  var hud1 = hudBox('dm_h1', 'LUME INDEX', '96.4 %', f.ice);
-  var hud2 = locked
-    ? hudBox('dm_h2b', 'VALUATION', 'LOCKED', f.gold)
-    : hudBox('dm_h2a', 'VALUATION', 'SCANNING', f.ice);
+      g.moveTo(xs[j], ys[j]); g.lineTo(xs[j + 1], ys[j + 1]);
+      g.lineTo((xs[j] + xs[j + 1]) / 2, TH2);
+      g.closePath();
+      g.fillStyle = 'rgba(93,115,64,' + (0.04 + 0.06 * rnd(j * 11 + 2)).toFixed(3) + ')';
+      g.fill();
+    }
+    g.beginPath(); g.moveTo(0, TH2 + 2);
+    for (j = 0; j <= n; j++) g.lineTo(TW2 * j / n, TH2 * (0.55 + 0.4 * rnd(j * 13 + 5)));
+    g.lineTo(TW2, TH2 + 2); g.closePath();
+    g.fillStyle = '#050803'; g.fill();
+  });
 
-  // ================= per-frame =================
   ctx.save();
 
-  // drifting bokeh backdrop (ambient)
-  var bdx = Math.sin(ms * 0.00006) * 24, bdy = Math.cos(ms * 0.000045) * 18;
-  ctx.globalAlpha = baseA * vis * dk;
-  ctx.drawImage(bokeh, -PAD + bdx, -PAD + bdy);
+  /* ---------- world: terrain, light pool, fireflies ---------- */
+  ctx.globalAlpha = A * 0.9;
+  ctx.drawImage(terr, 0, H - TH2);
 
-  // enter dial space (entrance scale 1.06 -> 1)
+  ctx.save();
+  ctx.translate(cx, cy + R * 1.0);
+  ctx.scale(1, 0.35);
+  var pool = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.25);
+  pool.addColorStop(0, hexA(f.gold2, 0.10));
+  pool.addColorStop(1, hexA(f.gold2, 0));
+  ctx.globalAlpha = A;
+  ctx.fillStyle = pool;
+  ctx.beginPath(); ctx.arc(0, 0, R * 1.25, 0, TAU); ctx.fill();
+  ctx.restore();
+
+  for (i = 0; i < 3; i++) {
+    var fx = W * (0.10 + 0.13 * i) + Math.sin(ms * 0.00021 + i * 2.4) * W * 0.022;
+    var fy = H * (0.50 + 0.34 * rnd(i + 11)) + Math.sin(ms * 0.00033 + i * 1.7) * H * 0.035;
+    var bl = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(ms * 0.0016 + i * 2.1));
+    ctx.fillStyle = '#d6e08a';
+    ctx.globalAlpha = A * 0.05 * bl; ctx.beginPath(); ctx.arc(fx, fy, 7, 0, TAU); ctx.fill();
+    ctx.globalAlpha = A * 0.14 * bl; ctx.beginPath(); ctx.arc(fx, fy, 3.2, 0, TAU); ctx.fill();
+    ctx.globalAlpha = A * 0.75 * bl; ctx.beginPath(); ctx.arc(fx, fy, 1.2, 0, TAU); ctx.fill();
+  }
+
+  /* ---------- instrument group ---------- */
   ctx.translate(cx, cy);
-  ctx.scale(scl, scl);
+  ctx.scale(sc, sc);
 
-  ctx.globalAlpha = baseA * vis;
-  ctx.drawImage(dial, -D / 2, -D / 2);
-
-  // lume pulse overlay (ambient)
-  var i, a;
-  for (i = 0; i < 12; i++) {
-    if (i === 3) continue;
-    a = i / 12 * TAU - Math.PI / 2;
-    ctx.fillStyle = f.hexA(f.ice, (0.1 + 0.08 * Math.sin(ms * 0.0025 + i * 1.7)) * dk);
+  /* leather strap edge, faceted, exiting bottom-right (behind bezel) */
+  var ux = Math.cos(0.66), uy = Math.sin(0.66), px2 = -uy, py2 = ux;
+  var seg = [[R * 0.78, R * 0.085], [R * 1.15, R * 0.10], [R * 1.55, R * 0.115], [R * 2.0, R * 0.13]];
+  var scol = ['#2e2015', '#241810', '#1d130c'];
+  ctx.globalAlpha = A;
+  for (i = 0; i < 3; i++) {
+    var d0 = seg[i], d1 = seg[i + 1];
+    ctx.fillStyle = scol[i];
     ctx.beginPath();
-    ctx.arc(Math.cos(a) * R * 0.76, Math.sin(a) * R * 0.76, 4.5, 0, TAU);
-    ctx.fill();
+    ctx.moveTo(ux * d0[0] + px2 * d0[1], uy * d0[0] + py2 * d0[1]);
+    ctx.lineTo(ux * d1[0] + px2 * d1[1], uy * d1[0] + py2 * d1[1]);
+    ctx.lineTo(ux * d1[0] - px2 * d1[1], uy * d1[0] - py2 * d1[1]);
+    ctx.lineTo(ux * d0[0] - px2 * d0[1], uy * d0[0] - py2 * d0[1]);
+    ctx.closePath(); ctx.fill();
   }
-
-  // scan beam progress (completes on exit)
-  var bp = f.clamp01(f.ease(t) * 1.02 + eout * 1.5);
-  var bx = lerp(-R, R, bp);
-  var fp = f.clamp01((t - 0.75) / 0.22);
-
-  // ---- clipped to dial: revealed tics, beam, flare wash ----
-  ctx.save();
+  ctx.strokeStyle = hexA('#c9a25c', 0.14); ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(0, 0, R * 0.97, 0, TAU);
-  ctx.clip();
+  ctx.moveTo(ux * R * 0.86 + px2 * R * 0.055, uy * R * 0.86 + py2 * R * 0.055);
+  ctx.lineTo(ux * R * 1.9 + px2 * R * 0.09, uy * R * 1.9 + py2 * R * 0.09);
+  ctx.stroke();
 
-  if (bx > -R * 0.98) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(-R, -R, bx + R, R * 2);
-    ctx.clip();
-    ctx.globalAlpha = baseA * vis * (0.6 + 0.08 * Math.sin(ms * 0.004));
-    ctx.drawImage(tics, -D / 2, -D / 2);
-    ctx.restore();
+  /* face sprite, with focus-pull ghosts on entrance */
+  var dfoc = 1 - inE;
+  if (dfoc > 0.02) {
+    var off = dfoc * R * 0.03;
+    ctx.globalAlpha = A * 0.30 * dfoc;
+    ctx.drawImage(face, -hs + off, -hs);
+    ctx.drawImage(face, -hs - off, -hs + off * 0.5);
   }
+  ctx.globalAlpha = A * (0.55 + 0.45 * inE);
+  ctx.drawImage(face, -hs, -hs);
 
-  var edgeFade = f.clamp01(bp * 14) * f.clamp01((1 - bp) * 14);
-  if (edgeFade > 0.01) {
-    var flick = 0.85 + 0.12 * Math.sin(ms * 0.017) + 0.03 * Math.sin(ms * 0.043);
-    var trail = R * 0.55;
-    var grd = ctx.createLinearGradient(bx - trail, 0, bx, 0);
-    grd.addColorStop(0, f.hexA(f.ice, 0));
-    grd.addColorStop(0.75, f.hexA(f.ice, 0.07 * dk));
-    grd.addColorStop(1, f.hexA(f.ice, 0.18 * dk));
-    ctx.globalAlpha = baseA * vis * edgeFade * flick;
-    ctx.fillStyle = grd;
-    ctx.fillRect(bx - trail, -R, trail, R * 2);
-    ctx.fillStyle = f.hexA(f.ice, 0.2 * dk);
-    ctx.fillRect(bx - 5, -R, 8, R * 2);
-    ctx.fillStyle = f.hexA('#e9f4ff', 0.95 * dk);
-    ctx.fillRect(bx - 0.75, -R, 1.5, R * 2);
+  /* compass rose with ambient wobble */
+  var wob = Math.sin(ms * 0.00051) * Math.sin(ms * 0.00013 + 1.7);
+  ctx.save();
+  ctx.rotate(wob * 0.017);
+  ctx.globalAlpha = A * (0.94 + 0.06 * Math.sin(ms * 0.0019));
+  ctx.drawImage(rose, -rh, -rh);
+  ctx.restore();
+
+  /* ---------- scan beam + revealed tics ---------- */
+  var prog = ease(f.t);
+  var bx = (-1.25 + 2.5 * prog) * R;
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.85, 0, TAU); ctx.clip();
+  ctx.strokeStyle = '#3a2a18';
+  ctx.lineWidth = 1;
+  for (i = 0; i < 12; i++) {
+    var tx = (-0.66 + i * 0.12) * R;
+    var rv = clamp01((bx - tx) / (R * 0.18));
+    if (rv <= 0) continue;
+    ctx.globalAlpha = A * 0.26 * rv;
+    ctx.beginPath(); ctx.moveTo(tx, -R * 0.315); ctx.lineTo(tx, -R * 0.285); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx, R * 0.285); ctx.lineTo(tx, R * 0.315); ctx.stroke();
   }
-
-  if (fp > 0 && fp < 1) {
-    ctx.globalAlpha = baseA * vis * (1 - fp) * 0.1 * dk;
+  if (prog > 0.005 && prog < 0.995) {
+    var trail = ctx.createLinearGradient(bx - R * 0.85, 0, bx, 0);
+    trail.addColorStop(0, hexA(f.gold2, 0));
+    trail.addColorStop(0.7, hexA(f.gold2, 0.06));
+    trail.addColorStop(1, hexA(f.gold2, 0.17));
+    ctx.globalAlpha = A;
+    ctx.fillStyle = trail;
+    ctx.fillRect(bx - R * 0.85, -R * 0.86, R * 0.85, R * 1.72);
     ctx.fillStyle = f.gold;
-    ctx.beginPath(); ctx.arc(0, 0, R * 0.97, 0, TAU); ctx.fill();
+    ctx.globalAlpha = A * 0.06; ctx.fillRect(bx - R * 0.012, -R * 0.86, R * 0.045, R * 1.72);
+    ctx.globalAlpha = A * 0.16; ctx.fillRect(bx - R * 0.005, -R * 0.86, R * 0.018, R * 1.72);
+    ctx.globalAlpha = A * 0.60; ctx.fillRect(bx - R * 0.002, -R * 0.86, R * 0.005, R * 1.72);
   }
   ctx.restore();
 
-  // ---- live hands from real local time ----
-  var dnow = new Date();
-  var sec = dnow.getSeconds() + dnow.getMilliseconds() / 1000;
-  var mnu = dnow.getMinutes() + sec / 60;
-  var hrs = (dnow.getHours() % 12) + mnu / 60;
-  var aH = hrs / 12 * TAU - Math.PI / 2;
+  /* ---------- parchment HUD tags ---------- */
+  function tag(x, y, txt, al) {
+    if (al < 0.02) return;
+    var tw = R * 0.34, th = R * 0.10, lip = Math.max(1, R * 0.008);
+    ctx.globalAlpha = A * al;
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(x + R * 0.008, y + R * 0.012, tw, th);
+    ctx.fillStyle = '#d8ccb4';
+    ctx.fillRect(x, y, tw, th);
+    ctx.fillStyle = '#e4d8bc';
+    ctx.fillRect(x, y, tw, lip);
+    ctx.fillStyle = '#c4b294';
+    ctx.fillRect(x, y + th - lip, tw, lip);
+    ctx.strokeStyle = '#4a3420';
+    ctx.lineWidth = Math.max(1, R * 0.006);
+    ctx.strokeRect(x, y, tw, th);
+    ctx.fillStyle = '#3a2a18';
+    ctx.font = Math.max(9, Math.round(R * 0.048)) + 'px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, x + tw / 2, y + th / 2 + 1);
+  }
+  tag(-R * 0.60, -R * 0.40, 'EST £3,120', clamp01((prog - 0.40) * 5));
+  tag(R * 0.16, R * 0.30, 'LOWEST-20', clamp01((prog - 0.70) * 5));
+
+  /* ---------- live hands ---------- */
+  var dt = new Date();
+  var sec = dt.getSeconds() + dt.getMilliseconds() / 1000;
+  var mnu = dt.getMinutes() + sec / 60;
+  var hrr = (dt.getHours() % 12) + mnu / 60;
+  var aH = hrr / 12 * TAU - Math.PI / 2;
   var aM = mnu / 60 * TAU - Math.PI / 2;
-  var aS = sec / 60 * TAU - Math.PI / 2;
-  var handCol = f.dark ? f.fg : '#dde7f5';
+  var aS = sec / 60 * TAU - Math.PI / 2 + Math.sin(ms * 0.0062) * 0.003;
 
-  ctx.lineCap = 'round';
-  ctx.globalAlpha = baseA * vis;
-
-  function hand(ang, tail, len, wid, col) {
-    var ca = Math.cos(ang), sa = Math.sin(ang);
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-    ctx.lineWidth = wid + 1.2;
+  function ironHand(ang, len, tail, wid) {
+    function path(c) {
+      c.beginPath();
+      c.moveTo(-tail, wid * 0.42);
+      c.lineTo(0, wid * 0.55);
+      c.lineTo(len * 0.82, wid * 0.20);
+      c.lineTo(len, 0);
+      c.lineTo(len * 0.82, -wid * 0.20);
+      c.lineTo(0, -wid * 0.55);
+      c.lineTo(-tail, -wid * 0.42);
+      c.closePath();
+    }
+    ctx.save();
+    ctx.translate(R * 0.012, R * 0.016);
+    ctx.rotate(ang);
+    ctx.globalAlpha = A * 0.30;
+    path(ctx); ctx.fillStyle = '#000'; ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.rotate(ang);
+    ctx.globalAlpha = A;
+    path(ctx); ctx.fillStyle = '#2a241d'; ctx.fill();
+    ctx.strokeStyle = '#4a4036'; ctx.lineWidth = Math.max(1, R * 0.005);
     ctx.beginPath();
-    ctx.moveTo(-ca * tail + 2.2, -sa * tail + 3.2);
-    ctx.lineTo(ca * len + 2.2, sa * len + 3.2);
+    ctx.moveTo(-tail, -wid * 0.42);
+    ctx.lineTo(0, -wid * 0.55);
+    ctx.lineTo(len * 0.82, -wid * 0.20);
+    ctx.lineTo(len, 0);
     ctx.stroke();
-    ctx.strokeStyle = col;
-    ctx.lineWidth = wid;
-    ctx.beginPath();
-    ctx.moveTo(-ca * tail, -sa * tail);
-    ctx.lineTo(ca * len, sa * len);
-    ctx.stroke();
+    ctx.restore();
   }
+  ironHand(aH, R * 0.34, R * 0.09, R * 0.055);
+  ironHand(aM, R * 0.52, R * 0.10, R * 0.040);
 
-  hand(aH, R * 0.06, R * 0.46, Math.max(3, R * 0.03), handCol);
-  ctx.strokeStyle = 'rgba(8,12,22,0.55)';
-  ctx.lineWidth = Math.max(1, R * 0.011);
-  ctx.beginPath();
-  ctx.moveTo(Math.cos(aH) * R * 0.14, Math.sin(aH) * R * 0.14);
-  ctx.lineTo(Math.cos(aH) * R * 0.4, Math.sin(aH) * R * 0.4);
-  ctx.stroke();
-
-  hand(aM, R * 0.07, R * 0.7, Math.max(2, R * 0.02), handCol);
-  ctx.strokeStyle = 'rgba(8,12,22,0.55)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(Math.cos(aM) * R * 0.16, Math.sin(aM) * R * 0.16);
-  ctx.lineTo(Math.cos(aM) * R * 0.62, Math.sin(aM) * R * 0.62);
-  ctx.stroke();
-
-  hand(aS, R * 0.18, R * 0.82, 1.5, f.gold);
-  ctx.fillStyle = f.gold;
-  ctx.beginPath();
-  ctx.arc(-Math.cos(aS) * R * 0.18, -Math.sin(aS) * R * 0.18, Math.max(3, R * 0.022), 0, TAU);
-  ctx.fill();
-
-  // centre cap
-  ctx.fillStyle = f.gold2;
-  ctx.beginPath(); ctx.arc(0, 0, Math.max(4, R * 0.032), 0, TAU); ctx.fill();
-  ctx.fillStyle = '#0b101d';
-  ctx.beginPath(); ctx.arc(0, 0, Math.max(1.6, R * 0.012), 0, TAU); ctx.fill();
-
-  // ---- valuation-lock flare ring (t > 0.75) ----
-  if (fp > 0 && fp < 1) {
-    var fr = f.ease(fp) * R * 1.08;
-    var fa = (1 - fp) * (1 - fp) * 0.6 * dk * vis;
-    ctx.globalAlpha = baseA;
-    ctx.strokeStyle = f.hexA(f.gold, fa);
-    ctx.lineWidth = 2 + 6 * (1 - fp);
-    ctx.beginPath(); ctx.arc(0, 0, fr, 0, TAU); ctx.stroke();
-    ctx.strokeStyle = f.hexA(f.gold, fa * 0.35);
-    ctx.lineWidth = 14 * (1 - fp) + 8;
-    ctx.beginPath(); ctx.arc(0, 0, fr * 0.96, 0, TAU); ctx.stroke();
+  /* seconds hand = two-tone compass needle */
+  var nw = R * 0.030, L1 = R * 0.62, L2 = R * 0.50;
+  function needleHalf(sgn, colUp, colDn, solid) {
+    var LL = sgn > 0 ? L1 : L2;
+    ctx.beginPath(); ctx.moveTo(sgn * LL, 0); ctx.lineTo(0, -nw); ctx.lineTo(0, 0); ctx.closePath();
+    ctx.fillStyle = solid || colUp; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(sgn * LL, 0); ctx.lineTo(0, 0); ctx.lineTo(0, nw); ctx.closePath();
+    ctx.fillStyle = solid || colDn; ctx.fill();
   }
+  ctx.save();
+  ctx.translate(R * 0.012, R * 0.016);
+  ctx.rotate(aS);
+  ctx.globalAlpha = A * 0.30;
+  needleHalf(1, 0, 0, '#000'); needleHalf(-1, 0, 0, '#000');
+  ctx.restore();
+  ctx.save();
+  ctx.rotate(aS);
+  ctx.globalAlpha = A;
+  needleHalf(1, '#a02015', '#c0281a', null);
+  needleHalf(-1, '#d3d0bf', '#e8e6d8', null);
+  ctx.restore();
 
-  // ---- HUD boxes fade in behind the beam ----
-  var boxes = [
-    { img: hud0, x: -R * 1.38, y: -R * 0.58, tx: -R * 0.6, ty: -R * 0.28, col: f.ice },
-    { img: hud1, x: -R * 1.28, y: R * 0.34, tx: -R * 0.3, ty: R * 0.45, col: f.ice },
-    { img: hud2, x: R * 1.06, y: -R * 0.5, tx: R * 0.52, ty: -R * 0.2, col: locked ? f.gold : f.ice }
-  ];
-  for (i = 0; i < 3; i++) {
-    var b = boxes[i];
-    var ap = f.clamp01((bx - b.tx) / (R * 0.22)) * vis;
-    if (ap <= 0.01) continue;
-    ctx.globalAlpha = baseA * ap;
-    var ex = b.x < 0 ? b.x + 120 : b.x;
-    ctx.strokeStyle = f.hexA(b.col, 0.4);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(ex, b.y + 21);
-    ctx.lineTo(b.tx, b.ty);
-    ctx.stroke();
-    ctx.fillStyle = f.hexA(b.col, 0.9);
-    ctx.beginPath(); ctx.arc(b.tx, b.ty, 2.5, 0, TAU); ctx.fill();
-    var rp = (ms * 0.0012 + i * 0.4) % 1;
-    ctx.strokeStyle = f.hexA(b.col, 0.5 * (1 - rp));
-    ctx.beginPath(); ctx.arc(b.tx, b.ty, 3 + rp * 9, 0, TAU); ctx.stroke();
-    ctx.drawImage(b.img, b.x, b.y);
-    ctx.fillStyle = f.hexA(b.col, Math.sin(ms * 0.006 + i * 2.1) > 0.3 ? 0.9 : 0.2);
-    ctx.fillRect(b.x + 108, b.y + 8, 4, 4);
+  /* bronze centre cap */
+  ctx.globalAlpha = A;
+  ctx.beginPath(); ctx.arc(R * 0.004, R * 0.006, R * 0.050, 0, TAU); ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.046, 0, TAU); ctx.fillStyle = '#8a6a38'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.046, 0, TAU); ctx.strokeStyle = '#4a3420'; ctx.lineWidth = Math.max(1, R * 0.007); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.030, Math.PI * 0.7, Math.PI * 1.6); ctx.strokeStyle = '#c9a25c'; ctx.lineWidth = Math.max(1, R * 0.008); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.011, 0, TAU); ctx.fillStyle = '#3a2a18'; ctx.fill();
+
+  /* valuation-locked flare (single pulse past t 0.78) */
+  if (f.t > 0.78) {
+    var p = clamp01((f.t - 0.78) / 0.14);
+    if (p < 1) {
+      var fr = R * (0.30 + 0.60 * ease(p));
+      ctx.strokeStyle = f.gold;
+      ctx.globalAlpha = A * 0.28 * (1 - p);
+      ctx.lineWidth = Math.max(3, R * 0.05 * (1 - p));
+      ctx.beginPath(); ctx.arc(0, 0, fr, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = A * 0.80 * (1 - p);
+      ctx.lineWidth = Math.max(1.5, R * 0.020 * (1 - p));
+      ctx.beginPath(); ctx.arc(0, 0, fr, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = A * 0.28 * (1 - p);
+      ctx.lineWidth = Math.max(1, R * 0.008);
+      ctx.beginPath(); ctx.arc(0, 0, fr * 1.15, 0, TAU); ctx.stroke();
+      var fgl = ctx.createRadialGradient(0, 0, 0, 0, 0, fr);
+      fgl.addColorStop(0, hexA(f.gold, 0.14 * (1 - p)));
+      fgl.addColorStop(1, hexA(f.gold, 0));
+      ctx.globalAlpha = A;
+      ctx.fillStyle = fgl;
+      ctx.beginPath(); ctx.arc(0, 0, fr, 0, TAU); ctx.fill();
+    }
   }
 
   ctx.restore();
 }
 
 function paintSchematicRealm(ctx, f) {
-  var W = f.W, H = f.H, ms = f.ms, TAU = Math.PI * 2;
-  var A = f.dark ? 1 : 0.5;
-  var ei = f.ease(f.clamp01(f.in01));
-  var eo = f.ease(f.clamp01(f.out01));
-  var live = 1 - eo;
-  var base = ctx.globalAlpha;
-  var cx = W * 0.55, cy = H * 0.48, R = Math.min(W, H) * 0.3;
-  var mn = Math.min(W, H);
-  var j, k;
+  var GA = ctx.globalAlpha;
+  var W = f.W, H = f.H, ms = f.ms, PI = Math.PI;
+  var ein = f.ease(f.clamp01(f.in01)), eout = f.ease(f.clamp01(f.out01));
+  var A = GA * (f.dark ? 0.55 : 1);
+  var live = ein * (0.30 + 0.70 * eout);
+  var flameS = (0.20 + 0.80 * ein) * (0.40 + 0.60 * eout);
+  var fi = Math.floor(ms / 90), fr = ms / 90 - fi; fr = fr * fr * (3 - 2 * fr);
+  var fn0 = f.rnd(fi & 1023), fn1 = f.rnd((fi + 1) & 1023);
+  var flick = 0.82 + 0.18 * (fn0 + (fn1 - fn0) * fr);
+  var K = 'paintSchematicRealm:' + (W | 0) + 'x' + (H | 0) + ':';
+  var cx = W * 0.17, deskY = H * 0.45, trayY = H * 0.618, candleTop = H * 0.552, baseY = H * 0.672;
+  var i;
 
-  function al(a) { ctx.globalAlpha = base * f.clamp01(a); }
+  // ---------- static world: night, window, desk, props ----------
+  var bg = f.cache(K + 'bg', W | 0, H | 0, function (g) {
+    function poly(p, c) { g.fillStyle = c; g.beginPath(); g.moveTo(p[0], p[1]); for (var n = 2; n < p.length; n += 2) g.lineTo(p[n], p[n + 1]); g.closePath(); g.fill(); }
+    // night
+    g.fillStyle = '#020308'; g.fillRect(0, 0, W, H);
+    var sg = g.createLinearGradient(0, 0, 0, deskY);
+    sg.addColorStop(0, 'rgba(12,18,34,0.55)'); sg.addColorStop(1, 'rgba(4,6,12,0)');
+    g.fillStyle = sg; g.fillRect(0, 0, W, deskY);
+    // arched window silhouette, top-left
+    var wx = W * 0.155, ww = W * 0.062, wy = H * 0.205, wb = H * 0.365;
+    g.fillStyle = '#0b1322';
+    g.beginPath(); g.moveTo(wx - ww, wb); g.lineTo(wx - ww, wy); g.arc(wx, wy, ww, PI, 0); g.lineTo(wx + ww, wb); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(58,51,43,0.75)'; g.lineWidth = Math.max(2, W * 0.0028); g.stroke();
+    g.strokeStyle = '#04060c'; g.lineWidth = Math.max(2, W * 0.002);
+    g.beginPath(); g.moveTo(wx, wy - ww); g.lineTo(wx, wb); g.moveTo(wx - ww, H * 0.24); g.lineTo(wx + ww, H * 0.24); g.stroke();
+    g.fillStyle = '#241f19'; g.fillRect(wx - ww * 1.15, wb, ww * 2.3, H * 0.012);
+    // ---- desk: low-poly planks in perspective ----
+    var yB = deskY, yF = H * 0.872, vx = W * 0.42;
+    g.fillStyle = '#31220f'; g.fillRect(0, yB, W, H - yB);
+    var N = 7, shades = ['#4a3420', '#3e2c1a', '#584028', '#4a3420', '#43301c', '#584028', '#3e2c1a'];
+    var xf = [], xb = [];
+    for (var n2 = 0; n2 <= N; n2++) { xf[n2] = -0.06 * W + n2 * (1.12 * W / N); xb[n2] = vx + (xf[n2] - vx) * 0.62; }
+    var yM = (yB + yF) * 0.5;
+    for (n2 = 0; n2 < N; n2++) {
+      var xm0 = (xb[n2] + xf[n2]) * 0.5, xm1 = (xb[n2 + 1] + xf[n2 + 1]) * 0.5;
+      poly([xb[n2], yB, xb[n2 + 1], yB, xm1, yM, xm0, yM], shades[n2]);
+      poly([xm0, yM, xm1, yM, xf[n2 + 1], yF, xf[n2], yF], shades[n2]);
+      g.fillStyle = 'rgba(0,0,0,' + (0.04 + f.rnd(n2 + 3) * 0.07).toFixed(3) + ')';
+      g.beginPath(); g.moveTo(xb[n2], yB); g.lineTo(xb[n2 + 1], yB); g.lineTo(xm1, yM); g.lineTo(xm0, yM); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,214,150,' + (0.02 + f.rnd(n2 + 11) * 0.03).toFixed(3) + ')';
+      g.beginPath(); g.moveTo(xm0, yM); g.lineTo(xm1, yM); g.lineTo(xf[n2 + 1], yF); g.lineTo(xf[n2], yF); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(26,17,8,0.9)'; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(xb[n2], yB); g.lineTo(xf[n2], yF); g.stroke();
+      g.strokeStyle = 'rgba(18,11,4,0.45)'; g.lineWidth = 1;
+      for (var s = 0; s < 2; s++) {
+        var u = 0.25 + 0.5 * f.rnd(n2 * 5 + s + 31);
+        var gx0 = xb[n2] + (xb[n2 + 1] - xb[n2]) * u, gx1 = xf[n2] + (xf[n2 + 1] - xf[n2]) * u;
+        var bend = (f.rnd(n2 * 7 + s + 57) - 0.5) * W * 0.012;
+        g.beginPath(); g.moveTo(gx0, yB + H * 0.01); g.quadraticCurveTo((gx0 + gx1) * 0.5 + bend, yM, gx1, yF - H * 0.01); g.stroke();
+      }
+    }
+    g.strokeStyle = 'rgba(106,76,46,0.5)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(0, yB + 1); g.lineTo(W, yB + 1); g.stroke();
+    // bevelled front edge + front face
+    g.fillStyle = '#6a4c2e'; g.fillRect(0, yF, W, H * 0.012);
+    var fg2 = g.createLinearGradient(0, yF + H * 0.012, 0, H);
+    fg2.addColorStop(0, '#2a1b0c'); fg2.addColorStop(1, '#140b04');
+    g.fillStyle = fg2; g.fillRect(0, yF + H * 0.012, W, H - yF);
+    // ---- props layout ----
+    var px = W * 0.262, pT = H * 0.615, pB = H * 0.664, pr = H * 0.026;
+    var sx = W * 0.205, sy = H * 0.492, sl = W * 0.072, sr = H * 0.0155;
+    // contact shadows
+    g.fillStyle = 'rgba(0,0,0,0.38)';
+    g.beginPath(); g.ellipse(cx, baseY + H * 0.004, H * 0.05, H * 0.011, 0, 0, PI * 2); g.fill();
+    g.beginPath(); g.ellipse(px + W * 0.003, H * 0.667, H * 0.03, H * 0.008, 0, 0, PI * 2); g.fill();
+    g.beginPath(); g.ellipse(sx, sy + sr + H * 0.004, sl * 1.05, H * 0.006, 0, 0, PI * 2); g.fill();
+    // ---- rolled spare scroll (back-left) ----
+    g.fillStyle = '#4a3420'; g.fillRect(sx - sl - W * 0.014, sy - sr * 0.45, W * 0.014, sr * 0.9);
+    g.fillRect(sx + sl, sy - sr * 0.45, W * 0.014, sr * 0.9);
+    g.fillStyle = '#6a4c2e'; g.fillRect(sx - sl - W * 0.014, sy - sr * 0.45, W * 0.014, sr * 0.38);
+    g.fillRect(sx + sl, sy - sr * 0.45, W * 0.014, sr * 0.38);
+    g.fillStyle = '#3a2a18'; g.fillRect(sx - sl - W * 0.017, sy - sr * 0.6, W * 0.004, sr * 1.2);
+    g.fillRect(sx + sl + W * 0.013, sy - sr * 0.6, W * 0.004, sr * 1.2);
+    g.fillStyle = '#c4b294'; g.fillRect(sx - sl, sy + sr * 0.3, sl * 2, sr * 0.7);
+    g.fillStyle = '#d8ccb4'; g.fillRect(sx - sl, sy - sr * 0.35, sl * 2, sr * 0.65);
+    g.fillStyle = '#e4d8bc'; g.fillRect(sx - sl, sy - sr, sl * 2, sr * 0.65);
+    g.fillStyle = '#a8946f'; g.fillRect(sx + sl * 0.32, sy - sr, 1.5, sr * 2);
+    g.fillStyle = '#cbbd9c'; g.beginPath(); g.ellipse(sx + sl - W * 0.001, sy, W * 0.003, sr, 0, 0, PI * 2); g.fill();
+    g.fillStyle = '#a8946f'; g.beginPath(); g.ellipse(sx + sl - W * 0.001, sy, W * 0.0015, sr * 0.5, 0, 0, PI * 2); g.fill();
+    // ---- old map corner (peeking from under the pot/wax) ----
+    poly([W * 0.19, H * 0.658, W * 0.325, H * 0.647, W * 0.352, H * 0.699, W * 0.298, H * 0.734, W * 0.208, H * 0.72], '#cbbd9c');
+    poly([W * 0.19, H * 0.658, W * 0.325, H * 0.647, W * 0.318, H * 0.66, W * 0.21, H * 0.671], '#b6a480');
+    g.fillStyle = 'rgba(143,29,16,0.7)';
+    var rx0 = W * 0.215, ry0 = H * 0.705, rx1 = W * 0.30, ry1 = H * 0.671, cq = W * 0.255, cyq = H * 0.722;
+    for (var q = 0; q < 8; q++) {
+      var tq = q / 7, it = 1 - tq;
+      g.fillRect(it * it * rx0 + 2 * it * tq * cq + tq * tq * rx1, it * it * ry0 + 2 * it * tq * cyq + tq * tq * ry1, 3, 3);
+    }
+    g.strokeStyle = 'rgba(143,29,16,0.85)'; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(rx1 - 5, ry1 - 5); g.lineTo(rx1 + 6, ry1 + 6); g.moveTo(rx1 + 6, ry1 - 5); g.lineTo(rx1 - 5, ry1 + 6); g.stroke();
+    // ---- ink-scribble scrap (far left) ----
+    poly([W * 0.055, H * 0.652, W * 0.145, H * 0.643, W * 0.152, H * 0.692, W * 0.062, H * 0.702], '#d0c3a2');
+    poly([W * 0.055, H * 0.652, W * 0.145, H * 0.643, W * 0.143, H * 0.650, W * 0.058, H * 0.659], '#e0d5b6');
+    g.strokeStyle = 'rgba(20,14,8,0.7)'; g.lineWidth = 1.5;
+    for (var w2 = 0; w2 < 4; w2++) {
+      var ly = H * (0.661 + w2 * 0.0095);
+      g.beginPath(); g.moveTo(W * 0.064, ly);
+      g.quadraticCurveTo(W * 0.085, ly - H * 0.004, W * 0.104, ly);
+      g.quadraticCurveTo(W * 0.118, ly + H * 0.003, W * (0.126 + f.rnd(w2 + 70) * 0.014), ly - H * 0.001);
+      g.stroke();
+    }
+    // ---- sealing wax stick + seal stamp ----
+    g.save(); g.translate(W * 0.318, H * 0.706); g.rotate(0.42);
+    g.fillStyle = '#8f1d10'; g.fillRect(-W * 0.026, -H * 0.006, W * 0.052, H * 0.012);
+    g.fillStyle = '#b53222'; g.fillRect(-W * 0.026, -H * 0.006, W * 0.052, H * 0.004);
+    g.fillStyle = '#5e120a'; g.fillRect(W * 0.022, -H * 0.006, W * 0.004, H * 0.012);
+    g.restore();
+    var stx = W * 0.352, sty = H * 0.664;
+    g.fillStyle = '#8a6a2a'; g.beginPath(); g.ellipse(stx, sty, H * 0.013, H * 0.006, 0, 0, PI * 2); g.fill();
+    g.fillStyle = '#5a4218'; g.beginPath(); g.ellipse(stx, sty - H * 0.002, H * 0.010, H * 0.0045, 0, 0, PI * 2); g.fill();
+    g.fillStyle = '#4a3420'; g.fillRect(stx - H * 0.004, sty - H * 0.036, H * 0.008, H * 0.034);
+    g.fillStyle = '#6a4c2e'; g.beginPath(); g.ellipse(stx, sty - H * 0.038, H * 0.008, H * 0.005, 0, 0, PI * 2); g.fill();
+    // ---- two loose coins ----
+    function coin(mx, my) {
+      g.fillStyle = '#6e5210'; g.beginPath(); g.ellipse(mx, my + H * 0.0025, H * 0.0145, H * 0.0062, 0, 0, PI * 2); g.fill();
+      g.fillStyle = '#b8891f'; g.beginPath(); g.ellipse(mx, my, H * 0.0145, H * 0.0062, 0, 0, PI * 2); g.fill();
+      g.fillStyle = '#d4a92e'; g.beginPath(); g.ellipse(mx, my, H * 0.0095, H * 0.004, 0, 0, PI * 2); g.fill();
+      g.fillStyle = '#f5c518'; g.beginPath(); g.moveTo(mx - H * 0.008, my - H * 0.002); g.lineTo(mx + H * 0.002, my - H * 0.004); g.lineTo(mx + H * 0.005, my + H * 0.001); g.closePath(); g.fill();
+    }
+    coin(W * 0.103, H * 0.737); coin(W * 0.132, H * 0.760);
+    // ---- brass candlestick + candle body ----
+    var cwS = H * 0.017;
+    poly([cx - H * 0.042, baseY, cx + H * 0.042, baseY, cx + H * 0.028, baseY - H * 0.016, cx - H * 0.028, baseY - H * 0.016], '#8a6a2a');
+    poly([cx - H * 0.042, baseY, cx - H * 0.028, baseY - H * 0.016, cx - H * 0.008, baseY - H * 0.016, cx - H * 0.012, baseY], '#c9a34a');
+    poly([cx + H * 0.042, baseY, cx + H * 0.028, baseY - H * 0.016, cx + H * 0.010, baseY - H * 0.016, cx + H * 0.016, baseY], '#5a4218');
+    poly([cx - H * 0.008, baseY - H * 0.016, cx + H * 0.008, baseY - H * 0.016, cx + H * 0.006, trayY + H * 0.006, cx - H * 0.006, trayY + H * 0.006], '#8a6a2a');
+    g.fillStyle = '#c9a34a'; g.fillRect(cx - H * 0.006, trayY + H * 0.006, H * 0.004, baseY - H * 0.022 - trayY);
+    poly([cx - H * 0.026, trayY + H * 0.006, cx + H * 0.026, trayY + H * 0.006, cx + H * 0.018, trayY - H * 0.004, cx - H * 0.018, trayY - H * 0.004], '#8a6a2a');
+    g.fillStyle = 'rgba(245,197,24,0.35)'; g.fillRect(cx - H * 0.024, trayY + H * 0.002, H * 0.014, H * 0.003);
+    poly([cx - cwS, trayY - H * 0.004, cx, trayY - H * 0.004, cx, candleTop, cx - cwS, candleTop + H * 0.003], '#d9cbaa');
+    poly([cx, trayY - H * 0.004, cx + cwS, trayY - H * 0.004, cx + cwS, candleTop + H * 0.003, cx, candleTop], '#bfae8c');
+    poly([cx - cwS, candleTop + H * 0.003, cx - cwS * 0.4, candleTop - H * 0.004, cx + cwS * 0.5, candleTop - H * 0.003, cx + cwS, candleTop + H * 0.003, cx, candleTop + H * 0.006], '#e8dcc0');
+    g.strokeStyle = '#241c12'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(cx, candleTop); g.lineTo(cx + H * 0.002, candleTop - H * 0.008); g.stroke();
+    // ---- ink pot (dark glass) ----
+    poly([px - pr * 0.55, pT, px + pr * 0.55, pT, px + pr, pT + (pB - pT) * 0.45, px + pr * 0.8, pB, px - pr * 0.8, pB, px - pr, pT + (pB - pT) * 0.45], '#0e1216');
+    poly([px - pr * 0.55, pT, px - pr, pT + (pB - pT) * 0.45, px - pr * 0.8, pB, px - pr * 0.35, pB, px - pr * 0.5, pT + (pB - pT) * 0.45, px - pr * 0.2, pT], '#1a2026');
+    poly([px - pr * 0.5, pT - H * 0.006, px + pr * 0.5, pT - H * 0.006, px + pr * 0.55, pT + H * 0.002, px - pr * 0.55, pT + H * 0.002], '#2a3038');
+    g.fillStyle = '#05070a'; g.beginPath(); g.ellipse(px, pT - H * 0.005, pr * 0.38, H * 0.004, 0, 0, PI * 2); g.fill();
+    // ---- sand / dust specks in the pool ----
+    for (var d = 0; d < 30; d++) {
+      var ang = f.rnd(d + 300) * PI * 2, rad = Math.sqrt(f.rnd(d + 340));
+      var sxp = cx + Math.cos(ang) * rad * W * 0.12;
+      var syp = H * 0.70 + Math.sin(ang) * rad * H * 0.075;
+      if (syp < deskY + H * 0.03) syp = deskY + H * 0.03;
+      if (syp > yF - 4) syp = yF - 4;
+      g.fillStyle = 'rgba(226,188,130,' + (0.10 + f.rnd(d + 380) * 0.18).toFixed(2) + ')';
+      g.fillRect(sxp, syp, 2, 2);
+    }
+  });
 
+  // ---------- warm light pool (half-res cached gradient) ----------
+  var pw = (W / 2) | 0, ph = (H / 2) | 0;
+  var pool = f.cache(K + 'pool', pw, ph, function (g) {
+    g.save(); g.translate(cx / 2, H * 0.585 / 2); g.scale(1, 0.72);
+    var rg = g.createRadialGradient(0, 0, 0, 0, 0, W * 0.24);
+    rg.addColorStop(0, 'rgba(255,196,110,0.42)');
+    rg.addColorStop(0.16, 'rgba(255,152,31,0.27)');
+    rg.addColorStop(0.4, 'rgba(206,110,32,0.13)');
+    rg.addColorStop(0.72, 'rgba(128,66,22,0.05)');
+    rg.addColorStop(1, 'rgba(128,66,22,0)');
+    g.fillStyle = rg; g.fillRect(-W, -H * 2, W * 2, H * 4);
+    g.restore();
+  });
+
+  // ---------- quill (cached, rotated per frame for the tap) ----------
+  var qw = Math.max(48, (W * 0.09) | 0), qh = Math.max(70, (H * 0.21) | 0);
+  var quill = f.cache(K + 'quill', qw, qh, function (g) {
+    var tx = qw * 0.14, ty = qh * 0.94, ex = qw * 0.82, ey = qh * 0.07;
+    var dx2 = ex - tx, dy2 = ey - ty, ln = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+    var nx = -(dy2 / ln), ny = dx2 / ln;
+    function P(t2) { return [tx + dx2 * t2, ty + dy2 * t2]; }
+    var side = [1, -0.62], base = ['#e8e2d2', '#d5cdb8'], fA = ['#d8d0ba', '#c8bfa8'], fB = ['#cfc8b4', '#bdb49c'];
+    for (var v = 0; v < 2; v++) {
+      var s2 = side[v];
+      g.beginPath();
+      var a0 = P(0.30); g.moveTo(a0[0], a0[1]);
+      for (var b = 0; b < 6; b++) {
+        var tb = 0.36 + b * 0.115;
+        var amp = ln * 0.15 * s2 * (0.55 + Math.sin((b + 1.5) / 7.5 * PI) * 0.65) * (0.8 + f.rnd(b + v * 7 + 3) * 0.4);
+        var o1 = P(tb); g.lineTo(o1[0] + nx * amp, o1[1] + ny * amp);
+        var o2 = P(tb + 0.05); g.lineTo(o2[0] + nx * amp * 0.55, o2[1] + ny * amp * 0.55);
+      }
+      var pe = P(1.0); g.lineTo(pe[0], pe[1]);
+      g.closePath(); g.fillStyle = base[v]; g.fill();
+      var pa = P(0.40), pm = P(0.52), pb2 = P(0.64);
+      g.fillStyle = fA[v];
+      g.beginPath(); g.moveTo(pa[0], pa[1]); g.lineTo(pm[0] + nx * ln * 0.11 * s2, pm[1] + ny * ln * 0.11 * s2); g.lineTo(pb2[0], pb2[1]); g.closePath(); g.fill();
+      pa = P(0.68); pm = P(0.80); pb2 = P(0.93);
+      g.fillStyle = fB[v];
+      g.beginPath(); g.moveTo(pa[0], pa[1]); g.lineTo(pm[0] + nx * ln * 0.09 * s2, pm[1] + ny * ln * 0.09 * s2); g.lineTo(pb2[0], pb2[1]); g.closePath(); g.fill();
+    }
+    g.strokeStyle = '#c9c0a8'; g.lineWidth = Math.max(2, ln * 0.018);
+    g.beginPath(); g.moveTo(tx, ty); g.lineTo(ex, ey); g.stroke();
+    var pn = P(0.07);
+    g.fillStyle = '#241c12';
+    g.beginPath(); g.moveTo(tx, ty); g.lineTo(pn[0] + nx * 3, pn[1] + ny * 3); g.lineTo(pn[0] - nx * 3, pn[1] - ny * 3); g.closePath(); g.fill();
+    g.fillStyle = '#0d1014'; g.fillRect(tx - 1.5, ty - 2, 3, 4);
+  });
+
+  // ---------- per-frame composite ----------
+  ctx.globalAlpha = A * (0.15 + 0.85 * ein);
+  ctx.drawImage(bg, 0, 0, W, H);
+
+  // light pool: blooms with in01, flickers with the flame, dims with out01
   ctx.save();
-  ctx.lineCap = 'butt';
-  ctx.lineJoin = 'round';
-
-  /* ---------- (a) blueprint wireframe terrain (cached), tilted/panned by t ---------- */
-  var tW = Math.max(2, Math.round(W));
-  var tH = Math.max(2, Math.round(H * 0.62));
-  var terr = f.cache('srTerrain', tW, tH, function (g, w, h) {
-    g.lineWidth = 1;
-    var vpx = w * 0.5, rows = 16, cols = 56;
-    var pts = [], i, c, z, row;
-    function elev(u, v) {
-      return Math.sin(u * 4.4 + v * 2.1 + f.rnd(3) * 6.28) * 0.55 +
-             Math.sin(u * 9.3 - v * 3.4 + f.rnd(11) * 6.28) * 0.30 +
-             Math.sin(u * 16.9 + v * 5.2 + f.rnd(23) * 6.28) * 0.15;
-    }
-    for (i = 0; i <= rows; i++) {
-      z = i / rows;
-      var ry = 3 + Math.pow(z, 1.65) * (h - 8);
-      var half = w * (0.14 + 0.38 * z + 0.95 * z * z);
-      var amp = Math.pow(z, 1.35) * h * 0.24;
-      row = [];
-      for (c = 0; c <= cols; c++) {
-        var u = c / cols;
-        row.push(vpx + (u - 0.5) * 2 * half,
-                 ry - amp * (0.5 + 0.5 * elev(u * 3.1, z * 2.6)));
-      }
-      pts.push(row);
-    }
-    for (i = 0; i <= rows; i++) {
-      z = i / rows;
-      row = pts[i];
-      g.strokeStyle = f.hexA(f.violet, (0.045 + z * 0.06) * A);
-      g.beginPath();
-      g.moveTo(row[0], row[1]);
-      for (c = 1; c <= cols; c++) g.lineTo(row[c * 2], row[c * 2 + 1]);
-      g.stroke();
-    }
-    g.strokeStyle = f.hexA(f.violet, 0.05 * A);
-    g.beginPath();
-    for (c = 0; c <= cols; c += 4) {
-      g.moveTo(pts[0][c * 2], pts[0][c * 2 + 1]);
-      for (i = 1; i <= rows; i++) g.lineTo(pts[i][c * 2], pts[i][c * 2 + 1]);
-    }
-    g.stroke();
-    g.strokeStyle = f.hexA(f.ice, 0.10 * A);
-    g.beginPath(); g.moveTo(0, 2.5); g.lineTo(w, 2.5); g.stroke();
-    g.strokeStyle = f.hexA(f.ice, 0.04 * A);
-    g.beginPath(); g.moveTo(0, 4.5); g.lineTo(w, 4.5); g.stroke();
-  });
-  var tilt = f.ease(f.t);
-  var dh = tH * (1 - tilt * 0.16);
-  var tBot = H + 12 - tilt * H * 0.10 + (1 - ei) * 46;
-  al(ei * live);
-  ctx.drawImage(terr, 0, tBot - dh, W, dh);
-
-  /* ---------- particle dust ---------- */
-  var dustGold = f.hexA(f.gold2, 0.10 * A);
-  var dustIce = f.hexA(f.ice, 0.08 * A);
-  var dustDim = f.hexA(f.ice, 0.05 * A);
-  al(ei * live);
-  for (j = 0; j < 42; j++) {
-    var dx0 = f.rnd(j * 31 + 2) * W + Math.sin(ms * 0.0004 + j * 1.3) * 6;
-    var spd = 6 + f.rnd(j * 31 + 9) * 14;
-    var dy0 = (f.rnd(j * 31 + 5) * H - ms * 0.001 * spd) % H;
-    if (dy0 < 0) dy0 += H;
-    ctx.fillStyle = (j % 3 === 0) ? dustGold : (j % 3 === 1 ? dustIce : dustDim);
-    var dsz = (j % 5 === 0) ? 2 : 1;
-    ctx.fillRect(dx0, dy0, dsz, dsz);
-  }
-
-  /* ---------- (c) drafting furniture: crop marks + crosshair ---------- */
-  al(ei * live);
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = f.hexA(f.ice, 0.30 * A);
-  var m = 16.5, L = 20;
-  ctx.beginPath();
-  ctx.moveTo(m, m + L); ctx.lineTo(m, m); ctx.lineTo(m + L, m);
-  ctx.moveTo(W - m - L, m); ctx.lineTo(W - m, m); ctx.lineTo(W - m, m + L);
-  ctx.moveTo(m, H - m - L); ctx.lineTo(m, H - m); ctx.lineTo(m + L, H - m);
-  ctx.moveTo(W - m - L, H - m); ctx.lineTo(W - m, H - m); ctx.lineTo(W - m, H - m - L);
-  ctx.stroke();
-
-  ctx.strokeStyle = f.hexA(f.ice, 0.26 * A);
-  ctx.beginPath();
-  ctx.moveTo(cx - 26, cy); ctx.lineTo(cx - 9, cy);
-  ctx.moveTo(cx + 9, cy); ctx.lineTo(cx + 26, cy);
-  ctx.moveTo(cx, cy - 26); ctx.lineTo(cx, cy - 9);
-  ctx.moveTo(cx, cy + 9); ctx.lineTo(cx, cy + 26);
-  ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, TAU); ctx.stroke();
-
-  /* ---------- measurement ticks along orbit ---------- */
-  var oProg = f.ease(f.clamp01(f.in01 * 1.25));
-  var NT = 60;
-  al(ei * live);
-  ctx.strokeStyle = f.hexA(f.ice, 0.20 * A);
-  ctx.beginPath();
-  for (k = 0; k < NT; k++) {
-    if (k / NT > oProg) break;
-    var ta = -Math.PI / 2 + (k / NT) * TAU;
-    var lng = (k % 5 === 0);
-    var r0 = R + 5, r1 = R + (lng ? 15 : 9);
-    var ct = Math.cos(ta), st = Math.sin(ta);
-    ctx.moveTo(cx + ct * r0, cy + st * r0);
-    ctx.lineTo(cx + ct * r1, cy + st * r1);
-    if (lng) {
-      var rr = r1 + 5;
-      ctx.moveTo(cx + ct * rr + st * 3, cy + st * rr - ct * 3);
-      ctx.lineTo(cx + ct * rr - st * 3, cy + st * rr + ct * 3);
-    }
-  }
-  ctx.stroke();
-
-  /* ---------- (b) huge dashed orbit circle (draw-in / un-draw) ---------- */
-  var arcEnd = TAU * f.ease(f.clamp01(f.in01 * 1.1));
-  if (arcEnd > 0.001) {
-    al(live);
-    ctx.setLineDash([Math.max(0.01, 7 * (1 - eo)), 6 + 8 * eo]);
-    ctx.lineDashOffset = -ms * 0.008 - eo * 420;
-    ctx.strokeStyle = f.hexA(f.ice, 0.10 * A);
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + arcEnd);
-    ctx.stroke();
-    ctx.strokeStyle = f.hexA(f.ice, 0.55 * A);
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + arcEnd);
-    ctx.stroke();
-    ctx.setLineDash([1, 7]);
-    ctx.lineDashOffset = -ms * 0.004;
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = f.hexA(f.ice, 0.10 * A);
-    ctx.beginPath();
-    ctx.arc(cx, cy, R + 24, -Math.PI / 2, -Math.PI / 2 + arcEnd);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.lineDashOffset = 0;
-  }
-
-  /* ---------- second crossing ellipse orbit (gold2, thin) ---------- */
-  var rot = -0.45, rx = R * 1.5, ryE = R * 0.42;
-  var eEnd = TAU * f.ease(f.clamp01(f.in01 * 1.1 - 0.05));
-  if (eEnd > 0.001) {
-    al(live);
-    ctx.strokeStyle = f.hexA(f.gold2, 0.30 * A);
-    ctx.lineWidth = 1;
-    ctx.setLineDash([Math.max(0.01, 60 * (1 - eo)), 0.01 + 60 * eo]);
-    ctx.lineDashOffset = -ms * 0.004 - eo * 260;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, ryE, rot, 0, eEnd);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.lineDashOffset = 0;
-
-    var eaAng = ms * 0.00022 + 2.0;
-    var ce = Math.cos(eaAng) * rx, se = Math.sin(eaAng) * ryE;
-    var exx = cx + ce * Math.cos(rot) - se * Math.sin(rot);
-    var eyy = cy + ce * Math.sin(rot) + se * Math.cos(rot);
-    al(ei * live);
-    ctx.fillStyle = f.hexA(f.gold2, 0.14 * A);
-    ctx.beginPath(); ctx.arc(exx, eyy, 5, 0, TAU); ctx.fill();
-    ctx.fillStyle = f.hexA(f.gold2, 0.8 * A);
-    ctx.beginPath(); ctx.arc(exx, eyy, 1.8, 0, TAU); ctx.fill();
-  }
-
-  /* ---------- comet head travelling the orbit ---------- */
-  var ca = -Math.PI / 2 + ms * 0.00034;
-  al(ei * live);
-  for (j = 6; j >= 1; j--) {
-    var pa = ca - j * 0.055;
-    ctx.fillStyle = f.hexA(f.gold, (0.30 - j * 0.045) * A);
-    ctx.beginPath();
-    ctx.arc(cx + Math.cos(pa) * R, cy + Math.sin(pa) * R, Math.max(0.6, 3 - j * 0.4), 0, TAU);
-    ctx.fill();
-  }
-  var hx = cx + Math.cos(ca) * R, hy = cy + Math.sin(ca) * R;
-  ctx.fillStyle = f.hexA(f.gold, 0.07 * A);
-  ctx.beginPath(); ctx.arc(hx, hy, 12, 0, TAU); ctx.fill();
-  ctx.fillStyle = f.hexA(f.gold, 0.16 * A);
-  ctx.beginPath(); ctx.arc(hx, hy, 6.5, 0, TAU); ctx.fill();
-  ctx.fillStyle = f.hexA(f.gold, 0.65 * A);
-  ctx.beginPath(); ctx.arc(hx, hy, 3.1, 0, TAU); ctx.fill();
-  ctx.fillStyle = f.hexA('#fff6da', 0.95 * A);
-  ctx.beginPath(); ctx.arc(hx, hy, 1.6, 0, TAU); ctx.fill();
-
-  /* ---------- compass rose, top-right (cached linework) ---------- */
-  var CS = 96;
-  var rose = f.cache('srRose', CS, CS, function (g, w, h) {
-    var c = w / 2, q;
-    g.lineWidth = 1;
-    g.lineJoin = 'round';
-    g.strokeStyle = f.hexA(f.ice, 0.38 * A);
-    g.beginPath(); g.arc(c, c, 40, 0, TAU); g.stroke();
-    g.strokeStyle = f.hexA(f.ice, 0.14 * A);
-    g.beginPath(); g.arc(c, c, 33.5, 0, TAU); g.stroke();
-    g.strokeStyle = f.hexA(f.ice, 0.32 * A);
-    g.beginPath();
-    for (var kk = 0; kk < 24; kk++) {
-      var a2 = (kk / 24) * TAU;
-      var rr0 = (kk % 6 === 0) ? 34 : 37;
-      g.moveTo(c + Math.cos(a2) * rr0, c + Math.sin(a2) * rr0);
-      g.lineTo(c + Math.cos(a2) * 40, c + Math.sin(a2) * 40);
-    }
-    g.stroke();
-    function kite(a, len, wd, col, aFill) {
-      var tx = c + Math.cos(a) * len, ty = c + Math.sin(a) * len;
-      var pxk = Math.cos(a + Math.PI / 2), pyk = Math.sin(a + Math.PI / 2);
-      var bx = c + Math.cos(a) * 6, by = c + Math.sin(a) * 6;
-      g.beginPath();
-      g.moveTo(tx, ty);
-      g.lineTo(bx + pxk * wd, by + pyk * wd);
-      g.lineTo(c, c);
-      g.lineTo(bx - pxk * wd, by - pyk * wd);
-      g.closePath();
-      g.fillStyle = f.hexA(col, aFill * A);
-      g.fill();
-      g.strokeStyle = f.hexA(col, 0.6 * A);
-      g.stroke();
-      g.beginPath();
-      g.moveTo(tx, ty);
-      g.lineTo(bx + pxk * wd, by + pyk * wd);
-      g.lineTo(c, c);
-      g.closePath();
-      g.fillStyle = f.hexA(col, 0.35 * A);
-      g.fill();
-    }
-    for (q = 0; q < 4; q++) kite(-Math.PI / 2 + q * Math.PI / 2, 29, 4.5, f.gold2, 0.14);
-    for (q = 0; q < 4; q++) kite(-Math.PI / 4 + q * Math.PI / 2, 17, 3, f.violet, 0.12);
-    g.fillStyle = f.hexA(f.gold, 0.9 * A);
-    g.beginPath(); g.arc(c, c, 2.6, 0, TAU); g.fill();
-    g.strokeStyle = f.hexA(f.gold2, 0.5 * A);
-    g.beginPath(); g.arc(c, c, 5.5, 0, TAU); g.stroke();
-  });
-  var rX = W - CS - 24, rY = 22 + Math.sin(ms * 0.0006) * 2.5;
-  al(ei * live * 0.9);
-  ctx.drawImage(rose, rX, rY);
-  var sc = rX + CS / 2, scy = rY + CS / 2, sa = ms * 0.0011;
-  ctx.lineWidth = 1;
-  for (j = 0; j < 4; j++) {
-    var swA = sa - j * 0.12;
-    ctx.strokeStyle = f.hexA(f.ice, (0.16 - j * 0.035) * A);
-    ctx.beginPath();
-    ctx.moveTo(sc, scy);
-    ctx.lineTo(sc + Math.cos(swA) * 31, scy + Math.sin(swA) * 31);
-    ctx.stroke();
-  }
-
-  /* ---------- (d) floating quest-rune glyphs ---------- */
-  var NG = 7, GS = 26;
-  var GP = [0, 0, 0];
-  function gpos(i, out) {
-    var dep = 0.7 + f.rnd(i * 9 + 7) * 0.6;
-    var dir = f.rnd(i * 9 + 2) > 0.5 ? -1 : 1;
-    out[0] = W * (0.07 + f.rnd(i * 9 + 1) * 0.40) +
-             Math.sin(ms * 0.00030 + i * 1.9) * 7 * dep + eo * dir * 70 * dep;
-    out[1] = H * (0.13 + f.rnd(i * 9 + 4) * 0.56) +
-             Math.cos(ms * 0.00023 + i * 2.6) * 5 * dep - eo * 60 * dep;
-    out[2] = dep;
-    return out;
-  }
-  function glyphC(i) {
-    return f.cache('srGly' + i, GS, GS, function (g, w, h) {
-      g.lineWidth = 1;
-      var gold2 = f.gold2, vio = f.violet, ice = f.ice;
-      if (i === 0) { /* sword */
-        g.fillStyle = f.hexA(ice, 0.85 * A);
-        g.fillRect(12, 2, 2, 13);
-        g.fillStyle = f.hexA(ice, 0.35 * A);
-        g.fillRect(11, 4, 1, 9);
-        g.fillStyle = f.hexA(gold2, 0.95 * A);
-        g.fillRect(8, 15, 10, 2);
-        g.fillStyle = f.hexA(gold2, 0.7 * A);
-        g.fillRect(12, 17, 2, 4);
-        g.fillRect(11, 21, 4, 2);
-      } else if (i === 1) { /* coin */
-        g.strokeStyle = f.hexA(gold2, 0.9 * A);
-        g.beginPath(); g.arc(13, 13, 8.5, 0, TAU); g.stroke();
-        g.fillStyle = f.hexA(f.gold, 0.10 * A);
-        g.beginPath(); g.arc(13, 13, 7, 0, TAU); g.fill();
-        g.fillStyle = f.hexA(f.gold, 0.9 * A);
-        g.fillRect(12, 9, 2, 8);
-        g.fillRect(10, 11, 6, 1);
-        g.fillRect(10, 14, 6, 1);
-      } else if (i === 2) { /* book */
-        g.strokeStyle = f.hexA(vio, 0.85 * A);
-        g.strokeRect(5.5, 7.5, 15, 12);
-        g.beginPath(); g.moveTo(13.5, 7.5); g.lineTo(13.5, 19.5); g.stroke();
-        g.strokeStyle = f.hexA(vio, 0.4 * A);
-        g.beginPath();
-        g.moveTo(8, 11.5); g.lineTo(11.5, 11.5);
-        g.moveTo(8, 14.5); g.lineTo(11.5, 14.5);
-        g.moveTo(15.5, 11.5); g.lineTo(19, 11.5);
-        g.moveTo(15.5, 14.5); g.lineTo(19, 14.5);
-        g.stroke();
-        g.fillStyle = f.hexA(f.gold, 0.9 * A);
-        g.fillRect(15, 8, 2, 4);
-      } else if (i === 3) { /* potion */
-        g.fillStyle = f.hexA(gold2, 0.8 * A);
-        g.fillRect(11, 2, 4, 2);
-        g.fillStyle = f.hexA(ice, 0.6 * A);
-        g.fillRect(12, 4, 2, 4);
-        g.beginPath();
-        g.moveTo(13, 7.5); g.lineTo(18.5, 20.5); g.lineTo(7.5, 20.5); g.closePath();
-        g.fillStyle = f.hexA(vio, 0.30 * A);
-        g.fill();
-        g.strokeStyle = f.hexA(vio, 0.85 * A);
-        g.stroke();
-        g.fillStyle = f.hexA(vio, 0.85 * A);
-        g.fillRect(12, 16, 2, 2);
-      } else if (i === 4) { /* key */
-        g.strokeStyle = f.hexA(gold2, 0.9 * A);
-        g.beginPath(); g.arc(13, 7.5, 4, 0, TAU); g.stroke();
-        g.fillStyle = f.hexA(gold2, 0.85 * A);
-        g.fillRect(12, 11, 2, 11);
-        g.fillRect(14, 16, 4, 2);
-        g.fillRect(14, 20, 3, 2);
-      } else if (i === 5) { /* shield */
-        g.beginPath();
-        g.moveTo(7.5, 5.5); g.lineTo(18.5, 5.5); g.lineTo(18.5, 13);
-        g.lineTo(13, 20.5); g.lineTo(7.5, 13); g.closePath();
-        g.fillStyle = f.hexA(ice, 0.10 * A);
-        g.fill();
-        g.strokeStyle = f.hexA(ice, 0.85 * A);
-        g.stroke();
-        g.strokeStyle = f.hexA(gold2, 0.8 * A);
-        g.beginPath();
-        g.moveTo(13.5, 8); g.lineTo(13.5, 17);
-        g.moveTo(10, 11.5); g.lineTo(16, 11.5);
-        g.stroke();
-      } else { /* rune star */
-        g.strokeStyle = f.hexA(vio, 0.85 * A);
-        g.beginPath();
-        g.moveTo(13.5, 4); g.lineTo(13.5, 22);
-        g.moveTo(4, 13.5); g.lineTo(22, 13.5);
-        g.stroke();
-        g.strokeStyle = f.hexA(gold2, 0.8 * A);
-        g.beginPath();
-        g.moveTo(13.5, 9.5); g.lineTo(17.5, 13.5); g.lineTo(13.5, 17.5); g.lineTo(9.5, 13.5);
-        g.closePath();
-        g.stroke();
-        g.fillStyle = f.hexA(f.gold, 0.7 * A);
-        g.fillRect(12, 12, 3, 3);
-      }
-    });
-  }
-  for (var gi = 0; gi < NG; gi++) {
-    gpos(gi, GP);
-    var gxp = GP[0], dep = GP[2];
-    var apIn = f.ease(f.clamp01((f.in01 - gi * 0.05) / 0.45));
-    if (apIn <= 0) continue;
-    var gw = GS * dep;
-    var gy2 = GP[1] + (1 - apIn) * 16;
-    al(apIn * live * (0.55 + 0.45 * (dep - 0.7) / 0.6));
-    ctx.drawImage(glyphC(gi), gxp - gw / 2, gy2 - gw / 2, gw, gw);
-    var uy = gy2 + gw * 0.62;
-    var uw = gw * 0.95 * apIn;
-    ctx.strokeStyle = f.hexA(f.ice, 0.22 * A);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(gxp - uw / 2, uy); ctx.lineTo(gxp + uw / 2, uy);
-    ctx.stroke();
-    var cp = f.clamp01((f.in01 - (0.34 + gi * 0.085)) / 0.14);
-    if (cp > 0) {
-      var ks = dep * 0.9;
-      var ox = gxp + gw * 0.62, oy = gy2 + gw * 0.30;
-      var ax = ox - 4 * ks, ay = oy + 0.5 * ks;
-      var bx2 = ox - 1 * ks, by2 = oy + 4 * ks;
-      var cx2 = ox + 5 * ks, cy2 = oy - 3.5 * ks;
-      var p1 = Math.min(1, cp / 0.4);
-      var p2 = f.clamp01((cp - 0.4) / 0.6);
-      if (cp >= 1) {
-        ctx.fillStyle = f.hexA(f.gold, 0.10 * A);
-        ctx.beginPath(); ctx.arc(ox, oy, 7, 0, TAU); ctx.fill();
-      }
-      ctx.strokeStyle = f.hexA(f.gold, 0.95 * A);
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(ax + (bx2 - ax) * p1, ay + (by2 - ay) * p1);
-      if (p2 > 0) ctx.lineTo(bx2 + (cx2 - bx2) * p2, by2 + (cy2 - by2) * p2);
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
-  }
-
-  /* ---------- (e) radar ping from a random glyph every ~3s ---------- */
-  var pc = ms / 3000, pk = Math.floor(pc), pf = pc - pk;
-  gpos(Math.floor(f.rnd(pk * 13 + 5) * NG) % NG, GP);
-  var pr = 8 + pf * mn * 0.10;
-  al(Math.pow(1 - pf, 1.6) * 0.45 * ei * live);
-  ctx.strokeStyle = f.hexA(f.ice, 0.8 * A);
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(GP[0], GP[1], pr, 0, TAU); ctx.stroke();
-  var pf2 = pf - 0.16;
-  if (pf2 > 0) {
-    al(Math.pow(1 - pf2, 1.6) * 0.22 * ei * live);
-    ctx.beginPath(); ctx.arc(GP[0], GP[1], 8 + pf2 * mn * 0.10, 0, TAU); ctx.stroke();
-  }
-
+  ctx.globalCompositeOperation = 'lighter';
+  var ps = (0.55 + 0.45 * ein) * (0.97 + 0.05 * flick);
+  ctx.globalAlpha = A * live * (0.72 + 0.28 * flick);
+  ctx.translate(cx, H * 0.585); ctx.scale(ps, ps); ctx.translate(-cx, -H * 0.585);
+  ctx.drawImage(pool, 0, 0, W, H);
   ctx.restore();
+
+  // flame position + hot halo (layered translucent fills, no shadowBlur)
+  var fx = cx + Math.sin(ms * 0.0016) * H * 0.0012;
+  var fy = candleTop - H * 0.004;
+  var fh = H * 0.055 * flameS * (0.88 + 0.24 * flick);
+  var fw = H * 0.012 * (0.8 + 0.3 * flick);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  var halos = [[0.075, 0.05], [0.042, 0.09], [0.02, 0.16]];
+  for (i = 0; i < 3; i++) {
+    ctx.globalAlpha = A * live * halos[i][1] * flick;
+    ctx.fillStyle = '#ffcf7a';
+    ctx.beginPath(); ctx.arc(fx, fy - fh * 0.45, H * halos[i][0] * (0.7 + 0.5 * flameS), 0, PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
+  // flame: 3 layered flat polygons, re-jittered every ~90ms
+  function jj(kk) { return f.rnd((fi * 13 + kk) & 2047) - 0.5; }
+  var sway = Math.sin(ms * 0.0021) * 0.5;
+  function flamePoly(wm, hm, col, al) {
+    var w3 = fw * wm, h3 = fh * hm;
+    ctx.globalAlpha = A * al * (0.35 + 0.65 * ein);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(fx - w3, fy);
+    ctx.lineTo(fx - w3 * (0.95 + jj(2) * 0.2), fy - h3 * 0.38);
+    ctx.lineTo(fx - w3 * (0.55 + jj(3) * 0.25), fy - h3 * 0.74);
+    ctx.lineTo(fx + (jj(1) * 1.4 + sway) * w3, fy - h3);
+    ctx.lineTo(fx + w3 * (0.6 + jj(4) * 0.25), fy - h3 * 0.7);
+    ctx.lineTo(fx + w3 * (0.98 + jj(5) * 0.2), fy - h3 * 0.35);
+    ctx.lineTo(fx + w3, fy);
+    ctx.closePath(); ctx.fill();
+  }
+  flamePoly(1, 1, f.gold, 0.88);
+  flamePoly(0.66, 0.70, f.ember, 0.92);
+  flamePoly(0.38, 0.40, f.red, 0.95);
+  ctx.globalAlpha = A * 0.45 * ein;
+  ctx.fillStyle = '#2b3a9e';
+  ctx.beginPath(); ctx.moveTo(fx - fw * 0.4, fy); ctx.lineTo(fx, fy - fh * 0.12); ctx.lineTo(fx + fw * 0.4, fy); ctx.closePath(); ctx.fill();
+
+  // slow wax-drip highlight on the candle face
+  var dl = H * (0.016 + 0.014 * (0.5 + 0.5 * Math.sin(ms * 0.00035)));
+  ctx.globalAlpha = A * 0.5 * ein;
+  ctx.fillStyle = '#f0e6cc';
+  ctx.beginPath();
+  ctx.moveTo(cx + H * 0.012, candleTop + H * 0.004);
+  ctx.lineTo(cx + H * 0.016, candleTop + H * 0.004);
+  ctx.lineTo(cx + H * 0.0145, candleTop + H * 0.004 + dl);
+  ctx.lineTo(cx + H * 0.0125, candleTop + H * 0.004 + dl * 0.85);
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(cx + H * 0.0125, candleTop + H * 0.002 + dl, H * 0.003, H * 0.003);
+
+  // sky pinpricks twinkling in the window
+  var stars = [[0.132, 0.155], [0.172, 0.118], [0.19, 0.26]];
+  for (i = 0; i < 3; i++) {
+    ctx.globalAlpha = A * (0.35 + 0.45 * (0.5 + 0.5 * Math.sin(ms * 0.0016 + i * 2.4)));
+    ctx.fillStyle = f.ice;
+    ctx.fillRect(W * stars[i][0], H * stars[i][1], 2, 2);
+  }
+
+  // quill leaning on the ink pot; tip taps on a ~6s cycle
+  var tp = (ms % 6100) / 6100;
+  var tap = tp < 0.055 ? Math.sin(tp / 0.055 * PI) * 0.05 : 0;
+  ctx.save();
+  ctx.globalAlpha = A * (0.25 + 0.75 * ein);
+  ctx.translate(W * 0.276, H * 0.663);
+  ctx.rotate(0.02 + tap);
+  ctx.drawImage(quill, -qw * 0.14, -qh * 0.94, qw, qh);
+  ctx.restore();
+
+  // ink-pot glass glint + coin facet glints
+  ctx.globalAlpha = A * live * (0.18 + 0.10 * Math.sin(ms * 0.0011));
+  ctx.fillStyle = f.ice;
+  ctx.fillRect(W * 0.252, H * 0.626, Math.max(2, W * 0.002), H * 0.014);
+  for (i = 0; i < 2; i++) {
+    ctx.globalAlpha = A * live * 0.5 * (0.5 + 0.5 * Math.sin(ms * 0.0009 + i * 2.7));
+    ctx.fillStyle = '#f5c518';
+    var cc = i ? [W * 0.132, H * 0.760] : [W * 0.103, H * 0.737];
+    ctx.fillRect(cc[0] - H * 0.004, cc[1] - H * 0.002, H * 0.006, H * 0.0025);
+  }
+
+  // dust motes drifting up through the candlelight
+  for (i = 0; i < 25; i++) {
+    var r1 = f.rnd(i + 41), r2 = f.rnd(i + 141), r3 = f.rnd(i + 241);
+    var ph2 = (ms * (0.03 + r3 * 0.04) / 1000 + r2) % 1;
+    var mx = cx + (r1 - 0.5) * W * 0.30 + Math.sin(ms * 0.0005 + i * 1.7) * W * 0.008;
+    var my = H * (0.74 - 0.40 * ph2);
+    var ddx = (mx - cx) / (W * 0.18), ddy = (my - H * 0.58) / (H * 0.26);
+    var dd = 1 - Math.min(1, ddx * ddx + ddy * ddy);
+    if (dd <= 0) continue;
+    ctx.globalAlpha = A * live * flick * 0.55 * dd * Math.sin(ph2 * PI);
+    ctx.fillStyle = '#ffd9a0';
+    var msz = 1 + r1 * 1.6;
+    ctx.fillRect(mx, my, msz, msz);
+  }
+
+  ctx.globalAlpha = GA;
 }
 
 PAINTERS[0] = paintCrystalArena;
@@ -3974,6 +4205,17 @@ dots.forEach((d, i) => {
     lenis.scrollTo(track.offsetTop + trackLen() * ((i + 0.5) / SCENES), { duration: 1.4 });
   });
 });
+
+/* ---------- the NPC portrait joins the low-poly era ---------- */
+
+(function paintPortrait() {
+  const face = document.getElementById('npc-face');
+  if (!face || !ACTORS.ranger) return;
+  const g = face.getContext('2d');
+  g.clearRect(0, 0, face.width, face.height);
+  // chathead crop: hood, crest and eye slit fill the 72px frame (calibrated)
+  ACTORS.ranger(g, { x: 26, y: 284, s: 2.2, dir: 1, ms: 400, draw: 0, step: 0, roll: 0, fire: 0, hurt: 0, hexA });
+})();
 
 /* ---------- verification hook: seek the timeline directly ---------- */
 
