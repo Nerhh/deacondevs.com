@@ -769,7 +769,7 @@ html.smooth { scroll-behavior: auto; }
 
 .film-stage, .film-track { display: none; }
 .film .film-stage { display: block; position: fixed; inset: 0; z-index: 1; overflow: hidden; }
-.film .film-track { display: block; height: 1120vh; }
+.film .film-track { display: block; height: 980vh; }
 .film .fallback-only { display: none !important; }
 
 .film .noise { inset: -60px; animation: grain 900ms steps(6) infinite; }
@@ -1004,3 +1004,49 @@ html.smooth { scroll-behavior: auto; }
 .film #npc .npc-opt-title { color: #7f0f0f; }
 .film #npc .npc-options a, .film #npc .npc-options button { color: #241a0c; }
 .film #npc .npc-options a:hover, .film #npc .npc-options button:hover { color: #7f0f0f; }
+
+/* ---------- v5.2: the film reads in every theme, ends at the campfire ---------- */
+
+/* the film is always night — its text is always light, whatever the site theme */
+.film .sc-h1, .film .scene-ov h2 { color: #f0ead9; }
+.film .sc-sub { color: rgba(240, 234, 217, 0.78); }
+.film .sc-cap { color: rgba(240, 234, 217, 0.58); }
+.film .sc-kicker, .film .sc-index { color: #b8ab94; }
+.film .sc-tags li { color: #b8ab94; border-color: rgba(240, 234, 217, 0.22); }
+.film .sc-tag { color: #d9b45b; }
+.film .film-dots button { border-color: rgba(240, 234, 217, 0.45); }
+.film .film-dots button.on { background: #d9b45b; border-color: #d9b45b; box-shadow: 0 0 12px rgba(217, 180, 91, 0.55); }
+
+/* the page ends at the campfire */
+.film footer { display: none; }
+.sc-foot {
+  position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
+  font: 500 10px var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(240, 234, 217, 0.4);
+  white-space: nowrap;
+}
+
+/* the chatbox, done properly: centred text, maroon name, blue continue */
+.film #npc {
+  background: linear-gradient(#d9cdb2, #cfc2a2);
+  border: 2px solid #3a2e1e;
+  box-shadow: inset 0 0 0 2px #93805c, inset 0 0 0 4px #5c4e38, 0 14px 44px rgba(0, 0, 0, 0.5);
+  border-radius: 2px;
+  padding: 14px 20px;
+}
+.film #npc .npc-body { text-align: center; }
+.film #npc .npc-name { color: #8f0000; font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+.film #npc .npc-line { color: #241a0c; font-size: 14px; line-height: 1.6; }
+.film #npc .npc-continue { color: #1010c8; }
+.film #npc .npc-opt-title { color: #8f0000; }
+.film #npc .npc-options { text-align: center; }
+.film #npc .npc-face { background: transparent; border: none; box-shadow: none; border-radius: 0; }
+
+/* the ledger loses the rainbow: honest orange while filling, flat green when done */
+.film #ge-ticker #ge-fill { background: #c47a1d; }
+.film #ge-ticker .ge-bar.done #ge-fill { background: #2fbe4f; }
+.film #ge-ticker .ge-item { width: 44px; height: 44px; flex: 0 0 44px; }
+
+@media (max-width: 760px) {
+  .sc-foot { white-space: normal; text-align: center; width: 92vw; }
+}

@@ -20,8 +20,8 @@ gsap.ticker.lagSmoothing(0);
 
 // in film mode these sections live on the timeline, not in the document flow
 const FILM_ANCHORS = {
-  '#projects': 2.5 / 8, '#quests': 5.5 / 8,
-  '#clog': 6.5 / 8, '#about': 7.5 / 8, '#contact': 7.5 / 8,
+  '#projects': 1.5 / 7, '#quests': 4.5 / 7,
+  '#clog': 5.5 / 7, '#about': 6.5 / 7, '#contact': 6.5 / 7,
 };
 
 document.querySelectorAll('a[href^="#"]').forEach(a => {
@@ -74,7 +74,7 @@ dock('#npc', 'npc-slot');
 /* ---------- engine state ---------- */
 
 const ctx = filmCanvas.getContext('2d');
-const SCENES = 8;
+const SCENES = 7;
 const XFADE = 0.16;            // crossfade half-width in scene units
 let W = 0, H = 0, DPR = 1;
 let p = 0;                     // smoothed master progress 0..1
@@ -122,7 +122,7 @@ function cacheGet(key, w, h, fn) {
 function mkEnv(t, in01, out01, ms) {
   return {
     W, H, ms, t, in01, out01,
-    dark: THEME.dark,
+    dark: true, // the film is always night
     gold: '#f5c518', gold2: '#d9b45b', violet: '#a05fd0', ice: '#9cc7ff',
     ember: '#e67e22', red: '#c0281a',
     fg: THEME.fg, bg: THEME.bg, muted: THEME.muted, line: THEME.line,
@@ -1911,313 +1911,6 @@ function paintCampfireFinale(ctx, f) {
   ctx.restore();
 }
 
-function paintMarketScape(ctx, f) {
-  var GA = ctx.globalAlpha;
-  var W = f.W, H = f.H, ms = f.ms;
-  var rnd = f.rnd, hexA = f.hexA, clamp01 = f.clamp01;
-  var A = GA * (f.dark ? 1 : 0.55);
-  var ei = f.ease(clamp01(f.in01));
-  var ex = f.ease(clamp01(f.out01));
-  var midY = H * 0.52, amp = H * 0.16, baseY = H * 0.8;
-  var N = 80, step = Math.max(4, Math.round(W / 76)), SW = N * step;
-  var tk = f.dark ? ':d' : ':l';
-  var i, k;
-
-  // periodic deterministic price walk: coarse trend + medium swing + jag
-  function pv(n) {
-    n = ((n % N) + N) % N;
-    var iA = (n / 8) | 0, fA = (n % 8) / 8;
-    var a = rnd(41 + iA) * (1 - fA) + rnd(41 + ((iA + 1) % 10)) * fA;
-    var iB = (n / 4) | 0, fB = (n % 4) / 4;
-    var b = rnd(81 + iB) * (1 - fB) + rnd(81 + ((iB + 1) % 20)) * fB;
-    return (a * 0.52 + b * 0.3 + rnd(161 + n) * 0.18) - 0.5;
-  }
-
-  // ---------- caches ----------
-  var sky = f.cache('paintMarketScape:sky:' + W + 'x' + H + tk, W, H, function (c) {
-    c.fillStyle = '#020308'; c.fillRect(0, 0, W, H);
-    var g = c.createLinearGradient(0, H * 0.38, 0, H * 0.82);
-    g.addColorStop(0, hexA('#e67e22', 0));
-    g.addColorStop(0.55, hexA('#b3541a', 0.10));
-    g.addColorStop(0.82, hexA('#e67e22', 0.17));
-    g.addColorStop(1, hexA('#5a2410', 0.22));
-    c.fillStyle = g; c.fillRect(0, H * 0.38, W, H * 0.44);
-    c.fillStyle = hexA('#040303', 0.6); c.fillRect(0, H * 0.82, W, H * 0.18);
-    for (var s2 = 0; s2 < 64; s2++) {
-      var sx = rnd(700 + s2) * W;
-      var sy = rnd(800 + s2) * rnd(830 + s2) * H * 0.5;
-      var sz = rnd(950 + s2) < 0.85 ? 1 : 2;
-      c.globalAlpha = 0.1 + rnd(900 + s2) * 0.32;
-      c.fillStyle = (s2 % 7 === 0) ? '#9cc7ff' : '#e8e4d8';
-      c.fillRect(sx, sy, sz, sz);
-    }
-    c.globalAlpha = 1;
-  });
-
-  var hs = Math.ceil(baseY) + 2;
-  var strip = f.cache('paintMarketScape:range:' + W + 'x' + H + tk, SW, hs, function (c) {
-    var xs = [], ys = [], j, q;
-    for (j = 0; j <= N; j++) { xs.push(j * step); ys.push(midY + pv(j) * 2 * amp); }
-    c.save();
-    c.beginPath(); c.moveTo(xs[0], ys[0]);
-    for (j = 1; j <= N; j++) c.lineTo(xs[j], ys[j]);
-    c.lineTo(SW, baseY + 2); c.lineTo(0, baseY + 2); c.closePath();
-    c.clip();
-    // 2-3 vertical shade bands (flat low-poly banding)
-    var bands = ['#3d4e2a', '#354626', '#42532e'];
-    for (j = 0; j < 3; j++) { c.fillStyle = bands[j]; c.fillRect(SW * j / 3 - 1, 0, SW / 3 + 2, baseY + 2); }
-    var g2 = c.createLinearGradient(0, midY - amp, 0, baseY);
-    g2.addColorStop(0, hexA('#0a0f07', 0));
-    g2.addColorStop(1, hexA('#0a0f07', 0.55));
-    c.fillStyle = g2; c.fillRect(0, 0, SW, baseY + 2);
-    // faceted slope shading: dark facets on descents (right of peaks), faint lit on ascents
-    for (j = 0; j < N; j++) {
-      var d = H * (0.045 + rnd(300 + j) * 0.05);
-      c.fillStyle = (ys[j + 1] > ys[j]) ? hexA('#131a0d', 0.4) : hexA('#74884a', 0.15);
-      c.beginPath();
-      c.moveTo(xs[j], ys[j]); c.lineTo(xs[j + 1], ys[j + 1]);
-      c.lineTo(xs[j + 1], ys[j + 1] + d); c.lineTo(xs[j], ys[j] + d);
-      c.closePath(); c.fill();
-    }
-    // long right-flank shadow wedges from each peak down to its next valley
-    for (j = 1; j < N; j++) {
-      if (ys[j] < ys[j - 1] && ys[j] < ys[j + 1]) {
-        q = j + 1; while (q < N && ys[q + 1] > ys[q]) q++;
-        c.fillStyle = hexA('#0d120a', 0.26);
-        c.beginPath();
-        c.moveTo(xs[j], ys[j]); c.lineTo(xs[q], ys[q]);
-        c.lineTo(xs[q], baseY + 2); c.lineTo(xs[j], baseY + 2);
-        c.closePath(); c.fill();
-      }
-    }
-    // snow caps on the 3 tallest peaks (two flat facets each)
-    var peaks = [];
-    for (j = 1; j < N; j++) if (ys[j] < ys[j - 1] && ys[j] <= ys[j + 1]) peaks.push(j);
-    peaks.sort(function (a, b) { return ys[a] - ys[b]; });
-    var snow = 0;
-    for (j = 0; j < peaks.length && snow < 3; j++) {
-      q = peaks[j];
-      var sl = ys[q] + H * 0.034;
-      var tL = clamp01((ys[q - 1] - sl) / ((ys[q - 1] - ys[q]) || 1));
-      var xL = xs[q - 1] + (xs[q] - xs[q - 1]) * tL;
-      var yL = ys[q - 1] + (ys[q] - ys[q - 1]) * tL;
-      var tR = clamp01((ys[q + 1] - sl) / ((ys[q + 1] - ys[q]) || 1));
-      var xR = xs[q + 1] + (xs[q] - xs[q + 1]) * tR;
-      var yR = ys[q + 1] + (ys[q] - ys[q + 1]) * tR;
-      var yM = Math.max(yL, yR);
-      c.fillStyle = hexA('#e8eeee', 0.92);
-      c.beginPath(); c.moveTo(xL, yL); c.lineTo(xs[q], ys[q]); c.lineTo(xs[q], yM); c.closePath(); c.fill();
-      c.fillStyle = hexA('#b4c2c6', 0.9);
-      c.beginPath(); c.moveTo(xs[q], ys[q]); c.lineTo(xR, yR); c.lineTo(xs[q], yM); c.closePath(); c.fill();
-      snow++;
-    }
-    c.restore();
-    // dashed rolling-average line (wrapped window, seamless at tile edge)
-    var avg = [];
-    for (j = 0; j <= N; j++) {
-      var sum = 0;
-      for (q = -4; q <= 4; q++) sum += ys[(((j + q) % N) + N) % N];
-      avg.push(sum / 9);
-    }
-    c.strokeStyle = hexA(f.gold2, 0.75); c.lineWidth = 1.2; c.setLineDash([8, 6]);
-    c.beginPath(); c.moveTo(xs[0], avg[0]);
-    for (j = 1; j <= N; j++) c.lineTo(xs[j], avg[j]);
-    c.stroke(); c.setLineDash([]);
-    // glowing gold price line: layered translucent passes, bright core
-    c.lineJoin = 'round'; c.lineCap = 'round';
-    var pass = [[5, 0.14], [2.6, 0.26], [1.5, 0.95]];
-    for (q = 0; q < 3; q++) {
-      c.strokeStyle = hexA(f.gold, pass[q][1]); c.lineWidth = pass[q][0];
-      c.beginPath(); c.moveTo(xs[0], ys[0]);
-      for (j = 1; j <= N; j++) c.lineTo(xs[j], ys[j]);
-      c.stroke();
-    }
-  });
-
-  var pineH = Math.round(H * 0.16);
-  var pines = f.cache('paintMarketScape:pines:' + W + 'x' + H, W, pineH, function (c) {
-    var g = c.createLinearGradient(0, 0, 0, pineH);
-    g.addColorStop(0, hexA('#030604', 0));
-    g.addColorStop(0.6, hexA('#040805', 0.8));
-    g.addColorStop(1, '#030504');
-    c.fillStyle = g; c.fillRect(0, 0, W, pineH);
-    var np = 16, j;
-    for (j = 0; j < np; j++) {
-      var px = (j + 0.5) * W / np + (rnd(400 + j) - 0.5) * W / np * 0.9;
-      var hh = (0.4 + rnd(430 + j) * 0.5) * pineH * (px < W * 0.34 ? 0.55 : 1);
-      var bw = hh * 0.5;
-      c.fillStyle = '#060c08';
-      c.beginPath(); c.moveTo(px, pineH - hh); c.lineTo(px + bw / 2, pineH + 1); c.lineTo(px - bw / 2, pineH + 1); c.closePath(); c.fill();
-      c.fillStyle = hexA('#020408', 0.65);
-      c.beginPath(); c.moveTo(px, pineH - hh); c.lineTo(px + bw / 2, pineH + 1); c.lineTo(px, pineH + 1); c.closePath(); c.fill();
-      c.fillStyle = '#081108';
-      c.beginPath(); c.moveTo(px, pineH - hh * 0.72); c.lineTo(px + bw * 0.3, pineH - hh * 0.2); c.lineTo(px - bw * 0.3, pineH - hh * 0.2); c.closePath(); c.fill();
-    }
-    c.strokeStyle = hexA('#0b1509', 0.9); c.lineWidth = 1;
-    c.beginPath();
-    for (j = 0; j < 26; j++) {
-      var gx = rnd(500 + j) * W, gy = 3 + rnd(520 + j) * 6;
-      c.moveTo(gx, pineH); c.lineTo(gx - 2, pineH - gy);
-      c.moveTo(gx, pineH); c.lineTo(gx + 1, pineH - gy - 2);
-      c.moveTo(gx, pineH); c.lineTo(gx + 3, pineH - gy + 2);
-    }
-    c.stroke();
-  });
-
-  var cw = Math.round(W * 0.11) + 40, ch = Math.round(H * 0.05) + 16;
-  var cloud = f.cache('paintMarketScape:cloud:' + W + 'x' + H, cw, ch, function (c) {
-    function poly(pts, col) {
-      c.fillStyle = col; c.beginPath(); c.moveTo(pts[0][0] * cw, pts[0][1] * ch);
-      for (var q = 1; q < pts.length; q++) c.lineTo(pts[q][0] * cw, pts[q][1] * ch);
-      c.closePath(); c.fill();
-    }
-    poly([[0.08, 0.62], [0.3, 0.3], [0.62, 0.24], [0.9, 0.5], [0.66, 0.62]], '#141b2e');
-    poly([[0.3, 0.3], [0.62, 0.24], [0.6, 0.55]], '#1b2440');
-    poly([[0.02, 0.72], [0.08, 0.62], [0.66, 0.62], [0.9, 0.5], [0.97, 0.68], [0.5, 0.82]], '#0e1424');
-    poly([[0.02, 0.72], [0.5, 0.82], [0.97, 0.68], [0.5, 0.9]], hexA('#e67e22', 0.16));
-  });
-
-  // ---------- per-frame series data ----------
-  var yv = [];
-  for (i = 0; i < N; i++) yv.push(midY + pv(i) * 2 * amp);
-  var s = (ms * 0.0075) % SW;      // slow leftward scroll — the market never sleeps
-  var sc = 1 - ex;                  // exit: ridge flattens toward midline
-  // deal beacons: deepest local price minima (largest y), min separation
-  var vals = [];
-  for (i = 1; i < N - 1; i++) if (yv[i] > yv[i - 1] && yv[i] >= yv[i + 1]) vals.push(i);
-  vals.sort(function (a, b) { return yv[b] - yv[a]; });
-  var bea = [];
-  for (i = 0; i < vals.length && bea.length < 3; i++) {
-    var ok = true;
-    for (k = 0; k < bea.length; k++) {
-      var dd = Math.abs(vals[i] - bea[k]); if (Math.min(dd, N - dd) < 10) { ok = false; break; }
-    }
-    if (ok) bea.push(vals[i]);
-  }
-  // campfire: midpoint of the steepest slope
-  var best = 0, bd = -1;
-  for (i = 0; i < N; i++) { var d3 = Math.abs(yv[(i + 1) % N] - yv[i]); if (d3 > bd) { bd = d3; best = i; } }
-  var fireX = (best + 0.5) * step;
-  var fireY = (yv[best] + yv[(best + 1) % N]) / 2 + 2;
-
-  function lf(x) { return clamp01((x - W * 0.3) / (W * 0.09)); } // calm left third
-  function ridgeY(x) {
-    var u = (x + s) % SW; if (u < 0) u += SW;
-    var idx = u / step, i0 = idx | 0, fr = idx - i0;
-    var wy2 = yv[i0 % N] + (yv[(i0 + 1) % N] - yv[i0 % N]) * fr;
-    return midY + (wy2 - midY) * sc;
-  }
-  function node(x, y, r, bl) {
-    ctx.fillStyle = hexA(f.gold, 0.12 * bl);
-    ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = hexA(f.gold, 0.3 * bl);
-    ctx.beginPath(); ctx.arc(x, y, r * 1.7, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = hexA('#fff3d0', 0.95 * bl);
-    ctx.beginPath(); ctx.arc(x, y, r * 0.8, 0, 6.2832); ctx.fill();
-  }
-
-  // ---------- paint ----------
-  ctx.save();
-  ctx.globalAlpha = A;
-  ctx.drawImage(sky, 0, 0, W, H);
-
-  // drifting low-poly cloud slabs
-  for (i = 0; i < 3; i++) {
-    var csc = 0.7 + rnd(60 + i) * 0.6;
-    var per = W + cw * csc + 80;
-    var pos = (ms * (0.004 + 0.0035 * i) + i * 1370) % per;
-    var cx = W + 40 - pos;
-    var cy = H * (0.08 + 0.075 * i);
-    ctx.globalAlpha = A * 0.5 * (0.3 + 0.7 * lf(cx + cw * csc * 0.5)) * (0.25 + 0.75 * ei);
-    ctx.drawImage(cloud, cx, cy, cw * csc, ch * csc);
-  }
-  ctx.globalAlpha = A;
-
-  // ridge group: entrance draws in left-to-right
-  ctx.save();
-  if (ei < 0.999) { ctx.beginPath(); ctx.rect(0, 0, W * ei, H); ctx.clip(); }
-  var dy = midY * (1 - sc), dh = hs * sc;
-  var dx1 = Math.round(-s);
-  ctx.drawImage(strip, dx1, dy, SW, dh);
-  ctx.drawImage(strip, dx1 + SW, dy, SW, dh);
-
-  // deal beacons: pulse ring + red/white flag + price tag
-  var fs = Math.max(10, Math.round(H * 0.011));
-  var poleH = 10 + H * 0.014;
-  for (i = 0; i < bea.length; i++) {
-    var b = bea[i], wy = yv[b];
-    var price = Math.round(22 + ((midY + amp - wy) / (2 * amp)) * 68) + (((rnd(b * 7 + ((ms / 1600) | 0)) * 3) | 0) - 1);
-    for (var cp = 0; cp < 2; cp++) {
-      var sx = Math.round(b * step - s) + cp * SW;
-      if (sx < -40 || sx > W + 40) continue;
-      var sy = midY + (wy - midY) * sc;
-      var lfx = lf(sx) * (0.15 + 0.85 * (1 - ex));
-      for (k = 0; k < 2; k++) {
-        var ph = ((ms / 1600) + i * 0.41 + k * 0.5) % 1;
-        var pr = 3 + ph * H * 0.035;
-        var pa = (1 - ph) * (1 - ph) * 0.55 * lfx;
-        if (pa > 0.02) {
-          ctx.strokeStyle = hexA(f.ice, pa * 0.4); ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.ellipse(sx, sy + 2, pr, pr * 0.35, 0, 0, 6.2832); ctx.stroke();
-          ctx.strokeStyle = hexA(f.ice, pa); ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.ellipse(sx, sy + 2, pr, pr * 0.35, 0, 0, 6.2832); ctx.stroke();
-        }
-      }
-      var fa = 0.45 + 0.5 * lf(sx);
-      ctx.strokeStyle = hexA('#d8ccb4', fa); ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(sx, sy + 2); ctx.lineTo(sx, sy - poleH); ctx.stroke();
-      var wv = Math.sin(ms / 280 + i * 2.1) * 1.6;
-      var fw = 8 + H * 0.004;
-      ctx.fillStyle = hexA('#ece6d6', fa);
-      ctx.beginPath(); ctx.moveTo(sx, sy - poleH); ctx.lineTo(sx + fw, sy - poleH + 1 + wv); ctx.lineTo(sx + fw, sy - poleH + 4.5 + wv); ctx.lineTo(sx, sy - poleH + 4); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = hexA(f.red, fa);
-      ctx.beginPath(); ctx.moveTo(sx, sy - poleH + 4); ctx.lineTo(sx + fw, sy - poleH + 4.5 + wv); ctx.lineTo(sx + fw, sy - poleH + 8 + wv); ctx.lineTo(sx, sy - poleH + 8); ctx.closePath(); ctx.fill();
-      if (lfx > 0.03) {
-        var bw2 = fs * 2.4, bh2 = fs + 5;
-        var ty = sy - poleH - 8 - bh2;
-        ctx.fillStyle = hexA('#221c14', 0.92 * lfx);
-        ctx.fillRect(sx - bw2 / 2, ty, bw2, bh2);
-        ctx.strokeStyle = hexA('#6a4c2e', 0.9 * lfx); ctx.lineWidth = 1;
-        ctx.strokeRect(sx - bw2 / 2 + 0.5, ty + 0.5, bw2 - 1, bh2 - 1);
-        ctx.fillStyle = hexA('#ff981f', 0.95 * lfx);
-        ctx.font = fs + 'px VT323, monospace';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('£' + price, sx, ty + bh2 / 2 + 1);
-      }
-    }
-  }
-
-  // campfire: one warm flickering pixel cluster on the steep slope
-  for (var cp2 = 0; cp2 < 2; cp2++) {
-    var fx2 = Math.round(fireX - s) + cp2 * SW;
-    if (fx2 < -12 || fx2 > W + 12) continue;
-    var fy2 = midY + (fireY - midY) * sc;
-    var fl = 0.6 + 0.4 * rnd(11 + ((ms / 90) | 0) % 97);
-    var jx = (rnd(31 + ((ms / 130) | 0) % 89) - 0.5) * 1.4;
-    ctx.fillStyle = hexA(f.ember, 0.1 * fl);
-    ctx.beginPath(); ctx.arc(fx2 + jx, fy2, 8 + 2 * fl, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = hexA('#ff9d3a', 0.25 * fl);
-    ctx.beginPath(); ctx.arc(fx2 + jx, fy2, 3.5, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = hexA('#ffd9a0', 0.9 * fl);
-    ctx.fillRect(fx2 + jx - 1, fy2 - 1.5, 2, 2.5);
-  }
-  ctx.restore();
-
-  // pen tip while the line draws in; live tick node once settled
-  if (ei < 0.999) {
-    node(W * ei, ridgeY(W * ei), 2.2, 0.8 + 0.2 * Math.sin(ms / 90));
-  }
-  var na = clamp01((ei - 0.87) * 8) * (1 - ex);
-  if (na > 0.02) {
-    node(W * 0.86, ridgeY(W * 0.86), 1.8, (0.75 + 0.25 * Math.sin(ms / 260)) * na);
-  }
-
-  // foreground pines + grass silhouettes
-  ctx.globalAlpha = A * ei * (0.25 + 0.75 * (1 - ex));
-  ctx.drawImage(pines, 0, H - pineH, W, pineH);
-  ctx.restore();
-}
-
 function paintWealthHalo(ctx, f) {
   var GA = ctx.globalAlpha;
   var AM = GA * (f.dark ? 1 : 0.55);
@@ -2232,6 +1925,45 @@ function paintWealthHalo(ctx, f) {
   var live = ei * (1 - eo);
   var i, k;
   if (f.in01 <= 0.001) { ctx.globalAlpha = GA; return; }
+
+  // ambient world behind the instrument -- the scene must never sit on a void
+  var bdk = f.cache('paintWealthHalo:bd:' + W + 'x' + H, W, H, function (c) {
+    var g = c.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#04050a');
+    g.addColorStop(0.62, '#070a10');
+    g.addColorStop(1, '#0b0d10');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    var wg = c.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 2.4);
+    wg.addColorStop(0, f.hexA('#d9b45b', 0.05));
+    wg.addColorStop(0.5, f.hexA('#d9b45b', 0.015));
+    wg.addColorStop(1, f.hexA('#d9b45b', 0));
+    c.fillStyle = wg; c.fillRect(0, 0, W, H);
+    for (var q = 0; q < 26; q++) {
+      c.globalAlpha = 0.08 + f.rnd(600 + q) * 0.22;
+      c.fillStyle = q % 6 === 0 ? '#9cc7ff' : '#e8e4d8';
+      c.fillRect(f.rnd(610 + q) * W, f.rnd(640 + q) * H * 0.5, 1, 1);
+    }
+    c.globalAlpha = 1;
+    var hills = [['#0d1218', 0.86, 0.055], ['#090d13', 0.92, 0.075]];
+    for (var hql = 0; hql < 2; hql++) {
+      var col = hills[hql][0], base = H * hills[hql][1], amp2 = H * hills[hql][2];
+      c.fillStyle = col;
+      c.beginPath(); c.moveTo(0, H);
+      c.lineTo(0, base);
+      for (var hx = 0; hx <= 12; hx++) {
+        c.lineTo(W * hx / 12, base - f.rnd(660 + hql * 40 + hx) * amp2);
+      }
+      c.lineTo(W, H); c.closePath(); c.fill();
+    }
+  });
+  A(ei); ctx.drawImage(bdk, 0, 0, W, H);
+  for (i = 0; i < 14; i++) {
+    var mtx = (f.rnd(700 + i) * W + ms * (0.004 + f.rnd(710 + i) * 0.008)) % W;
+    var mty = f.rnd(720 + i) * H;
+    A(ei * (0.05 + 0.14 * f.rnd(730 + i)) * (0.6 + 0.4 * Math.sin(ms * 0.001 + i * 2.1)));
+    ctx.fillStyle = '#d9b45b';
+    ctx.fillRect(mtx, mty, 1.5, 1.5);
+  }
 
   function A(a) { ctx.globalAlpha = Math.max(0, Math.min(1, a)) * AM; }
   function rr(x, y, w, h, r) {
@@ -2485,13 +2217,13 @@ function paintWealthHalo(ctx, f) {
   }
 
   // ---------- OSRS orbs on the left arc ----------
-  var orbR = Math.max(12, R * 0.082);
+  var orbR = Math.max(14, R * 0.098);
   for (i = 0; i < 4; i++) {
     var oe = f.ease(f.clamp01((f.in01 - 0.32 - i * 0.09) / 0.45));
     if (oe <= 0.001) continue;
     var oa = Math.PI + 0.62 - i * 0.38;
     var det = eo * R * (0.55 + 0.12 * i);
-    var orad = R * 1.16 + det;
+    var orad = R * 1.015 + det;
     var ox = cx + Math.cos(oa) * orad;
     var oy = cy + Math.sin(oa) * orad;
     var os = 0.5 + 0.5 * oe;
@@ -2538,9 +2270,9 @@ function paintWealthHalo(ctx, f) {
   if (cee > 0.001) {
     var cAng = Math.PI + 1.05;
     var cdet = eo * R * 0.6;
-    var ccx = cx + Math.cos(cAng) * (R * 1.06 + cdet);
-    var ccy = cy + Math.sin(cAng) * (R * 1.06 + cdet);
-    var cR = Math.max(11, R * 0.072);
+    var ccx = cx + Math.cos(cAng) * (R * 1.05 + cdet);
+    var ccy = cy + Math.sin(cAng) * (R * 1.05 + cdet);
+    var cR = Math.max(18, R * 0.13);
     var cal = cee * (1 - eo);
     var cs = 0.5 + 0.5 * cee;
     ctx.save();
@@ -3350,12 +3082,11 @@ function paintSchematicRealm(ctx, f) {
 
 PAINTERS[0] = paintCrystalArena;
 PAINTERS[1] = paintGielinorFlyover;
-PAINTERS[2] = paintMarketScape;
-PAINTERS[3] = paintWealthHalo;
-PAINTERS[4] = paintDialMacro;
-PAINTERS[5] = paintSchematicRealm;
-PAINTERS[6] = paintCollectionHall;
-PAINTERS[7] = paintCampfireFinale;
+PAINTERS[2] = paintWealthHalo;
+PAINTERS[3] = paintDialMacro;
+PAINTERS[4] = paintSchematicRealm;
+PAINTERS[5] = paintCollectionHall;
+PAINTERS[6] = paintCampfireFinale;
 
 /* ---------- the actors: low-poly OSRS art, integrated from the art fleet ---------- */
 
@@ -4189,11 +3920,6 @@ gsap.ticker.add(() => {
   const idx = Math.max(0, Math.min(SCENES - 1, Math.round(sp - 0.5)));
   dots.forEach((d, i) => d.classList.toggle('on', i === idx));
 
-  // the film ends: the stage yields to the footer
-  const endK = clamp01((p - 0.965) / 0.03);
-  stage.style.opacity = (1 - endK).toFixed(3);
-  stage.style.visibility = endK >= 1 ? 'hidden' : 'visible';
-  stage.style.pointerEvents = endK > 0.5 ? 'none' : '';
 });
 
 /* ---------- scene dots navigate the timeline ---------- */
@@ -4210,11 +3936,38 @@ dots.forEach((d, i) => {
 
 (function paintPortrait() {
   const face = document.getElementById('npc-face');
-  if (!face || !ACTORS.ranger) return;
+  if (!face) return;
   const g = face.getContext('2d');
   g.clearRect(0, 0, face.width, face.height);
-  // chathead crop: hood, crest and eye slit fill the 72px frame (calibrated)
-  ACTORS.ranger(g, { x: 26, y: 284, s: 2.2, dir: 1, ms: 400, draw: 0, step: 0, roll: 0, fire: 0, hurt: 0, hexA });
+  const P = (pts, col) => {
+    g.fillStyle = col;
+    g.beginPath();
+    g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    g.closePath();
+    g.fill();
+  };
+  // shoulders and cloak
+  P([[4, 72], [13, 51], [59, 51], [68, 72]], '#241f1a');
+  P([[4, 72], [13, 51], [36, 55], [36, 72]], '#2b2520');
+  // the hood, front on: tall point, faceted left/right
+  P([[36, 3], [59, 25], [55, 49], [36, 55], [17, 49], [13, 25]], '#26221f');
+  P([[36, 3], [59, 25], [50, 30], [36, 12]], '#302a24');
+  P([[36, 3], [13, 25], [22, 30], [36, 12]], '#1b1816');
+  // gold crest over the crown
+  P([[33, 4], [39, 4], [41, 15], [37, 12], [35, 12], [31, 15]], '#d9a821');
+  P([[35, 12], [37, 12], [38, 19], [34, 19]], '#a87e18');
+  // the dark of the cowl
+  P([[36, 15], [52, 29], [48, 48], [36, 53], [24, 48], [20, 29]], '#0c0a08');
+  // the red eye slit, glowing
+  g.fillStyle = 'rgba(217,48,37,0.30)';
+  g.fillRect(23, 30, 26, 8);
+  g.fillStyle = '#d93025';
+  g.fillRect(26, 32, 20, 3);
+  g.fillStyle = '#ff6a5a';
+  g.fillRect(30, 32, 6, 2);
+  // masked lower face
+  P([[26, 41], [46, 41], [42, 52], [30, 52]], '#1d1a19');
 })();
 
 /* ---------- verification hook: seek the timeline directly ---------- */
