@@ -473,10 +473,11 @@ function paintCrystalArena(ctx, f) {
 
   var mh = Math.round(H * 0.12);
   var mist = f.cache(K + 'mist', W, mh, function (g) {
+    // fade to nothing at BOTH edges — mist has no straight lines
     var band = g.createLinearGradient(0, 0, 0, mh);
     band.addColorStop(0, 'rgba(175,200,202,0)');
-    band.addColorStop(0.55, 'rgba(175,200,202,0.30)');
-    band.addColorStop(1, 'rgba(175,200,202,0.12)');
+    band.addColorStop(0.5, 'rgba(175,200,202,0.14)');
+    band.addColorStop(1, 'rgba(175,200,202,0)');
     g.fillStyle = band; g.fillRect(0, 0, W, mh);
     for (var i = 0; i < 9; i++) {
       var x = W * (i + 0.5) / 9 + (rnd(i + 50) - 0.5) * W * 0.08;
@@ -486,11 +487,14 @@ function paintCrystalArena(ctx, f) {
       var gr = g.createRadialGradient(x, y, 1, x, y, rx);
       gr.addColorStop(0, 'rgba(185,208,210,0.5)');
       gr.addColorStop(1, 'rgba(185,208,210,0)');
-      g.save();
-      g.translate(x, y); g.scale(1, ry / rx); g.translate(-x, -y);
-      g.fillStyle = gr;
-      g.fillRect(x - rx, y - rx, rx * 2, rx * 2);
-      g.restore();
+      for (var wq = -1; wq <= 1; wq++) {
+        g.save();
+        g.translate(wq * W, 0);
+        g.translate(x, y); g.scale(1, ry / rx); g.translate(-x, -y);
+        g.fillStyle = gr;
+        g.fillRect(x - rx, y - rx, rx * 2, rx * 2);
+        g.restore();
+      }
     }
   });
 
@@ -2412,18 +2416,6 @@ function paintWealthHalo(ctx, f) {
     g.lineWidth = Math.max(1.5, R * 0.009); g.strokeStyle = '#c9a25c';
     g.beginPath(); g.arc(hc, hc, rH0, PI * 1.05, PI * 1.45); g.stroke();
     g.lineCap = 'butt';
-    // 8 bronze rivets
-    var rvR = Math.max(3, R * 0.016);
-    for (bi = 0; bi < 8; bi++) {
-      aq = bi * TAU / 8;
-      sx = hc + Math.cos(aq) * rGm; sy = hc + Math.sin(aq) * rGm;
-      g.fillStyle = '#8a6a38';
-      g.beginPath(); g.arc(sx, sy, rvR, 0, TAU); g.fill();
-      g.strokeStyle = '#2a241d'; g.lineWidth = 1.5;
-      g.beginPath(); g.arc(sx, sy, rvR, 0, TAU); g.stroke();
-      g.fillStyle = '#c9a25c';
-      g.beginPath(); g.arc(sx - rvR * 0.3, sy - rvR * 0.3, rvR * 0.32, 0, TAU); g.fill();
-    }
     // recess carving helper (dark well + bronze collar)
     function recess(x, y, r2) {
       g.fillStyle = '#2a241d';
@@ -2529,15 +2521,6 @@ function paintWealthHalo(ctx, f) {
       A(gal * gp * 0.9); ctx.fillStyle = '#ffffff';
       ctx.fillRect(glx - 0.8, gly - 0.8, 1.6, 1.6);
     }
-    // number just inside the ring, toward the map
-    var nx = cx + Math.cos(gAng[i]) * R * 0.87;
-    var ny = cy + Math.sin(gAng[i]) * R * 0.87;
-    ctx.font = '15px VT323, monospace';
-    A(gal * (0.75 + 0.25 * hv2));
-    ctx.strokeStyle = '#14100b'; ctx.lineWidth = 3;
-    ctx.strokeText('' + pcts[i], nx, ny);
-    ctx.fillStyle = cols[i];
-    ctx.fillText('' + pcts[i], nx, ny);
   }
 
   // ---------- left arc: coin stack + net worth readout ----------
@@ -2561,42 +2544,32 @@ function paintWealthHalo(ctx, f) {
     A(cal2 * 0.6); ctx.strokeStyle = '#fff6d8'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.ellipse(kx + 0.6, ky - cw * 0.62, cw * 0.55, chh * 0.5, 0, PI * 1.05, PI * 1.7); ctx.stroke();
     ctx.lineCap = 'butt';
-  }
-  var nwe = f.ease(f.clamp01((f.in01 - 0.42) / 0.45));
-  if (nwe > 0.001) {
-    var nal = nwe * (1 - eoF);
-    var nwx = cx + Math.cos(coinA) * R * 0.60;
-    var nwy = cy + Math.sin(coinA) * R * 0.60;
-    var cntE = f.ease(f.clamp01((f.in01 - 0.42) / 0.55));
-    var kk = Math.floor(ms / 2200);
-    var twOn = cntE >= 0.999 && f.rnd(kk) > 0.55;
-    var twv = 5 + Math.floor(f.rnd(kk + 9) * 85);
-    var val = 127482 * cntE + (twOn ? twv : 0);
-    var txt = '£' + fmt(val);
-    ctx.font = '20px VT323, monospace';
-    A(nal);
-    ctx.strokeStyle = '#14100b'; ctx.lineWidth = 4;
-    ctx.strokeText(txt, nwx, nwy);
-    ctx.fillStyle = f.gold;
-    ctx.fillText(txt, nwx, nwy);
-    ctx.font = '10px VT323, monospace';
-    A(nal * 0.9);
-    ctx.strokeStyle = '#14100b'; ctx.lineWidth = 3;
-    ctx.strokeText('NET WORTH', nwx, nwy + 15);
-    A(nal * 0.75);
-    ctx.fillStyle = f.muted;
-    ctx.fillText('NET WORTH', nwx, nwy + 15);
-    if (twOn) {
-      var pp = (ms % 2200) / 2200;
-      A(nal * (1 - pp));
-      ctx.font = '14px VT323, monospace';
-      ctx.strokeStyle = '#14100b'; ctx.lineWidth = 3;
-      ctx.strokeText('+' + twv, nwx + 44, nwy - 12 - pp * 18);
-      ctx.fillStyle = f.gold;
-      ctx.fillText('+' + twv, nwx + 44, nwy - 12 - pp * 18);
+    // hover the coins: the ledger whispers the total
+    if (f.mx >= 0) {
+      var cdx = f.mx - kx, cdy = f.my - ky;
+      if (cdx * cdx + cdy * cdy < coinR * coinR * 5.3) {
+        var pltW = 152, pltH = 42;
+        var plx = kx + coinR * 2.4, ply = ky - pltH / 2;
+        A(cal2 * 0.92);
+        ctx.fillStyle = '#14100b';
+        ctx.fillRect(plx + 2, ply + 3, pltW, pltH);
+        ctx.fillStyle = '#d8ccb4';
+        ctx.fillRect(plx, ply, pltW, pltH);
+        ctx.strokeStyle = '#6a4c2e';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(plx + 1, ply + 1, pltW - 2, pltH - 2);
+        A(cal2);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '13px VT323, monospace';
+        ctx.fillStyle = '#7a5e3a';
+        ctx.fillText('NET WORTH', plx + pltW / 2, ply + 12);
+        ctx.font = '19px VT323, monospace';
+        ctx.fillStyle = '#3a2a18';
+        ctx.fillText('£127,482', plx + pltW / 2, ply + 29);
+      }
     }
   }
-
   // ---------- compass needle in the bezel (frame-mounted, subtle) ----------
   var cne = f.ease(f.clamp01((f.in01 - 0.30) / 0.45));
   if (cne > 0.001) {
@@ -2670,6 +2643,9 @@ function paintWealthHalo(ctx, f) {
 
 
 function paintDialMacro(ctx, f) {
+  /* "The watchmaker's bench at night" — three instruments at three scales.
+     Large compass-watch high-right, pocket watch on the bench, field compass
+     resting flat, plus bench clutter. No single centred circle anywhere. */
   var GA = ctx.globalAlpha;
   var W = f.W, H = f.H, ms = f.ms;
   var ease = f.ease, clamp01 = f.clamp01, hexA = f.hexA, rnd = f.rnd;
@@ -2678,21 +2654,223 @@ function paintDialMacro(ctx, f) {
   var inE = ease(f.in01), outE = ease(f.out01);
   var A = GA * dk * (0.12 + 0.88 * inE) * (1 - 0.92 * outE);
   if (A < 0.004) return;
-  var R = Math.min(W, H) * 0.42;
-  if (!(R > 4)) return;
-  var cx = W * 0.6 + outE * W * 0.09;
-  var cy = H * 0.52;
-  var sc = 1.05 - 0.05 * inE + 0.03 * outE;
-  var i;
+  var MIN = Math.min(W, H);
+  var R1 = MIN * 0.27, R2 = MIN * 0.15, R3 = MIN * 0.085;
+  if (!(R1 > 4)) return;
+  var i, a;
 
-  /* ---------- cached face: bezel + parchment + etchings ---------- */
-  var S = Math.ceil(R * 2.6), hs = S / 2;
-  var face = f.cache('paintDialMacro:face:' + S, S, S, function (g) {
+  /* entrance stagger + exit drift-right */
+  var e1 = ease(clamp01(f.in01 * 1.25));
+  var e2 = ease(clamp01(f.in01 * 1.45 - 0.18));
+  var e3 = ease(clamp01(f.in01 * 1.60 - 0.34));
+  var eC = ease(clamp01(f.in01 * 1.90 - 0.62));
+  var drift = outE * W * 0.035;
+
+  var cx1 = W * 0.68 + drift, cy1 = H * 0.38;
+  var cx2 = W * 0.47 + drift * 0.85, cy2 = H * 0.72 + (1 - e2) * MIN * 0.016;
+  var cx3 = W * 0.82 + drift * 1.15, cy3 = H * 0.76 + (1 - e3) * MIN * 0.013;
+  var benchTop = H * 0.755;
+  var tilt = -12 * Math.PI / 180;
+
+  /* live local time */
+  var dnow = new Date();
+  var sec = dnow.getSeconds() + dnow.getMilliseconds() / 1000;
+  var mnu = dnow.getMinutes() + sec / 60;
+  var hrr = (dnow.getHours() % 12) + mnu / 60;
+  var aH = hrr / 12 * TAU - Math.PI / 2;
+  var aM = mnu / 60 * TAU - Math.PI / 2;
+  var aS = sec / 60 * TAU - Math.PI / 2;
+
+  /* ---------- shared hand / needle / shadow helpers ---------- */
+  function ironHand(c, ang, len, tail, wid, R, alpha) {
+    function path() {
+      c.beginPath();
+      c.moveTo(-tail, wid * 0.42);
+      c.lineTo(0, wid * 0.55);
+      c.lineTo(len * 0.82, wid * 0.20);
+      c.lineTo(len, 0);
+      c.lineTo(len * 0.82, -wid * 0.20);
+      c.lineTo(0, -wid * 0.55);
+      c.lineTo(-tail, -wid * 0.42);
+      c.closePath();
+    }
+    c.save();
+    c.translate(R * 0.012, R * 0.016);
+    c.rotate(ang);
+    c.globalAlpha = alpha * 0.30;
+    path(); c.fillStyle = '#000'; c.fill();
+    c.restore();
+    c.save();
+    c.rotate(ang);
+    c.globalAlpha = alpha;
+    path(); c.fillStyle = '#2a241d'; c.fill();
+    c.strokeStyle = '#4a4036'; c.lineWidth = Math.max(1, R * 0.005);
+    c.beginPath();
+    c.moveTo(-tail, -wid * 0.42);
+    c.lineTo(0, -wid * 0.55);
+    c.lineTo(len * 0.82, -wid * 0.20);
+    c.lineTo(len, 0);
+    c.stroke();
+    c.restore();
+  }
+
+  function needle(c, ang, Lt, Lb, nw, capR, alpha, R) {
+    function half(sgn, cU, cD, solid) {
+      var LL = sgn > 0 ? Lt : Lb;
+      c.beginPath(); c.moveTo(sgn * LL, 0); c.lineTo(0, -nw); c.lineTo(0, 0); c.closePath();
+      c.fillStyle = solid || cU; c.fill();
+      c.beginPath(); c.moveTo(sgn * LL, 0); c.lineTo(0, 0); c.lineTo(0, nw); c.closePath();
+      c.fillStyle = solid || cD; c.fill();
+    }
+    c.save();
+    c.translate(R * 0.012, R * 0.016);
+    c.rotate(ang);
+    c.globalAlpha = alpha * 0.30;
+    half(1, 0, 0, '#000'); half(-1, 0, 0, '#000');
+    c.restore();
+    c.save();
+    c.rotate(ang);
+    c.globalAlpha = alpha;
+    half(1, '#a02015', '#c0281a', null);
+    half(-1, '#d3d0bf', '#e8e6d8', null);
+    c.restore();
+    /* bronze pivot cap */
+    c.globalAlpha = alpha;
+    c.beginPath(); c.arc(R * 0.004, R * 0.006, capR * 1.09, 0, TAU); c.fillStyle = 'rgba(0,0,0,0.30)'; c.fill();
+    c.beginPath(); c.arc(0, 0, capR, 0, TAU); c.fillStyle = '#8a6a38'; c.fill();
+    c.beginPath(); c.arc(0, 0, capR, 0, TAU); c.strokeStyle = '#4a3420'; c.lineWidth = Math.max(1, capR * 0.16); c.stroke();
+    c.beginPath(); c.arc(0, 0, capR * 0.62, Math.PI * 0.7, Math.PI * 1.6); c.strokeStyle = '#c9a25c'; c.lineWidth = Math.max(1, capR * 0.17); c.stroke();
+    c.beginPath(); c.arc(0, 0, capR * 0.24, 0, TAU); c.fillStyle = '#3a2a18'; c.fill();
+  }
+
+  function puck(x, y, r, sq, al) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1, sq);
+    ctx.globalAlpha = al;
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  function tag(x, y, txt, al, ab) {
+    if (al < 0.02) return;
+    var tw = R1 * 0.36, th = R1 * 0.105, lip = Math.max(1, R1 * 0.008);
+    ctx.globalAlpha = ab * al;
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(x + R1 * 0.008, y + R1 * 0.012, tw, th);
+    ctx.fillStyle = '#d8ccb4';
+    ctx.fillRect(x, y, tw, th);
+    ctx.fillStyle = '#e4d8bc';
+    ctx.fillRect(x, y, tw, lip);
+    ctx.fillStyle = '#c4b294';
+    ctx.fillRect(x, y + th - lip, tw, lip);
+    ctx.strokeStyle = '#4a3420';
+    ctx.lineWidth = Math.max(1, R1 * 0.006);
+    ctx.strokeRect(x, y, tw, th);
+    ctx.fillStyle = '#3a2a18';
+    ctx.font = Math.max(11, Math.round(R1 * 0.062)) + 'px VT323, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, x + tw / 2, y + th / 2 + 1);
+  }
+
+  /* ---------- cached warm light pool (upper-right wash) ---------- */
+  var PQ = Math.max(32, Math.ceil(MIN * 0.5));
+  var pool = f.cache('paintDialMacro2:pool:' + PQ, PQ, PQ, function (g) {
     if (g.getContext) g = g.getContext('2d');
+    var q = PQ / 2;
+    var rg = g.createRadialGradient(q, q, 0, q, q, q);
+    rg.addColorStop(0, 'rgba(217,180,91,0.15)');
+    rg.addColorStop(0.5, 'rgba(217,180,91,0.055)');
+    rg.addColorStop(1, 'rgba(217,180,91,0)');
+    g.fillStyle = rg;
+    g.fillRect(0, 0, PQ, PQ);
+  });
+
+  /* ---------- cached low-poly night terrain (behind the bench) ---------- */
+  var TW = Math.ceil(W), TH = Math.ceil(H * 0.16);
+  var terr = f.cache('paintDialMacro2:terr:' + TW + 'x' + TH, TW, TH, function (g) {
+    if (g.getContext) g = g.getContext('2d');
+    var n = 14, xs = [], ys = [], k;
+    for (k = 0; k <= n; k++) { xs.push(TW * k / n); ys.push(TH * (0.18 + 0.5 * rnd(k * 7 + 3))); }
+    g.beginPath(); g.moveTo(0, TH + 2);
+    for (k = 0; k <= n; k++) g.lineTo(xs[k], ys[k]);
+    g.lineTo(TW, TH + 2); g.closePath();
+    g.fillStyle = '#0a1008'; g.fill();
+    for (k = 0; k < n; k++) {
+      g.beginPath();
+      g.moveTo(xs[k], ys[k]); g.lineTo(xs[k + 1], ys[k + 1]);
+      g.lineTo((xs[k] + xs[k + 1]) / 2, TH);
+      g.closePath();
+      g.fillStyle = 'rgba(93,115,64,' + (0.035 + 0.055 * rnd(k * 11 + 2)).toFixed(3) + ')';
+      g.fill();
+    }
+    g.beginPath(); g.moveTo(0, TH + 2);
+    for (k = 0; k <= n; k++) g.lineTo(TW * k / n, TH * (0.52 + 0.42 * rnd(k * 13 + 5)));
+    g.lineTo(TW, TH + 2); g.closePath();
+    g.fillStyle = '#050803'; g.fill();
+  });
+
+  /* ---------- cached bench planks (bottom quarter) ---------- */
+  var BW = Math.ceil(W), BH = Math.ceil(H - benchTop) + 2;
+  var bench = f.cache('paintDialMacro2:bench:' + BW + 'x' + BH, BW, BH, function (g) {
+    if (g.getContext) g = g.getContext('2d');
+    var cols = ['#2a1b11', '#22140c', '#1a0f08'];
+    var lips = ['rgba(201,162,92,0.10)', 'rgba(201,162,92,0.07)', 'rgba(201,162,92,0.05)'];
+    var np = 3, ph = BH / np, p, k;
+    for (p = 0; p < np; p++) {
+      var y0 = p * ph;
+      g.fillStyle = cols[p];
+      g.fillRect(0, y0, BW, ph + 1);
+      g.fillStyle = lips[p];
+      g.fillRect(0, y0, BW, Math.max(1, ph * 0.055));
+      g.fillStyle = 'rgba(0,0,0,0.40)';
+      g.fillRect(0, y0 + ph - Math.max(1, ph * 0.07), BW, Math.max(1, ph * 0.07));
+      /* low-poly sheen wedges */
+      for (k = 0; k < 5; k++) {
+        var wx = BW * (0.05 + 0.90 * rnd(p * 61 + k * 17 + 8));
+        var ww = BW * (0.05 + 0.10 * rnd(p * 29 + k * 7 + 1));
+        g.beginPath();
+        g.moveTo(wx, y0 + ph);
+        g.lineTo(wx + ww * 0.4, y0 + ph * 0.15);
+        g.lineTo(wx + ww, y0 + ph);
+        g.closePath();
+        g.fillStyle = 'rgba(201,162,92,' + (0.008 + 0.014 * rnd(p * 5 + k)).toFixed(3) + ')';
+        g.fill();
+      }
+      /* grain strokes */
+      g.lineWidth = 1;
+      for (k = 0; k < 10; k++) {
+        var gy = y0 + ph * (0.14 + 0.72 * rnd(p * 31 + k * 7 + 1));
+        var gx = BW * rnd(p * 17 + k * 5 + 2);
+        var gl = BW * (0.06 + 0.26 * rnd(p * 13 + k * 3 + 4));
+        g.strokeStyle = 'rgba(0,0,0,' + (0.12 + 0.14 * rnd(p + k * 9)).toFixed(3) + ')';
+        g.beginPath();
+        g.moveTo(gx, gy);
+        g.lineTo(gx + gl * 0.5, gy + (rnd(k * 11 + p * 3) - 0.5) * ph * 0.10);
+        g.lineTo(gx + gl, gy + (rnd(k * 23 + p * 5) - 0.5) * ph * 0.16);
+        g.stroke();
+      }
+      /* board seams */
+      for (k = 0; k < 4; k++) {
+        var sx = BW * (0.08 + 0.84 * rnd(p * 41 + k * 19 + 6));
+        g.strokeStyle = 'rgba(0,0,0,0.32)';
+        g.beginPath(); g.moveTo(sx, y0 + 1); g.lineTo(sx + ph * 0.10, y0 + ph); g.stroke();
+      }
+    }
+  });
+
+  /* ---------- cached MAIN face: bronze bezel + parchment + rose ---------- */
+  var S1 = Math.ceil(R1 * 2.6), h1 = S1 / 2;
+  var face1 = f.cache('paintDialMacro2:face1:' + S1, S1, S1, function (g) {
+    if (g.getContext) g = g.getContext('2d');
+    var R = R1, k, aa, rx, ry;
     g.save();
-    g.translate(hs, hs);
+    g.translate(h1, h1);
     function circ(r, col) { g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fillStyle = col; g.fill(); }
-    /* crown stem + loop (pocket-watch) */
+    /* crown stem + loop pointing UP-LEFT */
+    g.save();
+    g.rotate(-Math.PI / 4);
     g.beginPath(); g.arc(0, -R * 1.155, R * 0.062, 0, TAU);
     g.lineWidth = R * 0.030; g.strokeStyle = '#6a4c2e'; g.stroke();
     g.beginPath(); g.arc(0, -R * 1.155, R * 0.062, Math.PI * 0.7, Math.PI * 1.6);
@@ -2705,6 +2883,7 @@ function paintDialMacro(ctx, f) {
     g.fillRect(-R * 0.068, -R * 1.115, R * 0.136, R * 0.012);
     g.fillStyle = '#4a3420';
     g.fillRect(-R * 0.012, -R * 1.06, R * 0.024, R * 0.13);
+    g.restore();
     /* bronze bezel rings */
     circ(R, '#4a3420');
     circ(R * 0.985, '#6a4c2e');
@@ -2716,10 +2895,9 @@ function paintDialMacro(ctx, f) {
     circ(R * 0.885, '#5a4326');
     circ(R * 0.868, '#3a2a18');
     /* 8 rivets */
-    var j, a, rx, ry;
-    for (j = 0; j < 8; j++) {
-      a = j * TAU / 8 + TAU / 16;
-      rx = Math.cos(a) * R * 0.925; ry = Math.sin(a) * R * 0.925;
+    for (k = 0; k < 8; k++) {
+      aa = k * TAU / 8 + TAU / 16;
+      rx = Math.cos(aa) * R * 0.925; ry = Math.sin(aa) * R * 0.925;
       g.beginPath(); g.arc(rx + R * 0.004, ry + R * 0.005, R * 0.024, 0, TAU); g.fillStyle = '#3a2a18'; g.fill();
       g.beginPath(); g.arc(rx, ry, R * 0.021, 0, TAU); g.fillStyle = '#8a6a38'; g.fill();
       g.beginPath(); g.arc(rx - R * 0.006, ry - R * 0.007, R * 0.008, 0, TAU); g.fillStyle = '#c9a25c'; g.fill();
@@ -2733,42 +2911,42 @@ function paintDialMacro(ctx, f) {
     /* linen grain spokes */
     g.strokeStyle = 'rgba(58,42,24,0.023)';
     g.lineWidth = 1;
-    for (j = 0; j < 48; j++) {
-      a = j * TAU / 48 + 0.03;
+    for (k = 0; k < 48; k++) {
+      aa = k * TAU / 48 + 0.03;
       g.beginPath();
-      g.moveTo(Math.cos(a) * R * 0.09, Math.sin(a) * R * 0.09);
-      g.lineTo(Math.cos(a) * R * 0.84, Math.sin(a) * R * 0.84);
+      g.moveTo(Math.cos(aa) * R * 0.09, Math.sin(aa) * R * 0.09);
+      g.lineTo(Math.cos(aa) * R * 0.84, Math.sin(aa) * R * 0.84);
       g.stroke();
     }
     /* concentric ruling rings */
     g.strokeStyle = 'rgba(58,42,24,0.09)';
     var rr = [0.28, 0.40, 0.52, 0.64, 0.745];
-    for (j = 0; j < rr.length; j++) { g.beginPath(); g.arc(0, 0, R * rr[j], 0, TAU); g.stroke(); }
-    /* minute track on rim */
-    for (j = 0; j < 60; j++) {
-      a = j * TAU / 60 - Math.PI / 2;
-      var big = j % 5 === 0;
+    for (k = 0; k < rr.length; k++) { g.beginPath(); g.arc(0, 0, R * rr[k], 0, TAU); g.stroke(); }
+    /* fine minute track */
+    for (k = 0; k < 60; k++) {
+      aa = k * TAU / 60 - Math.PI / 2;
+      var big = k % 5 === 0;
       g.strokeStyle = big ? 'rgba(58,42,24,0.55)' : 'rgba(58,42,24,0.30)';
       g.lineWidth = big ? Math.max(1.4, R * 0.007) : 1;
       g.beginPath();
-      g.moveTo(Math.cos(a) * R * (big ? 0.782 : 0.80), Math.sin(a) * R * (big ? 0.782 : 0.80));
-      g.lineTo(Math.cos(a) * R * 0.838, Math.sin(a) * R * 0.838);
+      g.moveTo(Math.cos(aa) * R * (big ? 0.782 : 0.80), Math.sin(aa) * R * (big ? 0.782 : 0.80));
+      g.lineTo(Math.cos(aa) * R * 0.838, Math.sin(aa) * R * 0.838);
       g.stroke();
     }
-    /* thin diagonal cross etch to rim */
+    /* thin diagonal cross etch */
     g.strokeStyle = 'rgba(58,42,24,0.16)';
     g.lineWidth = 1;
-    for (j = 0; j < 4; j++) {
-      a = Math.PI / 4 + j * Math.PI / 2;
+    for (k = 0; k < 4; k++) {
+      aa = Math.PI / 4 + k * Math.PI / 2;
       g.beginPath();
-      g.moveTo(Math.cos(a) * R * 0.07, Math.sin(a) * R * 0.07);
-      g.lineTo(Math.cos(a) * R * 0.76, Math.sin(a) * R * 0.76);
+      g.moveTo(Math.cos(aa) * R * 0.07, Math.sin(aa) * R * 0.07);
+      g.lineTo(Math.cos(aa) * R * 0.76, Math.sin(aa) * R * 0.76);
       g.stroke();
     }
     /* bronze diamond ticks at the eighths */
-    for (j = 0; j < 4; j++) {
-      a = Math.PI / 4 + j * Math.PI / 2;
-      var ex = Math.cos(a) * R * 0.655, ey = Math.sin(a) * R * 0.655, dz = R * 0.028;
+    for (k = 0; k < 4; k++) {
+      aa = Math.PI / 4 + k * Math.PI / 2;
+      var ex = Math.cos(aa) * R * 0.655, ey = Math.sin(aa) * R * 0.655, dz = R * 0.028;
       g.beginPath();
       g.moveTo(ex, ey - dz); g.lineTo(ex + dz * 0.62, ey); g.lineTo(ex, ey + dz); g.closePath();
       g.fillStyle = '#6a4c2e'; g.fill();
@@ -2780,92 +2958,218 @@ function paintDialMacro(ctx, f) {
     g.font = Math.round(R * 0.13) + 'px VT323, monospace';
     g.textAlign = 'center'; g.textBaseline = 'middle';
     var CL = [['N', 0, -1], ['E', 1, 0], ['S', 0, 1], ['W', -1, 0]];
-    for (j = 0; j < 4; j++) {
-      var lx = CL[j][1] * R * 0.62, ly = CL[j][2] * R * 0.62;
+    for (k = 0; k < 4; k++) {
+      var lx = CL[k][1] * R * 0.62, ly = CL[k][2] * R * 0.62;
       g.fillStyle = 'rgba(255,255,255,0.30)';
-      g.fillText(CL[j][0], lx, ly + Math.max(1, R * 0.006));
+      g.fillText(CL[k][0], lx, ly + Math.max(1, R * 0.006));
       g.fillStyle = '#3a2a18';
-      g.fillText(CL[j][0], lx, ly);
+      g.fillText(CL[k][0], lx, ly);
     }
-    g.restore();
-  });
-
-  /* ---------- cached compass rose ---------- */
-  var RS = Math.ceil(R * 0.5), rh = RS / 2;
-  var rose = f.cache('paintDialMacro:rose:' + RS, RS, RS, function (g) {
-    if (g.getContext) g = g.getContext('2d');
-    g.save();
-    g.translate(rh, rh);
+    /* etched 8-point rose at centre (dark red + bone facets) */
     var r1 = R * 0.205, r2 = R * 0.135, v = R * 0.052;
-    function pt(rr, aa) { return [Math.cos(aa) * rr, Math.sin(aa) * rr]; }
+    function pt(rr2, aa2) { return [Math.cos(aa2) * rr2, Math.sin(aa2) * rr2]; }
     function facets(red, bone, solid, oy) {
-      for (var k = 0; k < 8; k++) {
-        var a = k * TAU / 8 - Math.PI / 2;
-        var L = (k % 2 === 0) ? r1 : r2;
-        var tip = pt(L, a), vl = pt(v, a - TAU / 16), vr = pt(v, a + TAU / 16);
+      for (var q = 0; q < 8; q++) {
+        var af = q * TAU / 8 - Math.PI / 2;
+        var L = (q % 2 === 0) ? r1 : r2;
+        var tip = pt(L, af), vl = pt(v, af - TAU / 16), vr = pt(v, af + TAU / 16);
         g.beginPath(); g.moveTo(tip[0], tip[1] + oy); g.lineTo(vl[0], vl[1] + oy); g.lineTo(0, oy); g.closePath();
-        g.fillStyle = solid || ((k % 2 === 0) ? red : bone); g.fill();
+        g.fillStyle = solid || ((q % 2 === 0) ? red : bone); g.fill();
         g.beginPath(); g.moveTo(tip[0], tip[1] + oy); g.lineTo(vr[0], vr[1] + oy); g.lineTo(0, oy); g.closePath();
-        g.fillStyle = solid || ((k % 2 === 0) ? bone : red); g.fill();
+        g.fillStyle = solid || ((q % 2 === 0) ? bone : red); g.fill();
       }
     }
     facets(null, null, 'rgba(0,0,0,0.20)', Math.max(1, R * 0.008));
     facets('#8f1d10', '#e8e6d8', null, 0);
     g.strokeStyle = 'rgba(58,42,24,0.70)'; g.lineWidth = Math.max(1, R * 0.0035);
-    for (var k = 0; k < 8; k++) {
-      var a = k * TAU / 8 - Math.PI / 2, L = (k % 2 === 0) ? r1 : r2;
-      var tip = pt(L, a), vl = pt(v, a - TAU / 16), vr = pt(v, a + TAU / 16);
-      g.beginPath(); g.moveTo(vl[0], vl[1]); g.lineTo(tip[0], tip[1]); g.lineTo(vr[0], vr[1]); g.stroke();
+    for (k = 0; k < 8; k++) {
+      aa = k * TAU / 8 - Math.PI / 2;
+      var L2 = (k % 2 === 0) ? r1 : r2;
+      var tp = pt(L2, aa), vl2 = pt(v, aa - TAU / 16), vr2 = pt(v, aa + TAU / 16);
+      g.beginPath(); g.moveTo(vl2[0], vl2[1]); g.lineTo(tp[0], tp[1]); g.lineTo(vr2[0], vr2[1]); g.stroke();
     }
-    g.beginPath(); g.arc(0, 0, R * 0.030, 0, TAU); g.fillStyle = '#e8e6d8'; g.fill();
-    g.beginPath(); g.arc(0, 0, R * 0.030, 0, TAU); g.strokeStyle = '#8f1d10'; g.lineWidth = Math.max(1, R * 0.006); g.stroke();
     g.restore();
   });
 
-  /* ---------- cached low-poly night terrain ---------- */
-  var TW2 = Math.ceil(W), TH2 = Math.ceil(H * 0.26);
-  var terr = f.cache('paintDialMacro:terr:' + TW2 + 'x' + TH2, TW2, TH2, function (g) {
+  /* ---------- cached POCKET WATCH face: navy-steel in bronze case ---------- */
+  var S2 = Math.ceil(R2 * 2.9), h2 = S2 / 2;
+  var face2 = f.cache('paintDialMacro2:face2:' + S2, S2, S2, function (g) {
     if (g.getContext) g = g.getContext('2d');
-    var n = 12, xs = [], ys = [], j;
-    for (j = 0; j <= n; j++) { xs.push(TW2 * j / n); ys.push(TH2 * (0.22 + 0.5 * rnd(j * 7 + 3))); }
-    g.beginPath(); g.moveTo(0, TH2 + 2);
-    for (j = 0; j <= n; j++) g.lineTo(xs[j], ys[j]);
-    g.lineTo(TW2, TH2 + 2); g.closePath();
-    g.fillStyle = '#0a1008'; g.fill();
-    for (j = 0; j < n; j++) {
+    var R = R2, k, aa;
+    g.save();
+    g.translate(h2, h2);
+    function circ(r, col) { g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fillStyle = col; g.fill(); }
+    /* winding crown + bow at top-right */
+    g.save();
+    g.rotate(Math.PI / 4);
+    g.beginPath(); g.arc(0, -R * 1.26, R * 0.085, 0, TAU);
+    g.lineWidth = R * 0.036; g.strokeStyle = '#6a4c2e'; g.stroke();
+    g.beginPath(); g.arc(0, -R * 1.26, R * 0.085, Math.PI * 0.7, Math.PI * 1.6);
+    g.lineWidth = R * 0.014; g.strokeStyle = '#c9a25c'; g.stroke();
+    g.fillStyle = '#6a4c2e';
+    g.fillRect(-R * 0.055, -R * 1.17, R * 0.11, R * 0.19);
+    g.fillStyle = '#8a6a38';
+    g.fillRect(-R * 0.075, -R * 1.185, R * 0.15, R * 0.05);
+    g.fillStyle = '#c9a25c';
+    g.fillRect(-R * 0.075, -R * 1.185, R * 0.15, R * 0.014);
+    g.strokeStyle = '#3a2a18'; g.lineWidth = 1;
+    for (k = -2; k <= 2; k++) {
       g.beginPath();
-      g.moveTo(xs[j], ys[j]); g.lineTo(xs[j + 1], ys[j + 1]);
-      g.lineTo((xs[j] + xs[j + 1]) / 2, TH2);
-      g.closePath();
-      g.fillStyle = 'rgba(93,115,64,' + (0.04 + 0.06 * rnd(j * 11 + 2)).toFixed(3) + ')';
+      g.moveTo(k * R * 0.026, -R * 1.13);
+      g.lineTo(k * R * 0.026, -R * 0.995);
+      g.stroke();
+    }
+    g.restore();
+    /* bronze case */
+    circ(R, '#3a2a18');
+    circ(R * 0.975, '#6a4c2e');
+    circ(R * 0.93, '#8a6a38');
+    g.beginPath(); g.arc(0, 0, R * 0.955, Math.PI * 0.78, Math.PI * 1.52);
+    g.lineWidth = R * 0.020; g.strokeStyle = '#c9a25c'; g.stroke();
+    g.beginPath(); g.arc(0, 0, R * 0.955, -Math.PI * 0.18, Math.PI * 0.46);
+    g.strokeStyle = 'rgba(0,0,0,0.30)'; g.stroke();
+    circ(R * 0.875, '#10151d');
+    /* navy-steel face */
+    var ng = g.createRadialGradient(-R * 0.16, -R * 0.20, R * 0.05, 0, 0, R * 0.86);
+    ng.addColorStop(0, '#26324a');
+    ng.addColorStop(0.5, '#1a2434');
+    ng.addColorStop(1, '#0c1119');
+    circ(R * 0.845, ng);
+    /* brushed sheen arcs */
+    g.strokeStyle = 'rgba(156,199,255,0.05)';
+    g.lineWidth = 1;
+    for (k = 0; k < 6; k++) {
+      g.beginPath(); g.arc(0, 0, R * (0.18 + 0.11 * k), Math.PI * 1.05, Math.PI * 1.65); g.stroke();
+    }
+    /* 12 bone hour markers (4 major) */
+    for (k = 0; k < 12; k++) {
+      var big = k % 3 === 0;
+      g.save();
+      g.rotate(k * TAU / 12 - Math.PI / 2);
+      g.fillStyle = big ? '#e8e6d8' : 'rgba(232,230,216,0.62)';
+      var ml = big ? R * 0.135 : R * 0.08;
+      var mw = big ? R * 0.034 : R * 0.017;
+      g.fillRect(R * 0.72 - ml, -mw / 2, ml, mw);
+      if (big) {
+        g.fillStyle = 'rgba(0,0,0,0.35)';
+        g.fillRect(R * 0.72 - ml, mw / 2 - Math.max(1, mw * 0.2), ml, Math.max(1, mw * 0.2));
+      }
+      g.restore();
+    }
+    /* minute dots */
+    g.fillStyle = 'rgba(232,230,216,0.30)';
+    for (k = 0; k < 60; k++) {
+      if (k % 5 === 0) continue;
+      aa = k * TAU / 60 - Math.PI / 2;
+      g.beginPath();
+      g.arc(Math.cos(aa) * R * 0.78, Math.sin(aa) * R * 0.78, Math.max(0.6, R * 0.006), 0, TAU);
       g.fill();
     }
-    g.beginPath(); g.moveTo(0, TH2 + 2);
-    for (j = 0; j <= n; j++) g.lineTo(TW2 * j / n, TH2 * (0.55 + 0.4 * rnd(j * 13 + 5)));
-    g.lineTo(TW2, TH2 + 2); g.closePath();
-    g.fillStyle = '#050803'; g.fill();
+    /* quiet maker's mark */
+    g.font = Math.round(R * 0.105) + 'px VT323, monospace';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(156,199,255,0.22)';
+    g.fillText('DIAL', 0, R * 0.36);
+    g.restore();
   });
 
+  /* ---------- cached FIELD COMPASS face: brass ring + bone ---------- */
+  var S3 = Math.ceil(R3 * 2.3), h3 = S3 / 2;
+  var face3 = f.cache('paintDialMacro2:face3:' + S3, S3, S3, function (g) {
+    if (g.getContext) g = g.getContext('2d');
+    var R = R3, k, aa;
+    g.save();
+    g.translate(h3, h3);
+    function circ(r, col) { g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fillStyle = col; g.fill(); }
+    circ(R, '#3a2a18');
+    circ(R * 0.965, '#7a5c2e');
+    circ(R * 0.90, '#9a7a3a');
+    g.beginPath(); g.arc(0, 0, R * 0.935, Math.PI * 0.8, Math.PI * 1.55);
+    g.lineWidth = R * 0.03; g.strokeStyle = '#c9a25c'; g.stroke();
+    g.beginPath(); g.arc(0, 0, R * 0.935, -Math.PI * 0.15, Math.PI * 0.45);
+    g.strokeStyle = 'rgba(0,0,0,0.30)'; g.stroke();
+    circ(R * 0.80, '#4a3420');
+    var pg = g.createRadialGradient(-R * 0.12, -R * 0.15, R * 0.04, 0, 0, R * 0.78);
+    pg.addColorStop(0, '#e2dcc6');
+    pg.addColorStop(0.5, '#d4cbb0');
+    pg.addColorStop(1, '#b0a688');
+    circ(R * 0.76, pg);
+    /* tick ring */
+    for (k = 0; k < 16; k++) {
+      aa = k * TAU / 16 - Math.PI / 2;
+      var big = k % 4 === 0;
+      g.strokeStyle = big ? 'rgba(58,42,24,0.60)' : 'rgba(58,42,24,0.32)';
+      g.lineWidth = big ? Math.max(1, R * 0.02) : 1;
+      g.beginPath();
+      g.moveTo(Math.cos(aa) * R * (big ? 0.60 : 0.64), Math.sin(aa) * R * (big ? 0.60 : 0.64));
+      g.lineTo(Math.cos(aa) * R * 0.71, Math.sin(aa) * R * 0.71);
+      g.stroke();
+    }
+    g.beginPath(); g.arc(0, 0, R * 0.45, 0, TAU);
+    g.strokeStyle = 'rgba(58,42,24,0.14)'; g.lineWidth = 1; g.stroke();
+    /* N marker: red tick + letter */
+    g.beginPath();
+    g.moveTo(0, -R * 0.71); g.lineTo(-R * 0.045, -R * 0.585); g.lineTo(R * 0.045, -R * 0.585);
+    g.closePath(); g.fillStyle = '#8f1d10'; g.fill();
+    g.font = Math.round(R * 0.24) + 'px VT323, monospace';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(255,255,255,0.30)';
+    g.fillText('N', 0, -R * 0.435 + Math.max(1, R * 0.012));
+    g.fillStyle = '#3a2a18';
+    g.fillText('N', 0, -R * 0.435);
+    g.restore();
+  });
+
+  /* ---------- cached gear sprites (dark iron, bronze rim teeth) ---------- */
+  function makeGear(tg, RG) {
+    var GS = Math.ceil(RG * 2.3), gh = GS / 2;
+    var cnv = f.cache('paintDialMacro2:gear' + tg + ':' + GS, GS, GS, function (g) {
+      if (g.getContext) g = g.getContext('2d');
+      g.save();
+      g.translate(gh, gh);
+      var k, aa;
+      for (k = 0; k < 10; k++) {
+        g.save();
+        g.rotate(k * TAU / 10);
+        g.fillStyle = '#5a4326';
+        g.fillRect(RG * 0.70, -RG * 0.13, RG * 0.30, RG * 0.26);
+        g.fillStyle = '#8a6a38';
+        g.fillRect(RG * 0.70, -RG * 0.13, RG * 0.30, RG * 0.10);
+        g.restore();
+      }
+      g.beginPath(); g.arc(0, 0, RG * 0.80, 0, TAU); g.fillStyle = '#3a2a18'; g.fill();
+      g.beginPath(); g.arc(0, 0, RG * 0.70, 0, TAU); g.fillStyle = '#2a241d'; g.fill();
+      g.beginPath(); g.arc(0, 0, RG * 0.52, 0, TAU); g.strokeStyle = '#4a4036'; g.lineWidth = Math.max(1, RG * 0.05); g.stroke();
+      for (k = 0; k < 4; k++) {
+        aa = k * TAU / 4 + TAU / 8;
+        g.beginPath();
+        g.arc(Math.cos(aa) * RG * 0.40, Math.sin(aa) * RG * 0.40, RG * 0.13, 0, TAU);
+        g.fillStyle = '#15110c'; g.fill();
+      }
+      g.beginPath(); g.arc(0, 0, RG * 0.15, 0, TAU); g.fillStyle = '#8a6a38'; g.fill();
+      g.beginPath(); g.arc(0, 0, RG * 0.06, 0, TAU); g.fillStyle = '#15110c'; g.fill();
+      g.restore();
+    });
+    return { c: cnv, h: gh };
+  }
+
   ctx.save();
 
-  /* ---------- world: terrain, light pool, fireflies ---------- */
-  ctx.globalAlpha = A * 0.9;
-  ctx.drawImage(terr, 0, H - TH2);
-
-  ctx.save();
-  ctx.translate(cx, cy + R * 1.0);
-  ctx.scale(1, 0.35);
-  var pool = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.25);
-  pool.addColorStop(0, hexA(f.gold2, 0.10));
-  pool.addColorStop(1, hexA(f.gold2, 0));
+  /* ================= BACKDROP ================= */
+  /* warm pool of light from upper-right */
+  var PS = MIN * 1.7;
   ctx.globalAlpha = A;
-  ctx.fillStyle = pool;
-  ctx.beginPath(); ctx.arc(0, 0, R * 1.25, 0, TAU); ctx.fill();
-  ctx.restore();
-
-  for (i = 0; i < 3; i++) {
-    var fx = W * (0.10 + 0.13 * i) + Math.sin(ms * 0.00021 + i * 2.4) * W * 0.022;
-    var fy = H * (0.50 + 0.34 * rnd(i + 11)) + Math.sin(ms * 0.00033 + i * 1.7) * H * 0.035;
+  ctx.drawImage(pool, W * 0.74 - PS / 2, H * 0.28 - PS / 2, PS, PS);
+  /* terrain silhouette peeking over the bench line */
+  ctx.globalAlpha = A * 0.85;
+  ctx.drawImage(terr, 0, benchTop - TH + 2);
+  /* bench planks, bottom quarter */
+  ctx.globalAlpha = A;
+  ctx.drawImage(bench, 0, benchTop);
+  /* fireflies */
+  for (i = 0; i < 4; i++) {
+    var fx = W * (0.40 + 0.16 * i) + Math.sin(ms * 0.00021 + i * 2.4) * W * 0.018 + drift * 0.5;
+    var fy = H * (0.18 + 0.40 * rnd(i * 9 + 3)) + Math.sin(ms * 0.00033 + i * 1.7) * H * 0.032;
     var bl = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(ms * 0.0016 + i * 2.1));
     ctx.fillStyle = '#d6e08a';
     ctx.globalAlpha = A * 0.05 * bl; ctx.beginPath(); ctx.arc(fx, fy, 7, 0, TAU); ctx.fill();
@@ -2873,204 +3177,285 @@ function paintDialMacro(ctx, f) {
     ctx.globalAlpha = A * 0.75 * bl; ctx.beginPath(); ctx.arc(fx, fy, 1.2, 0, TAU); ctx.fill();
   }
 
-  /* ---------- instrument group ---------- */
-  ctx.translate(cx, cy);
-  ctx.scale(sc, sc);
-
-  /* leather strap edge, faceted, exiting bottom-right (behind bezel) */
-  var ux = Math.cos(0.66), uy = Math.sin(0.66), px2 = -uy, py2 = ux;
-  var seg = [[R * 0.78, R * 0.085], [R * 1.15, R * 0.10], [R * 1.55, R * 0.115], [R * 2.0, R * 0.13]];
-  var scol = ['#2e2015', '#241810', '#1d130c'];
-  ctx.globalAlpha = A;
-  for (i = 0; i < 3; i++) {
-    var d0 = seg[i], d1 = seg[i + 1];
-    ctx.fillStyle = scol[i];
-    ctx.beginPath();
-    ctx.moveTo(ux * d0[0] + px2 * d0[1], uy * d0[0] + py2 * d0[1]);
-    ctx.lineTo(ux * d1[0] + px2 * d1[1], uy * d1[0] + py2 * d1[1]);
-    ctx.lineTo(ux * d1[0] - px2 * d1[1], uy * d1[0] - py2 * d1[1]);
-    ctx.lineTo(ux * d0[0] - px2 * d0[1], uy * d0[0] - py2 * d0[1]);
-    ctx.closePath(); ctx.fill();
-  }
-  ctx.strokeStyle = hexA('#c9a25c', 0.14); ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(ux * R * 0.86 + px2 * R * 0.055, uy * R * 0.86 + py2 * R * 0.055);
-  ctx.lineTo(ux * R * 1.9 + px2 * R * 0.09, uy * R * 1.9 + py2 * R * 0.09);
-  ctx.stroke();
-
-  /* face sprite, with focus-pull ghosts on entrance */
-  var dfoc = 1 - inE;
+  /* ================= 1. MAIN COMPASS-WATCH (large, high-right) ================= */
+  var A1 = A * (0.55 + 0.45 * e1);
+  ctx.save();
+  ctx.translate(cx1, cy1);
+  var sc1 = (1.05 - 0.05 * e1) * (1 + 0.02 * outE) * (1 + 0.002 * Math.sin(ms * 0.0011));
+  ctx.scale(sc1, sc1);
+  /* focus-pull ghosts on entrance */
+  var dfoc = 1 - e1;
   if (dfoc > 0.02) {
-    var off = dfoc * R * 0.03;
+    var off = dfoc * R1 * 0.03;
     ctx.globalAlpha = A * 0.30 * dfoc;
-    ctx.drawImage(face, -hs + off, -hs);
-    ctx.drawImage(face, -hs - off, -hs + off * 0.5);
+    ctx.drawImage(face1, -h1 + off, -h1);
+    ctx.drawImage(face1, -h1 - off, -h1 + off * 0.5);
   }
-  ctx.globalAlpha = A * (0.55 + 0.45 * inE);
-  ctx.drawImage(face, -hs, -hs);
+  ctx.globalAlpha = A1;
+  ctx.drawImage(face1, -h1, -h1);
 
-  /* compass rose with ambient wobble */
-  var wob = Math.sin(ms * 0.00051) * Math.sin(ms * 0.00013 + 1.7);
-  ctx.save();
-  ctx.rotate(wob * 0.017);
-  ctx.globalAlpha = A * (0.94 + 0.06 * Math.sin(ms * 0.0019));
-  ctx.drawImage(rose, -rh, -rh);
-  ctx.restore();
-
-  /* ---------- scan beam + revealed tics ---------- */
+  /* scan beam, clipped to THIS face only, scrubbed by t */
   var prog = ease(f.t);
-  var bx = (-1.25 + 2.5 * prog) * R;
-
+  var bx = (-1.15 + 2.30 * prog) * R1;
   ctx.save();
-  ctx.beginPath(); ctx.arc(0, 0, R * 0.85, 0, TAU); ctx.clip();
-  ctx.strokeStyle = '#3a2a18';
-  ctx.lineWidth = 1;
-  for (i = 0; i < 12; i++) {
-    var tx = (-0.66 + i * 0.12) * R;
-    var rv = clamp01((bx - tx) / (R * 0.18));
-    if (rv <= 0) continue;
-    ctx.globalAlpha = A * 0.26 * rv;
-    ctx.beginPath(); ctx.moveTo(tx, -R * 0.315); ctx.lineTo(tx, -R * 0.285); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(tx, R * 0.285); ctx.lineTo(tx, R * 0.315); ctx.stroke();
-  }
+  ctx.beginPath(); ctx.arc(0, 0, R1 * 0.845, 0, TAU); ctx.clip();
   if (prog > 0.005 && prog < 0.995) {
-    var trail = ctx.createLinearGradient(bx - R * 0.85, 0, bx, 0);
+    var trail = ctx.createLinearGradient(bx - R1 * 0.8, 0, bx, 0);
     trail.addColorStop(0, hexA(f.gold2, 0));
     trail.addColorStop(0.7, hexA(f.gold2, 0.06));
     trail.addColorStop(1, hexA(f.gold2, 0.17));
-    ctx.globalAlpha = A;
+    ctx.globalAlpha = A1;
     ctx.fillStyle = trail;
-    ctx.fillRect(bx - R * 0.85, -R * 0.86, R * 0.85, R * 1.72);
+    ctx.fillRect(bx - R1 * 0.8, -R1 * 0.85, R1 * 0.8, R1 * 1.7);
     ctx.fillStyle = f.gold;
-    ctx.globalAlpha = A * 0.06; ctx.fillRect(bx - R * 0.012, -R * 0.86, R * 0.045, R * 1.72);
-    ctx.globalAlpha = A * 0.16; ctx.fillRect(bx - R * 0.005, -R * 0.86, R * 0.018, R * 1.72);
-    ctx.globalAlpha = A * 0.60; ctx.fillRect(bx - R * 0.002, -R * 0.86, R * 0.005, R * 1.72);
+    ctx.globalAlpha = A1 * 0.06; ctx.fillRect(bx - R1 * 0.012, -R1 * 0.85, R1 * 0.045, R1 * 1.7);
+    ctx.globalAlpha = A1 * 0.16; ctx.fillRect(bx - R1 * 0.005, -R1 * 0.85, R1 * 0.018, R1 * 1.7);
+    ctx.globalAlpha = A1 * 0.60; ctx.fillRect(bx - R1 * 0.002, -R1 * 0.85, R1 * 0.005, R1 * 1.7);
   }
   ctx.restore();
 
-  /* ---------- parchment HUD tags ---------- */
-  function tag(x, y, txt, al) {
-    if (al < 0.02) return;
-    var tw = R * 0.34, th = R * 0.10, lip = Math.max(1, R * 0.008);
-    ctx.globalAlpha = A * al;
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.fillRect(x + R * 0.008, y + R * 0.012, tw, th);
-    ctx.fillStyle = '#d8ccb4';
-    ctx.fillRect(x, y, tw, th);
-    ctx.fillStyle = '#e4d8bc';
-    ctx.fillRect(x, y, tw, lip);
-    ctx.fillStyle = '#c4b294';
-    ctx.fillRect(x, y + th - lip, tw, lip);
-    ctx.strokeStyle = '#4a3420';
-    ctx.lineWidth = Math.max(1, R * 0.006);
-    ctx.strokeRect(x, y, tw, th);
-    ctx.fillStyle = '#3a2a18';
-    ctx.font = Math.max(12, Math.round(R * 0.058)) + 'px VT323, monospace';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(txt, x + tw / 2, y + th / 2 + 1);
-  }
-  tag(-R * 0.60, -R * 0.40, 'EST £3,120', clamp01((prog - 0.40) * 5));
-  tag(R * 0.16, R * 0.30, 'LOWEST-20', clamp01((prog - 0.70) * 5));
+  /* live hands */
+  ironHand(ctx, aH, R1 * 0.34, R1 * 0.09, R1 * 0.055, R1, A1);
+  ironHand(ctx, aM, R1 * 0.52, R1 * 0.10, R1 * 0.040, R1, A1);
+  needle(ctx, aS + Math.sin(ms * 0.0062) * 0.003, R1 * 0.62, R1 * 0.50, R1 * 0.030, R1 * 0.046, A1, R1);
 
-  /* ---------- live hands ---------- */
-  var dt = new Date();
-  var sec = dt.getSeconds() + dt.getMilliseconds() / 1000;
-  var mnu = dt.getMinutes() + sec / 60;
-  var hrr = (dt.getHours() % 12) + mnu / 60;
-  var aH = hrr / 12 * TAU - Math.PI / 2;
-  var aM = mnu / 60 * TAU - Math.PI / 2;
-  var aS = sec / 60 * TAU - Math.PI / 2 + Math.sin(ms * 0.0062) * 0.003;
+  /* parchment tags fade in beside the dial after the beam passes */
+  var tagX = (W - cx1) > R1 * 1.55 ? R1 * 0.98 : -R1 * 0.42;
+  tag(tagX, -R1 * 0.36, 'EST £3,120', clamp01((prog - 0.58) * 4.5), A1);
+  tag(tagX + R1 * 0.07, -R1 * 0.10, 'LOWEST-20', clamp01((prog - 0.74) * 4.5), A1);
 
-  function ironHand(ang, len, tail, wid) {
-    function path(c) {
-      c.beginPath();
-      c.moveTo(-tail, wid * 0.42);
-      c.lineTo(0, wid * 0.55);
-      c.lineTo(len * 0.82, wid * 0.20);
-      c.lineTo(len, 0);
-      c.lineTo(len * 0.82, -wid * 0.20);
-      c.lineTo(0, -wid * 0.55);
-      c.lineTo(-tail, -wid * 0.42);
-      c.closePath();
-    }
-    ctx.save();
-    ctx.translate(R * 0.012, R * 0.016);
-    ctx.rotate(ang);
-    ctx.globalAlpha = A * 0.30;
-    path(ctx); ctx.fillStyle = '#000'; ctx.fill();
-    ctx.restore();
-    ctx.save();
-    ctx.rotate(ang);
-    ctx.globalAlpha = A;
-    path(ctx); ctx.fillStyle = '#2a241d'; ctx.fill();
-    ctx.strokeStyle = '#4a4036'; ctx.lineWidth = Math.max(1, R * 0.005);
-    ctx.beginPath();
-    ctx.moveTo(-tail, -wid * 0.42);
-    ctx.lineTo(0, -wid * 0.55);
-    ctx.lineTo(len * 0.82, -wid * 0.20);
-    ctx.lineTo(len, 0);
-    ctx.stroke();
-    ctx.restore();
-  }
-  ironHand(aH, R * 0.34, R * 0.09, R * 0.055);
-  ironHand(aM, R * 0.52, R * 0.10, R * 0.040);
-
-  /* seconds hand = two-tone compass needle */
-  var nw = R * 0.030, L1 = R * 0.62, L2 = R * 0.50;
-  function needleHalf(sgn, colUp, colDn, solid) {
-    var LL = sgn > 0 ? L1 : L2;
-    ctx.beginPath(); ctx.moveTo(sgn * LL, 0); ctx.lineTo(0, -nw); ctx.lineTo(0, 0); ctx.closePath();
-    ctx.fillStyle = solid || colUp; ctx.fill();
-    ctx.beginPath(); ctx.moveTo(sgn * LL, 0); ctx.lineTo(0, 0); ctx.lineTo(0, nw); ctx.closePath();
-    ctx.fillStyle = solid || colDn; ctx.fill();
-  }
-  ctx.save();
-  ctx.translate(R * 0.012, R * 0.016);
-  ctx.rotate(aS);
-  ctx.globalAlpha = A * 0.30;
-  needleHalf(1, 0, 0, '#000'); needleHalf(-1, 0, 0, '#000');
-  ctx.restore();
-  ctx.save();
-  ctx.rotate(aS);
-  ctx.globalAlpha = A;
-  needleHalf(1, '#a02015', '#c0281a', null);
-  needleHalf(-1, '#d3d0bf', '#e8e6d8', null);
-  ctx.restore();
-
-  /* bronze centre cap */
-  ctx.globalAlpha = A;
-  ctx.beginPath(); ctx.arc(R * 0.004, R * 0.006, R * 0.050, 0, TAU); ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fill();
-  ctx.beginPath(); ctx.arc(0, 0, R * 0.046, 0, TAU); ctx.fillStyle = '#8a6a38'; ctx.fill();
-  ctx.beginPath(); ctx.arc(0, 0, R * 0.046, 0, TAU); ctx.strokeStyle = '#4a3420'; ctx.lineWidth = Math.max(1, R * 0.007); ctx.stroke();
-  ctx.beginPath(); ctx.arc(0, 0, R * 0.030, Math.PI * 0.7, Math.PI * 1.6); ctx.strokeStyle = '#c9a25c'; ctx.lineWidth = Math.max(1, R * 0.008); ctx.stroke();
-  ctx.beginPath(); ctx.arc(0, 0, R * 0.011, 0, TAU); ctx.fillStyle = '#3a2a18'; ctx.fill();
-
-  /* valuation-locked flare (single pulse past t 0.78) */
+  /* valuation-locked flare pulse */
   if (f.t > 0.78) {
     var p = clamp01((f.t - 0.78) / 0.14);
     if (p < 1) {
-      var fr = R * (0.30 + 0.60 * ease(p));
+      var fr = R1 * (0.30 + 0.60 * ease(p));
       ctx.strokeStyle = f.gold;
-      ctx.globalAlpha = A * 0.28 * (1 - p);
-      ctx.lineWidth = Math.max(3, R * 0.05 * (1 - p));
+      ctx.globalAlpha = A1 * 0.28 * (1 - p);
+      ctx.lineWidth = Math.max(3, R1 * 0.05 * (1 - p));
       ctx.beginPath(); ctx.arc(0, 0, fr, 0, TAU); ctx.stroke();
-      ctx.globalAlpha = A * 0.80 * (1 - p);
-      ctx.lineWidth = Math.max(1.5, R * 0.020 * (1 - p));
+      ctx.globalAlpha = A1 * 0.80 * (1 - p);
+      ctx.lineWidth = Math.max(1.5, R1 * 0.020 * (1 - p));
       ctx.beginPath(); ctx.arc(0, 0, fr, 0, TAU); ctx.stroke();
-      ctx.globalAlpha = A * 0.28 * (1 - p);
-      ctx.lineWidth = Math.max(1, R * 0.008);
+      ctx.globalAlpha = A1 * 0.28 * (1 - p);
+      ctx.lineWidth = Math.max(1, R1 * 0.008);
       ctx.beginPath(); ctx.arc(0, 0, fr * 1.15, 0, TAU); ctx.stroke();
       var fgl = ctx.createRadialGradient(0, 0, 0, 0, 0, fr);
       fgl.addColorStop(0, hexA(f.gold, 0.14 * (1 - p)));
       fgl.addColorStop(1, hexA(f.gold, 0));
-      ctx.globalAlpha = A;
+      ctx.globalAlpha = A1;
       ctx.fillStyle = fgl;
       ctx.beginPath(); ctx.arc(0, 0, fr, 0, TAU); ctx.fill();
     }
   }
+  ctx.restore();
+
+  /* ================= gear half-tucked under the pocket watch ================= */
+  var A2 = A * (0.20 + 0.80 * e2);
+  var gearB = makeGear('B', Math.max(10, R2 * 0.30));
+  puck(cx2 - R2 * 0.74, cy2 + R2 * 0.80, R2 * 0.30, 0.4, A2 * 0.28);
+  ctx.save();
+  ctx.translate(cx2 - R2 * 0.72, cy2 + R2 * 0.72);
+  ctx.rotate(0.5);
+  ctx.globalAlpha = A2;
+  ctx.drawImage(gearB.c, -gearB.h, -gearB.h);
+  ctx.restore();
+
+  /* ================= 2. POCKET WATCH (medium, on the bench, tilted) ================= */
+  puck(cx2 + R2 * 0.08, cy2 + R2 * 0.92, R2 * 0.98, 0.30, A2 * 0.38);
+  ctx.save();
+  ctx.translate(cx2, cy2);
+  ctx.rotate(tilt);
+  ctx.globalAlpha = A2;
+  ctx.drawImage(face2, -h2, -h2);
+  /* drifting glass glint */
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, R2 * 0.85, 0, TAU); ctx.clip();
+  ctx.rotate(-0.6 + Math.sin(ms * 0.00019) * 0.24);
+  var gg = ctx.createLinearGradient(0, -R2, 0, R2);
+  gg.addColorStop(0.38, 'rgba(220,235,255,0)');
+  gg.addColorStop(0.50, 'rgba(220,235,255,0.075)');
+  gg.addColorStop(0.62, 'rgba(220,235,255,0)');
+  ctx.globalAlpha = A2;
+  ctx.fillStyle = gg;
+  ctx.fillRect(-R2, -R2, R2 * 2, R2 * 2);
+  ctx.restore();
+  /* live iron hands + slim gold seconds */
+  ironHand(ctx, aH, R2 * 0.40, R2 * 0.10, R2 * 0.075, R2, A2);
+  ironHand(ctx, aM, R2 * 0.60, R2 * 0.11, R2 * 0.055, R2, A2);
+  ctx.save();
+  ctx.rotate(aS);
+  ctx.globalAlpha = A2 * 0.30;
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = Math.max(1, R2 * 0.014);
+  ctx.beginPath(); ctx.moveTo(-R2 * 0.18 + R2 * 0.012, R2 * 0.016); ctx.lineTo(R2 * 0.66 + R2 * 0.012, R2 * 0.016); ctx.stroke();
+  ctx.globalAlpha = A2;
+  ctx.strokeStyle = f.gold;
+  ctx.beginPath(); ctx.moveTo(-R2 * 0.18, 0); ctx.lineTo(R2 * 0.66, 0); ctx.stroke();
+  ctx.fillStyle = f.gold;
+  ctx.beginPath(); ctx.arc(-R2 * 0.18, 0, R2 * 0.030, 0, TAU); ctx.fill();
+  ctx.restore();
+  /* pivot cap */
+  ctx.globalAlpha = A2;
+  ctx.beginPath(); ctx.arc(0, 0, R2 * 0.055, 0, TAU); ctx.fillStyle = '#8a6a38'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, R2 * 0.055, 0, TAU); ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = Math.max(1, R2 * 0.010); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, R2 * 0.018, 0, TAU); ctx.fillStyle = '#15110c'; ctx.fill();
+  ctx.restore();
+
+  /* ---- low-poly bronze chain from the crown down to the bench ---- */
+  function chainLink(x, y, ang, k2, al) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    var rw = R2 * 0.058, rh = (k2 % 2 === 0) ? R2 * 0.036 : R2 * 0.020;
+    ctx.globalAlpha = al * 0.30;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = Math.max(1.2, R2 * 0.018);
+    ctx.save(); ctx.translate(R2 * 0.012, R2 * 0.02); ctx.scale(1, rh / rw);
+    ctx.beginPath(); ctx.arc(0, 0, rw, 0, TAU); ctx.stroke(); ctx.restore();
+    ctx.globalAlpha = al;
+    ctx.strokeStyle = (k2 % 2 === 0) ? '#8a6a38' : '#6a4c2e';
+    ctx.save(); ctx.scale(1, rh / rw);
+    ctx.beginPath(); ctx.arc(0, 0, rw, 0, TAU); ctx.stroke(); ctx.restore();
+    ctx.strokeStyle = '#c9a25c';
+    ctx.lineWidth = Math.max(1, R2 * 0.008);
+    ctx.save(); ctx.scale(1, rh / rw);
+    ctx.beginPath(); ctx.arc(0, 0, rw, -Math.PI * 0.85, -Math.PI * 0.25); ctx.stroke(); ctx.restore();
+    ctx.restore();
+  }
+  var ca = -Math.PI / 4 + tilt;
+  var px0 = cx2 + Math.cos(ca) * R2 * 1.26;
+  var py0 = cy2 + Math.sin(ca) * R2 * 1.26;
+  var sway = Math.sin(ms * 0.00063) * R2 * 0.022 + Math.sin(ms * 0.00027 + 1.2) * R2 * 0.012;
+  var bY = benchTop + (H - benchTop) * 0.33;
+  var pxC = px0 + R2 * 0.42 + sway, pyC = (py0 + bY) * 0.5 + R2 * 0.16;
+  var px1 = px0 + R2 * 0.80, py1 = bY;
+  var nL = 6, tt, omt;
+  for (i = 1; i <= nL; i++) {
+    tt = i / (nL + 0.5);
+    omt = 1 - tt;
+    var qx = omt * omt * px0 + 2 * omt * tt * pxC + tt * tt * px1;
+    var qy = omt * omt * py0 + 2 * omt * tt * pyC + tt * tt * py1;
+    var dxq = 2 * omt * (pxC - px0) + 2 * tt * (px1 - pxC);
+    var dyq = 2 * omt * (pyC - py0) + 2 * tt * (py1 - pyC);
+    chainLink(qx, qy, Math.atan2(dyq, dxq), i, A2);
+  }
+  for (i = 0; i < 3; i++) {
+    chainLink(
+      px1 + R2 * 0.115 * (i + 1),
+      bY + R2 * 0.024 * (rnd(i * 3 + 1) - 0.5) + R2 * 0.010 * i,
+      0.10 + (rnd(i * 7 + 2) - 0.5) * 0.3,
+      i + nL + 1, A2
+    );
+  }
+  /* tiny clasp at the trailing end */
+  ctx.save();
+  ctx.translate(px1 + R2 * 0.115 * 4.1, bY + R2 * 0.035);
+  ctx.rotate(0.12);
+  ctx.globalAlpha = A2;
+  ctx.fillStyle = '#6a4c2e';
+  ctx.fillRect(-R2 * 0.045, -R2 * 0.022, R2 * 0.09, R2 * 0.044);
+  ctx.fillStyle = '#c9a25c';
+  ctx.fillRect(-R2 * 0.045, -R2 * 0.022, R2 * 0.09, R2 * 0.012);
+  ctx.beginPath(); ctx.arc(R2 * 0.062, 0, R2 * 0.020, 0, TAU);
+  ctx.strokeStyle = '#8a6a38'; ctx.lineWidth = Math.max(1, R2 * 0.010); ctx.stroke();
+  ctx.restore();
+
+  /* ================= 3. FIELD COMPASS (small, resting flat) ================= */
+  var A3 = A * (0.20 + 0.80 * e3);
+  puck(cx3 + R3 * 0.10, cy3 + R3 * 0.16, R3 * 1.02, 0.94, A3 * 0.30);
+  ctx.save();
+  ctx.translate(cx3, cy3);
+  ctx.globalAlpha = A3;
+  ctx.drawImage(face3, -h3, -h3);
+  /* wandering needle — layered sines, settles and overshoots */
+  var aN = -Math.PI / 2
+    + Math.sin(ms * 0.00047) * 0.85 * Math.sin(ms * 0.00013 + 2.1)
+    + Math.sin(ms * 0.00113 + 0.7) * 0.20 * Math.sin(ms * 0.00031 + 0.4)
+    + Math.sin(ms * 0.0043 + 1.3) * 0.030;
+  needle(ctx, aN, R3 * 0.58, R3 * 0.46, R3 * 0.075, R3 * 0.085, A3, R3);
+  ctx.restore();
+
+  /* ================= BENCH CLUTTER (fades in last) ================= */
+  if (eC > 0.01) {
+    var AC = A * eC;
+    /* slowly rotating loose cog */
+    var gr1 = Math.max(9, MIN * 0.017);
+    var gearA = makeGear('A', gr1);
+    var g1x = W * 0.615 + drift, g1y = H * 0.845;
+    puck(g1x + 3, g1y + 4, gr1 * 1.05, 0.5, AC * 0.30);
+    ctx.save();
+    ctx.translate(g1x, g1y);
+    ctx.rotate(ms * 0.00035);
+    ctx.globalAlpha = AC;
+    ctx.drawImage(gearA.c, -gearA.h, -gearA.h);
+    ctx.restore();
+    /* loose watch spring */
+    var spx = W * 0.560 + drift, spy = H * 0.865;
+    puck(spx + 2, spy + 3, R3 * 0.34, 0.5, AC * 0.22);
+    ctx.save();
+    ctx.translate(spx, spy);
+    ctx.rotate(0.6);
+    ctx.globalAlpha = AC * 0.9;
+    ctx.strokeStyle = f.gold2;
+    ctx.lineWidth = Math.max(1, MIN * 0.0022);
+    ctx.beginPath();
+    var stp = 44;
+    for (i = 0; i <= stp; i++) {
+      a = i / stp * 3.6 * TAU;
+      var srr2 = R3 * 0.055 + a * R3 * 0.0135;
+      var ex2 = Math.cos(a) * srr2, ey2 = Math.sin(a) * srr2 * 0.85;
+      if (i) ctx.lineTo(ex2, ey2); else ctx.moveTo(ex2, ey2);
+    }
+    ctx.stroke();
+    ctx.restore();
+    /* three tiny screws */
+    var SP = [[0.528, 0.800, 0.6], [0.648, 0.878, 2.1], [0.760, 0.806, 3.8]];
+    var srr = Math.max(2.2, MIN * 0.0062);
+    for (i = 0; i < 3; i++) {
+      var sx2 = W * SP[i][0] + drift, sy2 = H * SP[i][1];
+      ctx.globalAlpha = AC * 0.30;
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(sx2 + srr * 0.4, sy2 + srr * 0.5, srr, 0, TAU); ctx.fill();
+      ctx.globalAlpha = AC;
+      ctx.fillStyle = '#8a6a38';
+      ctx.beginPath(); ctx.arc(sx2, sy2, srr, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#3a2a18';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(sx2, sy2, srr, 0, TAU); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(sx2 - Math.cos(SP[i][2]) * srr * 0.7, sy2 - Math.sin(SP[i][2]) * srr * 0.7);
+      ctx.lineTo(sx2 + Math.cos(SP[i][2]) * srr * 0.7, sy2 + Math.sin(SP[i][2]) * srr * 0.7);
+      ctx.stroke();
+    }
+    /* jeweller's loupe near the field compass */
+    var lx = W * 0.893 + drift, ly = H * 0.815;
+    var LR = R3 * 0.52;
+    puck(lx + LR * 0.16, ly + LR * 0.42, LR * 1.1, 0.45, AC * 0.32);
+    ctx.save();
+    ctx.translate(lx, ly);
+    ctx.rotate(0.22);
+    ctx.globalAlpha = AC;
+    /* barrel wall */
+    ctx.save(); ctx.translate(LR * 0.06, LR * 0.30); ctx.scale(1, 0.82);
+    ctx.beginPath(); ctx.arc(0, 0, LR, 0, TAU); ctx.fillStyle = '#3a2a18'; ctx.fill();
+    ctx.restore();
+    /* top ring + ice glass */
+    ctx.save(); ctx.scale(1, 0.82);
+    ctx.beginPath(); ctx.arc(0, 0, LR, 0, TAU); ctx.fillStyle = '#6a4c2e'; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, LR * 0.90, 0, TAU); ctx.fillStyle = '#8a6a38'; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, LR * 0.95, Math.PI * 0.85, Math.PI * 1.55);
+    ctx.strokeStyle = '#c9a25c'; ctx.lineWidth = Math.max(1, LR * 0.07); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, LR * 0.76, 0, TAU); ctx.fillStyle = '#241a10'; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, LR * 0.68, 0, TAU); ctx.fillStyle = hexA(f.ice, 0.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(-LR * 0.14, -LR * 0.14, LR * 0.48, Math.PI * 1.05, Math.PI * 1.55);
+    ctx.strokeStyle = 'rgba(230,242,255,0.45)'; ctx.lineWidth = Math.max(1, LR * 0.06); ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+  }
 
   ctx.restore();
 }
+
 
 function paintSchematicRealm(ctx, f) {
   var GA = ctx.globalAlpha;
@@ -3876,8 +4261,12 @@ const bossX = () => W * 0.66;
 const champX = now => W * 0.34 + Math.sin(now / 2600) * W * 0.012;
 
 function mouthPos(now) {
+  // measured off the actual model: rest (-155,-165)*s, reared (-40,-270)*s
   const s = fightScale();
-  return { x: bossX() - (150 + boss.rear * 55) * s, y: groundY() - (85 + boss.rear * 125) * s };
+  return {
+    x: bossX() - (155 - 115 * boss.rear) * s,
+    y: groundY() - (165 + 105 * boss.rear) * s,
+  };
 }
 
 function fireArrow(now, spec) {
