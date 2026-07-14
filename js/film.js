@@ -71,6 +71,25 @@ dock('#clog', 'clog-slot');
 dock('#ge-ticker', 'ge-slot');
 dock('#npc', 'npc-slot');
 
+// the collection log docks as the real Collection Log window
+(() => {
+  const clogSec = document.getElementById('clog');
+  if (!clogSec || !document.getElementById('clog-slot')) return;
+  const win = document.createElement('div');
+  win.className = 'clog-chrome';
+  win.innerHTML =
+    '<div class="clog-titlebar"><span>Collection Log</span><i aria-hidden="true">✕</i></div>' +
+    '<div class="clog-tabs" aria-hidden="true"><span class="on">Discoveries</span><span>Bosses</span><span>Markets</span><span>Secrets</span></div>' +
+    '<p class="clog-obtained">Obtained: <b id="clog-obt">0/9</b></p>';
+  clogSec.insertBefore(win, clogSec.firstChild);
+  const src = document.getElementById('clog-count');
+  const tot = document.getElementById('clog-total');
+  const dst = document.getElementById('clog-obt');
+  const sync = () => { if (src && tot && dst) dst.textContent = src.textContent + '/' + tot.textContent; };
+  sync();
+  if (src) new MutationObserver(sync).observe(src, { childList: true, characterData: true, subtree: true });
+})();
+
 /* ---------- engine state ---------- */
 
 const ctx = filmCanvas.getContext('2d');
@@ -123,6 +142,7 @@ function mkEnv(t, in01, out01, ms) {
   return {
     W, H, ms, t, in01, out01,
     dark: true, // the film is always night
+    mx, my,
     gold: '#f5c518', gold2: '#d9b45b', violet: '#a05fd0', ice: '#9cc7ff',
     ember: '#e67e22', red: '#c0281a',
     fg: THEME.fg, bg: THEME.bg, muted: THEME.muted, line: THEME.line,
@@ -144,6 +164,15 @@ function size() {
 }
 size();
 addEventListener('resize', () => { size(); ScrollTrigger.refresh(); });
+
+// scenes may react to the visitor's hand
+let mx = -1, my = -1;
+filmCanvas.addEventListener('pointermove', e => {
+  const r = filmCanvas.getBoundingClientRect();
+  mx = e.clientX - r.left;
+  my = e.clientY - r.top;
+}, { passive: true });
+filmCanvas.addEventListener('pointerleave', () => { mx = -1; my = -1; }, { passive: true });
 
 /* ---------- scene painters (registry filled below by the scene modules) ---------- */
 
@@ -1982,18 +2011,52 @@ function paintWealthHalo(ctx, f) {
   var AM = GA * (f.dark ? 1 : 0.55);
   var W = f.W, H = f.H, ms = f.ms;
   var TAU = Math.PI * 2;
+  var PI = Math.PI;
   var cx = W * 0.62, cy = H * 0.5;
   var R = Math.min(W, H) * 0.30;
   var ringW = R * 0.09;
   var mapR = R - ringW * 0.5 + 2;
   var ei = f.ease(f.clamp01(f.in01));
   var eo = f.ease(f.clamp01(f.out01));
+  var eoF = f.ease(f.clamp01(f.out01 * 1.6));
   var live = ei * (1 - eo);
   var i, k;
   if (f.in01 <= 0.001) { ctx.globalAlpha = GA; return; }
 
-  // ambient world behind the instrument -- the scene must never sit on a void
-  var bdk = f.cache('paintWealthHalo:bd:' + W + 'x' + H, W, H, function (c) {
+  function A(a) { ctx.globalAlpha = Math.max(0, Math.min(1, a)) * AM; }
+  function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function fmt(n) {
+    var s = '' + Math.max(0, Math.floor(n)), o = '', L = s.length, q;
+    for (q = 0; q < L; q++) { o += s.charAt(q); var rd = L - 1 - q; if (rd > 0 && rd % 3 === 0) o += ','; }
+    return o;
+  }
+
+  // ---------- instrument constants ----------
+  var cols = [f.gold, f.violet, f.ice, f.ember];
+  var pcts = [52, 28, 12, 8];
+  var fracs = [0.52, 0.28, 0.12, 0.08];
+  var names = ['STOCKS', 'PENSION', 'CASH', 'PLAY'];
+  var a0 = -PI / 2;
+  var gAng = [PI * -52 / 180, PI * -17 / 180, PI * 17 / 180, PI * 52 / 180];
+  var rGm = R * 1.15;
+  var socR = Math.max(10, R * 0.058);
+  var coinA = PI * 160 / 180;
+  var coinR = Math.max(11, R * 0.062);
+  var cpA = PI * 215 / 180;
+  var cpR = Math.max(10, R * 0.052);
+  var rH0 = R * 1.06, rH1 = R * 1.24;
+
+  // ---------- night backdrop (kept technique) ----------
+  var bdk = f.cache('paintWealthHalo2:bd:' + W + 'x' + H, W, H, function (cv) {
+    var c = cv.getContext ? cv.getContext('2d') : cv;
     var g = c.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#04050a');
     g.addColorStop(0.62, '#070a10');
@@ -2031,30 +2094,53 @@ function paintWealthHalo(ctx, f) {
     ctx.fillRect(mtx, mty, 1.5, 1.5);
   }
 
-  function A(a) { ctx.globalAlpha = Math.max(0, Math.min(1, a)) * AM; }
-  function rr(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-  function fmt(n) {
-    var s = '' + Math.max(0, Math.floor(n)), o = '', L = s.length, q;
-    for (q = 0; q < L; q++) { o += s.charAt(q); var rd = L - 1 - q; if (rd > 0 && rd % 3 === 0) o += ','; }
-    return o;
+  // ---------- soft warm halo behind the instrument ----------
+  for (k = 0; k < 4; k++) {
+    A(live * (0.016 + 0.009 * k));
+    ctx.fillStyle = f.gold;
+    ctx.beginPath(); ctx.arc(cx, cy, R * (1.62 - 0.14 * k), 0, TAU); ctx.fill();
   }
 
-  // ---------- cached low-poly map face ----------
+  // ---------- hover state (pointer -> segment, eased ~150ms) ----------
+  var hovSeg = -1;
+  if (f.mx >= 0 && f.my >= 0 && ei > 0.75 && eo < 0.05) {
+    var pdx = f.mx - cx, pdy = f.my - cy;
+    var pd = Math.sqrt(pdx * pdx + pdy * pdy);
+    if (pd > R * 0.82 && pd < R * 1.3) {
+      var rel = Math.atan2(pdy, pdx) - a0;
+      rel = ((rel % TAU) + TAU) % TAU;
+      var acc = 0;
+      for (i = 0; i < 4; i++) { acc += fracs[i] * TAU; if (rel <= acc) { hovSeg = i; break; } }
+      if (hovSeg < 0) hovSeg = 3;
+    }
+    for (i = 0; i < 4; i++) {
+      var gdx = f.mx - (cx + Math.cos(gAng[i]) * rGm);
+      var gdy = f.my - (cy + Math.sin(gAng[i]) * rGm);
+      if (gdx * gdx + gdy * gdy < (socR * 1.5) * (socR * 1.5)) hovSeg = i;
+    }
+  }
+  var st = paintWealthHalo._hv;
+  if (!st) { st = paintWealthHalo._hv = { h: [0, 0, 0, 0], m: ms }; }
+  var dtm = ms - st.m;
+  if (!(dtm > 0)) dtm = 16;
+  if (dtm > 120) dtm = 120;
+  st.m = ms;
+  var kf = 1 - Math.exp(-dtm / 55);
+  var hArr = st.h, hMax = 0, hSel = 0;
+  for (i = 0; i < 4; i++) {
+    hArr[i] += (((i === hovSeg) ? 1 : 0) - hArr[i]) * kf;
+    if (hArr[i] < 0.001) hArr[i] = 0;
+    if (hArr[i] > 0.999) hArr[i] = 1;
+    if (hArr[i] > hMax) { hMax = hArr[i]; hSel = i; }
+  }
+
+  // ---------- cached low-poly map face (kept technique) ----------
   var mapS = Math.ceil(mapR * 2.3);
-  var face = f.cache('paintWealthHalo:face:' + mapS, mapS, mapS, function (cv) {
+  var face = f.cache('paintWealthHalo2:face:' + mapS, mapS, mapS, function (cv) {
     var g = cv.getContext ? cv.getContext('2d') : cv;
     var S = mapS, a, b, x, y, r0, ang2;
     g.fillStyle = '#4c5f35';
     g.fillRect(0, 0, S, S);
-    // faceted terrain
     var n = 9, pts = [], greens = ['#42552c', '#4a5d33', '#52673a', '#5d7340', '#67794a', '#74884a'];
     for (a = 0; a < n; a++) {
       pts.push([]);
@@ -2077,7 +2163,6 @@ function paintWealthHalo(ctx, f) {
         g.beginPath(); g.moveTo(p00[0], p00[1]); g.lineTo(p11[0], p11[1]); g.lineTo(p01[0], p01[1]); g.closePath(); g.fill();
       }
     }
-    // sandy path corner to corner
     var Ax = S * 0.02, Ay = S * 0.86, Bx = S * 0.98, By = S * 0.18;
     var pxs = [], pys = [];
     for (a = 0; a < 6; a++) {
@@ -2101,7 +2186,6 @@ function paintWealthHalo(ctx, f) {
       y = Ay + (By - Ay) * t2 + (f.rnd(a + 140) - 0.5) * S * 0.03;
       g.fillRect(x, y, 2, 2);
     }
-    // pond (upper-left of centre)
     var pcx = S * 0.30, pcy = S * 0.38, pr = S * 0.085;
     g.beginPath();
     for (a = 0; a < 8; a++) {
@@ -2124,7 +2208,6 @@ function paintWealthHalo(ctx, f) {
       if (a) g.lineTo(x, y); else g.moveTo(x, y);
     }
     g.closePath(); g.fillStyle = '#4d6f8e'; g.fill();
-    // grey building block near centre, beside the road
     g.save();
     g.translate(S * 0.61, S * 0.345);
     g.rotate(0.28);
@@ -2137,7 +2220,6 @@ function paintWealthHalo(ctx, f) {
     g.fillRect(S * 0.02, -S * 0.004, S * 0.042, S * 0.036);
     g.strokeRect(S * 0.02, -S * 0.004, S * 0.042, S * 0.036);
     g.restore();
-    // trees
     var drawn = 0;
     for (a = 0; a < 44 && drawn < 20; a++) {
       x = S * (0.10 + 0.80 * f.rnd(a * 5 + 11));
@@ -2146,8 +2228,8 @@ function paintWealthHalo(ctx, f) {
       if (dxq * dxq + dyq * dyq > (S * 0.43) * (S * 0.43)) continue;
       var crs = Math.abs((Bx - Ax) * (y - Ay) - (By - Ay) * (x - Ax)) / (S * 1.177);
       if (crs < S * 0.055) continue;
-      var pdx = x - pcx, pdy = y - pcy;
-      if (pdx * pdx + pdy * pdy < (S * 0.145) * (S * 0.145)) continue;
+      var pdx2 = x - pcx, pdy2 = y - pcy;
+      if (pdx2 * pdx2 + pdy2 * pdy2 < (S * 0.145) * (S * 0.145)) continue;
       var bdx = x - S * 0.61, bdy = y - S * 0.345;
       if (bdx * bdx + bdy * bdy < (S * 0.09) * (S * 0.09)) continue;
       r0 = S * 0.017 * (0.75 + f.rnd(a * 5 + 13) * 0.6);
@@ -2162,18 +2244,8 @@ function paintWealthHalo(ctx, f) {
 
   var rot = Math.sin(ms * 0.00012) * 0.06 + Math.sin(ms * 0.000047) * 0.025;
   var mapE = f.ease(f.clamp01(f.in01 / 0.55));
-  var cols = [f.gold, f.violet, f.ice, f.ember];
-  var pcts = [52, 28, 12, 8];
-  var fracs = [0.52, 0.28, 0.12, 0.08];
 
-  // ---------- soft gold ambient halo (layered fills, no shadowBlur) ----------
-  for (k = 0; k < 4; k++) {
-    A(live * (0.016 + 0.009 * k));
-    ctx.fillStyle = f.gold;
-    ctx.beginPath(); ctx.arc(cx, cy, R * (1.55 - 0.15 * k), 0, TAU); ctx.fill();
-  }
-
-  // ---------- map face (iris open, slow breathing rotation) ----------
+  // ---------- map face (iris open, breathing rotation, kept) ----------
   if (mapE > 0.001 && eo < 0.999) {
     ctx.save();
     ctx.beginPath();
@@ -2187,7 +2259,6 @@ function paintWealthHalo(ctx, f) {
     A(mapE * (1 - eo));
     ctx.drawImage(face, -mapS / 2, -mapS / 2, mapS, mapS);
     ctx.restore();
-    // edge vignette (layered strokes)
     ctx.lineCap = 'butt';
     for (k = 0; k < 3; k++) {
       A(mapE * (1 - eo) * (0.20 - 0.06 * k));
@@ -2195,7 +2266,6 @@ function paintWealthHalo(ctx, f) {
       ctx.lineWidth = 6;
       ctx.beginPath(); ctx.arc(cx, cy, mapR - 3 - k * 5, 0, TAU); ctx.stroke();
     }
-    // white flag planted on the path (rotates with terrain, bobs)
     var fpx2 = 0.1248 * mapS, fpy2 = -0.0684 * mapS;
     var cr2 = Math.cos(rot), sr2 = Math.sin(rot);
     var fx = cx + fpx2 * cr2 - fpy2 * sr2;
@@ -2212,7 +2282,6 @@ function paintWealthHalo(ctx, f) {
     ctx.lineTo(fx + 9, fy - 9.5 + bob);
     ctx.lineTo(fx + 1, fy - 7 + bob);
     ctx.closePath(); ctx.fill();
-    // white player arrow at exact centre
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(Math.sin(ms * 0.0009) * 0.07);
@@ -2227,9 +2296,8 @@ function paintWealthHalo(ctx, f) {
     ctx.restore();
   }
 
-  // ---------- allocation ring ----------
+  // ---------- allocation ring (kept, + hover thicken/dim) ----------
   var gapA = 2.4 / R;
-  var a0 = -Math.PI / 2;
   var rbe = f.ease(f.clamp01((f.in01 - 0.10) / 0.5));
   if (rbe > 0.001) {
     A(rbe * (1 - eo) * 0.9);
@@ -2240,36 +2308,43 @@ function paintWealthHalo(ctx, f) {
   var cur = a0;
   for (i = 0; i < 4; i++) {
     var sw = fracs[i] * TAU - gapA;
-    var st = cur + gapA / 2;
+    var st2 = cur + gapA / 2;
     cur += fracs[i] * TAU;
     var env = f.ease(f.clamp01((f.in01 - 0.18 - i * 0.12) / 0.5));
     if (env <= 0.001) continue;
-    var mid = st + sw / 2;
+    var mid = st2 + sw / 2;
     var fan = eo * R * (0.34 + 0.10 * i);
+    var hv = hArr[i];
+    var dimf = 1 - 0.45 * hMax * (1 - hv);
+    var rw = ringW * (1 + 0.5 * hv);
     ctx.save();
     ctx.translate(cx + Math.cos(mid) * fan, cy + Math.sin(mid) * fan);
     ctx.rotate(eo * 0.22 * (i - 1.5));
-    var en = st + sw * env;
-    var sal = env * (1 - eo);
+    var en = st2 + sw * env;
+    var sal = env * (1 - eo) * dimf;
     ctx.lineCap = 'butt';
-    A(sal); ctx.strokeStyle = cols[i]; ctx.lineWidth = ringW;
-    ctx.beginPath(); ctx.arc(0, 0, R, st, en); ctx.stroke();
-    A(sal * 0.35); ctx.strokeStyle = '#1a1006'; ctx.lineWidth = ringW * 0.42;
-    ctx.beginPath(); ctx.arc(0, 0, R - ringW * 0.26, st, en); ctx.stroke();
-    A(sal * 0.30); ctx.strokeStyle = '#fff6d8'; ctx.lineWidth = ringW * 0.16;
-    ctx.beginPath(); ctx.arc(0, 0, R + ringW * 0.28, st, en); ctx.stroke();
+    A(sal); ctx.strokeStyle = cols[i]; ctx.lineWidth = rw;
+    ctx.beginPath(); ctx.arc(0, 0, R, st2, en); ctx.stroke();
+    if (hv > 0.02) {
+      A(env * (1 - eo) * 0.28 * hv);
+      ctx.strokeStyle = '#fff6d8'; ctx.lineWidth = rw;
+      ctx.beginPath(); ctx.arc(0, 0, R, st2, en); ctx.stroke();
+    }
+    A(sal * 0.35); ctx.strokeStyle = '#1a1006'; ctx.lineWidth = rw * 0.42;
+    ctx.beginPath(); ctx.arc(0, 0, R - rw * 0.26, st2, en); ctx.stroke();
+    A(sal * 0.30); ctx.strokeStyle = '#fff6d8'; ctx.lineWidth = rw * 0.16;
+    ctx.beginPath(); ctx.arc(0, 0, R + rw * 0.28, st2, en); ctx.stroke();
     A(sal * 0.25); ctx.strokeStyle = '#100a04'; ctx.lineWidth = 1.5;
     for (k = 1; k <= 2; k++) {
-      var na = st + sw * (k / 3);
+      var na = st2 + sw * (k / 3);
       if (na > en) break;
       ctx.beginPath();
-      ctx.moveTo(Math.cos(na) * (R - ringW * 0.5), Math.sin(na) * (R - ringW * 0.5));
-      ctx.lineTo(Math.cos(na) * (R + ringW * 0.5), Math.sin(na) * (R + ringW * 0.5));
+      ctx.moveTo(Math.cos(na) * (R - rw * 0.5), Math.sin(na) * (R - rw * 0.5));
+      ctx.lineTo(Math.cos(na) * (R + rw * 0.5), Math.sin(na) * (R + rw * 0.5));
       ctx.stroke();
     }
     ctx.restore();
   }
-  // travelling bright sweep (layered translucent arcs)
   if (live > 0.001) {
     var sa = (ms * 0.0003) % TAU;
     var shalf = [0.45, 0.26, 0.12], salp = [0.05, 0.08, 0.13];
@@ -2280,130 +2355,319 @@ function paintWealthHalo(ctx, f) {
       A(live * salp[k]);
       ctx.beginPath(); ctx.arc(cx, cy, R, sa - shalf[k], sa + shalf[k]); ctx.stroke();
     }
+    ctx.lineCap = 'butt';
   }
 
-  // ---------- OSRS orbs on the left arc ----------
-  var orbR = Math.max(14, R * 0.098);
-  for (i = 0; i < 4; i++) {
-    var oe = f.ease(f.clamp01((f.in01 - 0.32 - i * 0.09) / 0.45));
-    if (oe <= 0.001) continue;
-    var segStart = a0;
-    for (k = 0; k < i; k++) segStart += fracs[k] * TAU;
-    var oa = segStart + fracs[i] * TAU / 2;
-    var det = eo * R * (0.55 + 0.12 * i);
-    var orad = R * 1.015 + det;
-    var ox = cx + Math.cos(oa) * orad;
-    var oy = cy + Math.sin(oa) * orad;
-    var os = 0.5 + 0.5 * oe;
-    var al = oe * (1 - eo);
-    ctx.save();
-    ctx.translate(ox, oy);
-    ctx.scale(os, os);
-    // the label is part of the orb: one fused plate behind it, game numerals
-    var LBL = ['stocks', 'pension', 'cash', 'play'];
-    var txt = LBL[i].toUpperCase() + ' ' + pcts[i] + '%';
-    ctx.font = '17px VT323, monospace';
-    var plateW = ctx.measureText(txt).width + 20;
-    var plateH = Math.max(24, orbR * 1.1);
-    var ldx = Math.cos(oa), ldy = Math.sin(oa);
-    var pxx, pyy;
-    if (Math.abs(ldx) >= 0.35) {
-      pxx = ldx >= 0 ? orbR - 6 : -(orbR - 6) - plateW;
-      pyy = -plateH / 2;
-    } else {
-      pxx = -plateW / 2;
-      pyy = ldy >= 0 ? orbR - 6 : -(orbR - 6) - plateH;
+  // ---------- forged stone-and-bronze housing (cached) ----------
+  var HS = Math.ceil(R * 2.6);
+  var hous = f.cache('paintWealthHalo2:hous:' + HS, HS, HS, function (cv) {
+    var g = cv.getContext ? cv.getContext('2d') : cv;
+    var hc = HS / 2, bi, aq, sx, sy;
+    // stone arc blocks
+    var nb = 10, b0 = -PI / 2 - TAU / (nb * 2);
+    for (bi = 0; bi < nb; bi++) {
+      var sa2 = b0 + bi * TAU / nb;
+      var eb = sa2 + TAU / nb;
+      g.fillStyle = bi % 2 ? '#3f382e' : '#494034';
+      g.beginPath();
+      g.arc(hc, hc, rH1 - 1, sa2, eb);
+      g.arc(hc, hc, rH0 + 1, eb, sa2, true);
+      g.closePath(); g.fill();
     }
-    A(al * 0.95); ctx.fillStyle = '#221c13';
-    rr(pxx, pyy, plateW, plateH, plateH / 2); ctx.fill();
-    A(al); ctx.strokeStyle = '#494034'; ctx.lineWidth = 3;
-    rr(pxx, pyy, plateW, plateH, plateH / 2); ctx.stroke();
-    A(al); ctx.fillStyle = cols[i];
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(txt, pxx + plateW / 2, pyy + plateH / 2 + 1);
-    A(al * 0.95); ctx.fillStyle = '#221c13';
-    ctx.beginPath(); ctx.arc(0, 0, orbR, 0, TAU); ctx.fill();
-    A(al * 0.6); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(0, 0, orbR, 0, TAU); ctx.stroke();
-    // crescent frame, opening toward the map
-    var op = 0.66;
-    ctx.lineCap = 'round';
-    A(al); ctx.strokeStyle = '#494034'; ctx.lineWidth = orbR * 0.30;
-    ctx.beginPath(); ctx.arc(0, 0, orbR * 0.92, oa - (Math.PI - op), oa + (Math.PI - op)); ctx.stroke();
-    A(al * 0.6); ctx.strokeStyle = '#6a5c49'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(0, 0, orbR * 1.05, oa - (Math.PI - op), oa + (Math.PI - op)); ctx.stroke();
-    // coloured globe with darker lower half
-    var gr = orbR * 0.60;
-    var puls = 1 + Math.sin(ms * 0.002 + i * 1.4) * 0.03;
-    A(al); ctx.fillStyle = cols[i];
-    ctx.beginPath(); ctx.arc(0, 0, gr * puls, 0, TAU); ctx.fill();
-    A(al * 0.45); ctx.fillStyle = '#160e04';
-    ctx.beginPath(); ctx.arc(0, 0, gr * puls, 0, Math.PI); ctx.closePath(); ctx.fill();
-    A(al * 0.30); ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(-gr * 0.33, -gr * 0.35, gr * 0.28, 0, TAU); ctx.fill();
-    A(al * 0.5); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(0, 0, gr * puls, 0, TAU); ctx.stroke();
+    // seams between blocks
+    g.strokeStyle = '#2a241d'; g.lineWidth = 2; g.lineCap = 'butt';
+    for (bi = 0; bi < nb; bi++) {
+      aq = b0 + bi * TAU / nb;
+      g.beginPath();
+      g.moveTo(hc + Math.cos(aq) * (rH0 + 1), hc + Math.sin(aq) * (rH0 + 1));
+      g.lineTo(hc + Math.cos(aq) * (rH1 - 1), hc + Math.sin(aq) * (rH1 - 1));
+      g.stroke();
+    }
+    // stone speckle chips
+    for (bi = 0; bi < 48; bi++) {
+      var ca = f.rnd(900 + bi) * TAU;
+      var cr = rH0 + 4 + f.rnd(930 + bi) * (rH1 - rH0 - 8);
+      g.globalAlpha = 0.4 + f.rnd(990 + bi) * 0.25;
+      g.fillStyle = f.rnd(960 + bi) > 0.5 ? '#3a332b' : '#524a3c';
+      g.fillRect(hc + Math.cos(ca) * cr, hc + Math.sin(ca) * cr, 2, 2);
+    }
+    g.globalAlpha = 1;
+    // outer bronze rim
+    g.lineWidth = Math.max(3, R * 0.030);
+    g.strokeStyle = '#6a4c2e';
+    g.beginPath(); g.arc(hc, hc, rH1, 0, TAU); g.stroke();
+    g.lineWidth = 1.5; g.strokeStyle = '#2a241d';
+    g.beginPath(); g.arc(hc, hc, rH1 + Math.max(2, R * 0.017), 0, TAU); g.stroke();
+    g.beginPath(); g.arc(hc, hc, rH1 - Math.max(2, R * 0.017), 0, TAU); g.stroke();
+    g.lineCap = 'round';
+    g.lineWidth = Math.max(2, R * 0.013); g.strokeStyle = '#c9a25c';
+    g.beginPath(); g.arc(hc, hc, rH1, PI * 1.02, PI * 1.48); g.stroke();
+    // inner bronze trim
+    g.lineCap = 'butt';
+    g.lineWidth = Math.max(2.5, R * 0.022); g.strokeStyle = '#6a4c2e';
+    g.beginPath(); g.arc(hc, hc, rH0, 0, TAU); g.stroke();
+    g.lineWidth = 1.5; g.strokeStyle = '#2a241d';
+    g.beginPath(); g.arc(hc, hc, rH0 - Math.max(2, R * 0.014), 0, TAU); g.stroke();
+    g.lineCap = 'round';
+    g.lineWidth = Math.max(1.5, R * 0.009); g.strokeStyle = '#c9a25c';
+    g.beginPath(); g.arc(hc, hc, rH0, PI * 1.05, PI * 1.45); g.stroke();
+    g.lineCap = 'butt';
+    // 8 bronze rivets
+    var rvR = Math.max(3, R * 0.016);
+    for (bi = 0; bi < 8; bi++) {
+      aq = bi * TAU / 8;
+      sx = hc + Math.cos(aq) * rGm; sy = hc + Math.sin(aq) * rGm;
+      g.fillStyle = '#8a6a38';
+      g.beginPath(); g.arc(sx, sy, rvR, 0, TAU); g.fill();
+      g.strokeStyle = '#2a241d'; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(sx, sy, rvR, 0, TAU); g.stroke();
+      g.fillStyle = '#c9a25c';
+      g.beginPath(); g.arc(sx - rvR * 0.3, sy - rvR * 0.3, rvR * 0.32, 0, TAU); g.fill();
+    }
+    // recess carving helper (dark well + bronze collar)
+    function recess(x, y, r2) {
+      g.fillStyle = '#2a241d';
+      g.beginPath(); g.arc(x, y, r2 * 1.34, 0, TAU); g.fill();
+      g.fillStyle = '#6a4c2e';
+      g.beginPath(); g.arc(x, y, r2 * 1.18, 0, TAU); g.fill();
+      g.lineCap = 'round';
+      g.strokeStyle = '#c9a25c'; g.lineWidth = Math.max(1.5, r2 * 0.16);
+      g.beginPath(); g.arc(x, y, r2 * 1.07, PI * 1.02, PI * 1.55); g.stroke();
+      g.lineCap = 'butt';
+      g.fillStyle = '#241d15';
+      g.beginPath(); g.arc(x, y, r2, 0, TAU); g.fill();
+      g.strokeStyle = '#141009'; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(x, y, r2, 0, TAU); g.stroke();
+    }
+    // four gem sockets on the right arc
+    for (bi = 0; bi < 4; bi++) {
+      recess(hc + Math.cos(gAng[bi]) * rGm, hc + Math.sin(gAng[bi]) * rGm, socR);
+    }
+    // coin recess (lower-left) and compass recess (upper-left)
+    recess(hc + Math.cos(coinA) * rGm, hc + Math.sin(coinA) * rGm, coinR);
+    var cpx2 = hc + Math.cos(cpA) * rGm, cpy2 = hc + Math.sin(cpA) * rGm;
+    recess(cpx2, cpy2, cpR);
+    // compass cardinal ticks (static part of the frame)
+    g.strokeStyle = '#d8ccb4'; g.lineWidth = 1.5; g.globalAlpha = 0.85;
+    for (bi = 0; bi < 4; bi++) {
+      aq = -PI / 2 + bi * PI / 2;
+      g.beginPath();
+      g.moveTo(cpx2 + Math.cos(aq) * cpR * 0.55, cpy2 + Math.sin(aq) * cpR * 0.55);
+      g.lineTo(cpx2 + Math.cos(aq) * cpR * 0.78, cpy2 + Math.sin(aq) * cpR * 0.78);
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+  });
+  var he = f.ease(f.clamp01((f.in01 - 0.06) / 0.5));
+  if (he > 0.001 && eo < 0.999) {
+    var hscl = 1.05 - 0.05 * he + eo * 0.06;
+    var hsz = HS * hscl;
+    A(he * (1 - eo));
+    ctx.drawImage(hous, cx - hsz / 2, cy - hsz / 2, hsz, hsz);
+  }
+
+  // ---------- gems in their sockets + inward numbers ----------
+  function gem(x, y, r2, col, seed, al) {
+    var vx = [], vy = [], k2, k3;
+    for (k2 = 0; k2 < 6; k2++) {
+      var an = -PI / 2 + k2 * TAU / 6;
+      var rv = r2 * (0.92 + f.rnd(seed * 7 + k2 + 300) * 0.16);
+      vx.push(x + Math.cos(an) * rv); vy.push(y + Math.sin(an) * rv);
+    }
+    var ax = x - r2 * 0.28, ay = y - r2 * 0.30;
+    var shade = [0.50, 0.12, -0.10, -0.40, -0.18, 0.06];
+    for (k2 = 0; k2 < 6; k2++) {
+      k3 = (k2 + 1) % 6;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay); ctx.lineTo(vx[k2], vy[k2]); ctx.lineTo(vx[k3], vy[k3]);
+      ctx.closePath();
+      A(al); ctx.fillStyle = col; ctx.fill();
+      var s2 = shade[k2];
+      if (s2 > 0) { A(al * s2); ctx.fillStyle = '#ffffff'; }
+      else { A(al * (-s2)); ctx.fillStyle = '#000000'; }
+      ctx.fill();
+    }
+    A(al * 0.7); ctx.strokeStyle = '#14100b'; ctx.lineWidth = 1; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (k2 = 0; k2 < 6; k2++) { if (k2) ctx.lineTo(vx[k2], vy[k2]); else ctx.moveTo(vx[0], vy[0]); }
+    ctx.closePath(); ctx.stroke();
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  for (i = 0; i < 4; i++) {
+    var ge = f.ease(f.clamp01((f.in01 - 0.34 - i * 0.08) / 0.4));
+    if (ge <= 0.001) continue;
+    var gal = ge * (1 - eoF);
+    if (gal <= 0.001) continue;
+    var gx = cx + Math.cos(gAng[i]) * rGm;
+    var gy = cy + Math.sin(gAng[i]) * rGm;
+    var hv2 = hArr[i];
+    // hover bloom behind the gem
+    if (hv2 > 0.02) {
+      var blo = ctx.createRadialGradient(gx, gy, socR * 0.2, gx, gy, socR * 2.3);
+      blo.addColorStop(0, f.hexA(cols[i], 0.40 * hv2));
+      blo.addColorStop(0.55, f.hexA(cols[i], 0.14 * hv2));
+      blo.addColorStop(1, f.hexA(cols[i], 0));
+      A(gal); ctx.fillStyle = blo;
+      ctx.beginPath(); ctx.arc(gx, gy, socR * 2.3, 0, TAU); ctx.fill();
+    }
+    var pul = 1 + Math.sin(ms * 0.002 + i * 1.6) * (0.03 + 0.035 * hv2);
+    var grr = socR * 0.72 * pul * (0.45 + 0.55 * ge) * (1 - 0.35 * eoF);
+    gem(gx, gy, grr, cols[i], i, gal * (0.9 + 0.1 * hv2));
+    // sparkle glint
+    var gcy = ((ms * 0.00045) + i * 0.31) % 1;
+    if (gcy < 0.16) {
+      var gp = Math.sin(gcy / 0.16 * PI);
+      var glx = gx + grr * 0.38, gly = gy - grr * 0.42;
+      var gs = (2 + 2.6 * gp) * (1 + 0.4 * hv2);
+      A(gal * gp * (0.75 + 0.25 * hv2));
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(glx - gs, gly); ctx.lineTo(glx + gs, gly);
+      ctx.moveTo(glx, gly - gs); ctx.lineTo(glx, gly + gs);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+      A(gal * gp * 0.9); ctx.fillStyle = '#ffffff';
+      ctx.fillRect(glx - 0.8, gly - 0.8, 1.6, 1.6);
+    }
+    // number just inside the ring, toward the map
+    var nx = cx + Math.cos(gAng[i]) * R * 0.87;
+    var ny = cy + Math.sin(gAng[i]) * R * 0.87;
+    ctx.font = '15px VT323, monospace';
+    A(gal * (0.75 + 0.25 * hv2));
+    ctx.strokeStyle = '#14100b'; ctx.lineWidth = 3;
+    ctx.strokeText('' + pcts[i], nx, ny);
+    ctx.fillStyle = cols[i];
+    ctx.fillText('' + pcts[i], nx, ny);
+  }
+
+  // ---------- left arc: coin stack + net worth readout ----------
+  var cse = f.ease(f.clamp01((f.in01 - 0.36) / 0.45));
+  if (cse > 0.001) {
+    var cal2 = cse * (1 - eoF);
+    var kx = cx + Math.cos(coinA) * rGm;
+    var ky = cy + Math.sin(coinA) * rGm;
+    var cw = Math.max(9, R * 0.028);
+    var chh = cw * 0.42;
+    var offs = [[1.2, cw * 0.62], [-1.4, 0], [0.6, -cw * 0.62]];
+    for (k = 0; k < 3; k++) {
+      var qx = kx + offs[k][0], qy = ky + offs[k][1] + (1 - cse) * 4;
+      A(cal2); ctx.fillStyle = '#7a5a18';
+      ctx.beginPath(); ctx.ellipse(qx, qy + chh * 0.55, cw, chh, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = k === 2 ? '#f5c518' : '#d9b45b';
+      ctx.beginPath(); ctx.ellipse(qx, qy, cw, chh, 0, 0, TAU); ctx.fill();
+      A(cal2 * 0.5); ctx.strokeStyle = '#5c430f'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(qx, qy, cw, chh, 0, 0, TAU); ctx.stroke();
+    }
+    A(cal2 * 0.6); ctx.strokeStyle = '#fff6d8'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.ellipse(kx + 0.6, ky - cw * 0.62, cw * 0.55, chh * 0.5, 0, PI * 1.05, PI * 1.7); ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+  var nwe = f.ease(f.clamp01((f.in01 - 0.42) / 0.45));
+  if (nwe > 0.001) {
+    var nal = nwe * (1 - eoF);
+    var nwx = cx + Math.cos(coinA) * R * 0.60;
+    var nwy = cy + Math.sin(coinA) * R * 0.60;
+    var cntE = f.ease(f.clamp01((f.in01 - 0.42) / 0.55));
+    var kk = Math.floor(ms / 2200);
+    var twOn = cntE >= 0.999 && f.rnd(kk) > 0.55;
+    var twv = 5 + Math.floor(f.rnd(kk + 9) * 85);
+    var val = 127482 * cntE + (twOn ? twv : 0);
+    var txt = '£' + fmt(val);
+    ctx.font = '20px VT323, monospace';
+    A(nal);
+    ctx.strokeStyle = '#14100b'; ctx.lineWidth = 4;
+    ctx.strokeText(txt, nwx, nwy);
+    ctx.fillStyle = f.gold;
+    ctx.fillText(txt, nwx, nwy);
+    ctx.font = '10px VT323, monospace';
+    A(nal * 0.9);
+    ctx.strokeStyle = '#14100b'; ctx.lineWidth = 3;
+    ctx.strokeText('NET WORTH', nwx, nwy + 15);
+    A(nal * 0.75);
+    ctx.fillStyle = f.muted;
+    ctx.fillText('NET WORTH', nwx, nwy + 15);
+    if (twOn) {
+      var pp = (ms % 2200) / 2200;
+      A(nal * (1 - pp));
+      ctx.font = '14px VT323, monospace';
+      ctx.strokeStyle = '#14100b'; ctx.lineWidth = 3;
+      ctx.strokeText('+' + twv, nwx + 44, nwy - 12 - pp * 18);
+      ctx.fillStyle = f.gold;
+      ctx.fillText('+' + twv, nwx + 44, nwy - 12 - pp * 18);
+    }
+  }
+
+  // ---------- compass needle in the bezel (frame-mounted, subtle) ----------
+  var cne = f.ease(f.clamp01((f.in01 - 0.30) / 0.45));
+  if (cne > 0.001) {
+    var cnal = cne * (1 - eoF);
+    ctx.save();
+    ctx.translate(cx + Math.cos(cpA) * rGm, cy + Math.sin(cpA) * rGm);
+    ctx.rotate(Math.sin(ms * 0.0007) * 0.10 + Math.sin(ms * 0.00023) * 0.05);
+    A(cnal); ctx.fillStyle = f.gold;
+    ctx.beginPath();
+    ctx.moveTo(0, -cpR * 0.60); ctx.lineTo(cpR * 0.16, 0); ctx.lineTo(-cpR * 0.16, 0);
+    ctx.closePath(); ctx.fill();
+    A(cnal * 0.8); ctx.fillStyle = f.gold2;
+    ctx.beginPath();
+    ctx.moveTo(0, cpR * 0.42); ctx.lineTo(cpR * 0.14, 0); ctx.lineTo(-cpR * 0.14, 0);
+    ctx.closePath(); ctx.fill();
+    A(cnal); ctx.fillStyle = '#14100b';
+    ctx.beginPath(); ctx.arc(0, 0, 1.6, 0, TAU); ctx.fill();
     ctx.restore();
   }
 
-  // ---------- net-worth XP pill, top-right rim ----------
-  var pe = f.ease(f.clamp01((f.in01 - 0.5) / 0.45));
-  if (pe > 0.001) {
-    var pdet = eo * R * 0.5;
-    var pxc = cx + 0.408 * (R * 1.12 + pdet);
-    var pyc = cy - 0.913 * (R * 1.12 + pdet) - (1 - pe) * 10;
-    var cntE = f.ease(f.clamp01((f.in01 - 0.5) / 0.48));
-    var kk = Math.floor(ms / 1600);
-    var twOn = cntE >= 0.999 && f.rnd(kk) > 0.62;
-    var twv = 6 + Math.floor(f.rnd(kk + 9) * 68);
-    var val = 127482 * cntE + (twOn ? twv : 0);
-    var txt = '£' + fmt(val);
-    ctx.font = '18px VT323, monospace';
-    var twd = ctx.measureText(txt).width;
-    var pw2 = twd + 22, ph2 = 26;
-    var pal = pe * (1 - eo);
-    A(pal * 0.92); ctx.fillStyle = '#171207';
-    rr(pxc - pw2 / 2, pyc - ph2 / 2, pw2, ph2, 6); ctx.fill();
-    A(pal * 0.9); ctx.strokeStyle = '#5b5142'; ctx.lineWidth = 1.5;
-    rr(pxc - pw2 / 2, pyc - ph2 / 2, pw2, ph2, 6); ctx.stroke();
-    A(pal * 0.5); ctx.strokeStyle = f.hexA(f.gold, 0.55); ctx.lineWidth = 1;
-    rr(pxc - pw2 / 2 + 2, pyc - ph2 / 2 + 2, pw2 - 4, ph2 - 4, 4); ctx.stroke();
-    A(pal); ctx.fillStyle = f.gold;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(txt, pxc, pyc + 1);
-    A(pal * 0.7);
-    ctx.font = '12px VT323, monospace';
-    ctx.fillStyle = f.muted;
-    ctx.fillText('NET WORTH', pxc, pyc - ph2 / 2 - 7);
-    if (twOn) {
-      var pp = (ms % 1600) / 1600;
-      A(pal * (1 - pp));
-      ctx.font = '14px VT323, monospace';
-      ctx.fillStyle = f.gold;
-      ctx.fillText('+' + twv, pxc + pw2 / 2 + 14, pyc - 6 - pp * 16);
-    }
-  }
-
-  // ---------- gold dust motes ----------
+  // ---------- gold dust motes orbiting outside the housing ----------
   ctx.fillStyle = f.gold;
-  for (i = 0; i < 24; i++) {
+  for (i = 0; i < 22; i++) {
     var ma = f.rnd(i) * TAU + ms * 0.00004 * (0.4 + f.rnd(i + 40)) * (f.rnd(i + 60) > 0.5 ? 1 : -1);
-    var mr = R * (1.03 + f.rnd(i + 20) * 0.38);
-    var mx = cx + Math.cos(ma) * mr;
-    var my = cy + Math.sin(ma) * mr * 0.97 + Math.sin(ms * 0.0007 + i * 2.1) * 4;
+    var mr = R * (1.28 + f.rnd(i + 20) * 0.24);
+    var mx2 = cx + Math.cos(ma) * mr;
+    var my2 = cy + Math.sin(ma) * mr * 0.97 + Math.sin(ms * 0.0007 + i * 2.1) * 4;
     var twk = Math.sin(ms * 0.0011 + i * 1.7);
     A(live * (0.15 + 0.35 * twk * twk));
     var msz = 1 + f.rnd(i + 80) * 1.5;
-    ctx.fillRect(mx, my, msz, msz);
+    ctx.fillRect(mx2, my2, msz, msz);
   }
 
-  // ---------- restore state ----------
+  // ---------- hover parchment label plate (topmost) ----------
+  if (hMax > 0.03 && live > 0.05) {
+    var acc2 = 0;
+    for (i = 0; i < hSel; i++) acc2 += fracs[i];
+    var midA = a0 + (acc2 + fracs[hSel] / 2) * TAU;
+    var lx = cx + Math.cos(midA) * R * 0.45;
+    var ly = cy + Math.sin(midA) * R * 0.45;
+    var lname = names[hSel] + ' · ' + pcts[hSel] + '%';
+    var lval = '£' + fmt(Math.round(127482 * pcts[hSel] / 100));
+    ctx.font = '15px VT323, monospace';
+    var w1 = ctx.measureText(lname).width;
+    ctx.font = '18px VT323, monospace';
+    var w2 = ctx.measureText(lval).width;
+    var pwid = Math.max(w1, w2) + 24, phei = 46;
+    var la = hMax * live;
+    A(la * 0.45); ctx.fillStyle = '#0a0806';
+    rr(lx - pwid / 2 + 3, ly - phei / 2 + 4, pwid, phei, 4); ctx.fill();
+    A(la * 0.96); ctx.fillStyle = '#d8ccb4';
+    rr(lx - pwid / 2, ly - phei / 2, pwid, phei, 4); ctx.fill();
+    A(la); ctx.strokeStyle = '#6a4c2e'; ctx.lineWidth = 2;
+    rr(lx - pwid / 2, ly - phei / 2, pwid, phei, 4); ctx.stroke();
+    A(la * 0.65); ctx.strokeStyle = '#8a6a38'; ctx.lineWidth = 1;
+    rr(lx - pwid / 2 + 2.5, ly - phei / 2 + 2.5, pwid - 5, phei - 5, 3); ctx.stroke();
+    A(la); ctx.fillStyle = '#2a241d';
+    ctx.font = '15px VT323, monospace';
+    ctx.fillText(lname, lx, ly - 9);
+    ctx.font = '18px VT323, monospace';
+    ctx.fillText(lval, lx, ly + 11);
+  }
+
+  // ---------- restore shared state ----------
   ctx.globalAlpha = GA;
   ctx.lineCap = 'butt';
   ctx.lineJoin = 'miter';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
 }
+
 
 function paintDialMacro(ctx, f) {
   var GA = ctx.globalAlpha;

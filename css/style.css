@@ -1053,3 +1053,49 @@ html.smooth { scroll-behavior: auto; }
   .film #npc .npc-tabs span { font-size: 8px; }
   .film #npc .npc-tabs .report { display: none; }
 }
+
+/* ---------- v5.5: the Collection Log becomes the Collection Log ---------- */
+
+.film #clog.section {
+  padding: 0; border: none;
+  background: #3a332b;
+  border: 2px solid #241d15;
+  box-shadow: inset 0 0 0 2px #5c5140, inset 0 0 0 4px #2a241d, 0 16px 50px rgba(0, 0, 0, 0.55);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.clog-chrome { display: none; }
+.film .clog-chrome { display: block; }
+.clog-titlebar {
+  display: flex; justify-content: center; position: relative;
+  background: linear-gradient(#2f2922, #262019);
+  padding: 7px 12px;
+  border-bottom: 2px solid #241d15;
+}
+.clog-titlebar span { font: 21px var(--pixel); color: #ff981f; letter-spacing: 0.04em; }
+.clog-titlebar i {
+  position: absolute; right: 9px; top: 8px;
+  font-style: normal; font: 12px var(--mono); color: #b8ab94;
+  border: 1px solid #5c5140; border-radius: 2px; padding: 0 5px 1px;
+}
+.clog-tabs { display: flex; gap: 2px; padding: 6px 8px 0; background: #332d25; }
+.clog-tabs span {
+  flex: 1; text-align: center;
+  font: 15px var(--pixel); color: #b8ab94;
+  background: linear-gradient(#453b2f, #37302a);
+  border: 1px solid #241d15; border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  padding: 3px 0 2px;
+}
+.clog-tabs span.on { color: #ff981f; background: linear-gradient(#544737, #453b2f); }
+.clog-obtained {
+  font: 16px var(--pixel); color: #ff981f;
+  padding: 8px 14px 0;
+  border-top: 2px solid #241d15;
+}
+.film #clog .clog-grid { padding: 10px 12px 14px; }
+.film #clog .clog-item h3 { color: #ff981f; }
+.film #clog .clog-item.done h3 { color: #3cd93c; }
+
+/* the chat window fills its slot — properly centred */
+.film #npc { width: 100%; }
