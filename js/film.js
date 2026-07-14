@@ -18,10 +18,18 @@ lenis.on('scroll', ScrollTrigger.update);
 gsap.ticker.add(t => lenis.raf(t * 1000));
 gsap.ticker.lagSmoothing(0);
 
+// in film mode these sections live on the timeline, not in the document flow
+const FILM_ANCHORS = { '#projects': 2.5 / 6, '#quests': 5.5 / 6 };
+
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
     const id = a.getAttribute('href');
     if (!id || id.length < 2) return;
+    if (root.classList.contains('film') && FILM_ANCHORS[id] !== undefined) {
+      e.preventDefault();
+      lenis.scrollTo(track.offsetTop + trackLen() * FILM_ANCHORS[id], { duration: 1.6 });
+      return;
+    }
     const el = document.querySelector(id);
     if (!el) return;
     e.preventDefault();
@@ -1896,9 +1904,14 @@ gsap.ticker.add(() => {
   for (let i = 0; i < SCENES; i++) {
     const a = sceneAlpha(i, sp);
     if (a <= 0.002) continue;
-    const t = clamp01(sp - i);
-    const in01 = i === 0 ? 1 : ease(clamp01(t / 0.24));
-    const out01 = ease(clamp01((t - 0.76) / 0.24));
+    // scene-local time spans the whole crossfade window, so worlds assemble
+    // while they fade in and finish dissolving exactly as they fade out
+    let c = sp;
+    if (i === 0) c = Math.max(c, 0.5);
+    if (i === SCENES - 1) c = Math.min(c, SCENES - 0.5);
+    const t = clamp01((c - i + XFADE) / (1 + 2 * XFADE));
+    const in01 = i === 0 ? 1 : ease(clamp01(t / 0.3));
+    const out01 = ease(clamp01((t - 0.7) / 0.3));
     ctx.save();
     ctx.globalAlpha = a * boot;
     const painter = PAINTERS[i];
@@ -1915,14 +1928,19 @@ gsap.ticker.add(() => {
     if (window.__duel) window.__duel.setCam(clamp01(sp) * 0.5);
   }
 
-  // overlays crossfade and drift with their scenes
+  // overlays crossfade sharper than the worlds so headlines never overprint,
+  // and drift further so in/out text passes at different heights
   for (let i = 0; i < overlays.length; i++) {
     const ov = overlays[i];
-    const a = sceneAlpha(i, sp) * boot;
+    const raw = sceneAlpha(i, sp);
+    const a = Math.pow(raw, 1.9) * boot;
     ov.style.opacity = a.toFixed(3);
-    const t = clamp01(sp - i);
-    ov.style.transform = 'translateY(' + ((0.5 - t) * -34).toFixed(1) + 'px)';
-    ov.classList.toggle('live', a > 0.55);
+    let c = sp;
+    if (i === 0) c = Math.max(c, 0.5);
+    if (i === SCENES - 1) c = Math.min(c, SCENES - 0.5);
+    const t = clamp01((c - i + XFADE) / (1 + 2 * XFADE));
+    ov.style.transform = 'translateY(' + ((0.5 - t) * -76).toFixed(1) + 'px)';
+    ov.classList.toggle('live', raw > 0.55);
   }
 
   const idx = Math.max(0, Math.min(SCENES - 1, Math.round(sp - 0.5)));
@@ -2018,7 +2036,8 @@ if (pill && duelUi && banner && window.__duel) {
 window.__film = {
   seek(v) {
     const val = clamp01(v);
-    scrollTo(0, Math.round(track.offsetTop + trackLen() * val));
+    // through Lenis so its internal target can never fight the jump
+    lenis.scrollTo(Math.round(track.offsetTop + trackLen() * val), { immediate: true, force: true });
     ScrollTrigger.update();
     p = val;
   },
