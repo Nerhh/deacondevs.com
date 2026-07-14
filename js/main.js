@@ -135,10 +135,10 @@ function applyTheme(t) {
 /* ---------- collection log: what has this visitor discovered? ---------- */
 
 const CLOG_ENTRIES = [
-  { id: 'spec-marcus', name: "Marcus's special attack", hint: 'unleash it in the duel' },
-  { id: 'spec-deacon', name: "Deacon's special attack", hint: 'the mage answers too' },
-  { id: 'duel-death', name: 'A fighter falls', hint: 'watch a duel to the end' },
-  { id: 'duel-won', name: 'Duel victor', hint: 'challenge Deacon and win' },
+  { id: 'spec-marcus', name: 'The dragonfire volley', hint: 'loose the special in the boss fight' },
+  { id: 'spec-deacon', name: 'Dragonfire endured', hint: 'watch Deacon draw breath' },
+  { id: 'duel-death', name: 'The dragon falls', hint: 'see the boss fight through' },
+  { id: 'duel-won', name: 'Dragon slayer', hint: 'fell Deacon the Blue' },
   { id: 'watch-scan', name: 'A full dial scan', hint: 'let the watch finish its reading' },
   { id: 'theme-flip', name: 'Flipped the lights', hint: 'try the other theme' },
   { id: 'email-reveal', name: 'The secret email', hint: 'scrapers never find it' },
@@ -202,6 +202,7 @@ function checkMoon() {
 clogRender();
 if (clogComplete()) root.classList.add('gilded');
 checkMoon();
+window.__clog = clogUnlock; // the film's boss fight reports its unlocks through this
 
 /* ---------- hero: Marcus (range, Masori) vs Deacon (mage, Ancestral) ---------- */
 

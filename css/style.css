@@ -769,7 +769,7 @@ html.smooth { scroll-behavior: auto; }
 
 .film-stage, .film-track { display: none; }
 .film .film-stage { display: block; position: fixed; inset: 0; z-index: 1; overflow: hidden; }
-.film .film-track { display: block; height: 840vh; }
+.film .film-track { display: block; height: 1120vh; }
 .film .fallback-only { display: none !important; }
 
 .film .noise { inset: -60px; animation: grain 900ms steps(6) infinite; }
@@ -884,4 +884,41 @@ html.smooth { scroll-behavior: auto; }
   #quest-slot { position: absolute; right: 4vw; left: 4vw; width: auto; top: 24vh; transform: none; }
   .film #quests .quest p { display: none; }
   .film-pill { bottom: 22px; font-size: 17px; }
+}
+
+/* ---------- scenes 7 & 8: docked collection log, provenance and contact ---------- */
+
+.film .film-hide { display: none !important; }
+
+#clog-slot {
+  position: absolute; right: clamp(24px, 5vw, 72px); top: 50%;
+  transform: translateY(-50%);
+  width: min(680px, 50vw);
+}
+.film #clog.section { padding: 0; border: none; }
+.film #clog .section-h, .film #clog .section-note { display: none; }
+.film #clog .clog-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
+.film #clog .clog-item { padding: 10px 14px; background: color-mix(in srgb, var(--bg2) 72%, transparent); }
+.film #clog .clog-item h3 { font-size: 13px; }
+.film #clog .clog-item p { font-size: 11px; }
+
+#ge-slot {
+  position: absolute; left: clamp(24px, 5vw, 72px); bottom: 9vh;
+  width: min(560px, 42vw);
+}
+.film #ge-ticker { margin: 0; background: color-mix(in srgb, var(--bg2) 72%, transparent); }
+
+#npc-slot {
+  position: absolute; right: clamp(24px, 5vw, 72px); top: 50%;
+  transform: translateY(-50%);
+  width: min(620px, 46vw);
+}
+.film #npc { margin: 0; }
+
+@media (max-width: 760px) {
+  #clog-slot { left: 4vw; right: 4vw; width: auto; top: 26vh; transform: none; }
+  .film #clog .clog-grid { grid-template-columns: 1fr; gap: 6px; }
+  .film #clog .clog-item p { display: none; }
+  #ge-slot { display: none; }
+  #npc-slot { left: 4vw; right: 4vw; width: auto; top: auto; bottom: 8vh; transform: none; }
 }
