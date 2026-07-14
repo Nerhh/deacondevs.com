@@ -3912,7 +3912,9 @@ gsap.ticker.add(() => {
   const sp = p * SCENES;
 
   size();
-  ctx.clearRect(0, 0, W, H);
+  // the film owns its own night — no theme may bleed through translucent paint
+  ctx.fillStyle = '#05060b';
+  ctx.fillRect(0, 0, W, H);
 
   if (sceneAlpha(0, sp) > 0.02) updateBoss(now, dt);
 
