@@ -155,7 +155,10 @@ function mkEnv(t, in01, out01, ms) {
 function size() {
   const w = innerWidth, h = innerHeight;
   DPR = Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.5 : 2);
-  if (w === W && h === H && filmCanvas.width === Math.round(w * DPR)) return;
+  const wSame = w === W && filmCanvas.width === Math.round(w * DPR);
+  if (wSame && h === H) return;
+  // phone URL-bar show/hide jitters height — let CSS stretch rather than rebuild the world
+  if (wSame && H && Math.abs(h - H) < 150) return;
   W = w; H = h;
   filmCanvas.width = Math.round(W * DPR);
   filmCanvas.height = Math.round(H * DPR);
@@ -2016,7 +2019,8 @@ function paintWealthHalo(ctx, f) {
   var W = f.W, H = f.H, ms = f.ms;
   var TAU = Math.PI * 2;
   var PI = Math.PI;
-  var cx = W * 0.62, cy = H * 0.5;
+  var narrow = W < 760;
+  var cx = W * (narrow ? 0.5 : 0.62), cy = H * (narrow ? 0.4 : 0.5);
   var R = Math.min(W, H) * 0.30;
   var ringW = R * 0.09;
   var mapR = R - ringW * 0.5 + 2;
@@ -2666,9 +2670,10 @@ function paintDialMacro(ctx, f) {
   var eC = ease(clamp01(f.in01 * 1.90 - 0.62));
   var drift = outE * W * 0.035;
 
-  var cx1 = W * 0.68 + drift, cy1 = H * 0.38;
-  var cx2 = W * 0.47 + drift * 0.85, cy2 = H * 0.72 + (1 - e2) * MIN * 0.016;
-  var cx3 = W * 0.82 + drift * 1.15, cy3 = H * 0.76 + (1 - e3) * MIN * 0.013;
+  var narrow = W < 760;
+  var cx1 = W * (narrow ? 0.52 : 0.68) + drift, cy1 = H * (narrow ? 0.3 : 0.38);
+  var cx2 = W * (narrow ? 0.3 : 0.47) + drift * 0.85, cy2 = H * (narrow ? 0.6 : 0.72) + (1 - e2) * MIN * 0.016;
+  var cx3 = W * (narrow ? 0.76 : 0.82) + drift * 1.15, cy3 = H * (narrow ? 0.62 : 0.76) + (1 - e3) * MIN * 0.013;
   var benchTop = H * 0.755;
   var tilt = -12 * Math.PI / 180;
 
@@ -3031,12 +3036,12 @@ function paintDialMacro(ctx, f) {
     circ(R * 0.875, '#10151d');
     /* navy-steel face */
     var ng = g.createRadialGradient(-R * 0.16, -R * 0.20, R * 0.05, 0, 0, R * 0.86);
-    ng.addColorStop(0, '#26324a');
-    ng.addColorStop(0.5, '#1a2434');
-    ng.addColorStop(1, '#0c1119');
+    ng.addColorStop(0, '#e6dcc2');
+    ng.addColorStop(0.5, '#d8ccb4');
+    ng.addColorStop(1, '#b4a486');
     circ(R * 0.845, ng);
     /* brushed sheen arcs */
-    g.strokeStyle = 'rgba(156,199,255,0.05)';
+    g.strokeStyle = 'rgba(122,94,58,0.10)';
     g.lineWidth = 1;
     for (k = 0; k < 6; k++) {
       g.beginPath(); g.arc(0, 0, R * (0.18 + 0.11 * k), Math.PI * 1.05, Math.PI * 1.65); g.stroke();
@@ -3046,7 +3051,7 @@ function paintDialMacro(ctx, f) {
       var big = k % 3 === 0;
       g.save();
       g.rotate(k * TAU / 12 - Math.PI / 2);
-      g.fillStyle = big ? '#e8e6d8' : 'rgba(232,230,216,0.62)';
+      g.fillStyle = big ? '#3a2a18' : 'rgba(58,42,24,0.62)';
       var ml = big ? R * 0.135 : R * 0.08;
       var mw = big ? R * 0.034 : R * 0.017;
       g.fillRect(R * 0.72 - ml, -mw / 2, ml, mw);
@@ -3057,7 +3062,7 @@ function paintDialMacro(ctx, f) {
       g.restore();
     }
     /* minute dots */
-    g.fillStyle = 'rgba(232,230,216,0.30)';
+    g.fillStyle = 'rgba(58,42,24,0.38)';
     for (k = 0; k < 60; k++) {
       if (k % 5 === 0) continue;
       aa = k * TAU / 60 - Math.PI / 2;
@@ -3068,7 +3073,7 @@ function paintDialMacro(ctx, f) {
     /* quiet maker's mark */
     g.font = Math.round(R * 0.105) + 'px VT323, monospace';
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillStyle = 'rgba(156,199,255,0.22)';
+    g.fillStyle = 'rgba(122,94,58,0.45)';
     g.fillText('DIAL', 0, R * 0.36);
     g.restore();
   });
@@ -4257,8 +4262,8 @@ let shakeB = 0, specAt = 0, lootT = -9e9;
 
 const groundY = () => H * 0.72;
 const fightScale = () => Math.max(0.5, Math.min(1.2, Math.min(W / 1500, H / 950)));
-const bossX = () => W * 0.66;
-const champX = now => W * 0.34 + Math.sin(now / 2600) * W * 0.012;
+const bossX = () => W * (W < 760 ? 0.74 : 0.66);
+const champX = now => W * (W < 760 ? 0.2 : 0.34) + Math.sin(now / 2600) * W * 0.012;
 
 function mouthPos(now) {
   // measured off the actual model: rest (-155,-165)*s, reared (-40,-270)*s
@@ -4471,7 +4476,7 @@ function drawBossFight(now, alpha, t) {
   // OSRS boss bar, pinned to the frame not the dolly
   ctx.save();
   ctx.globalAlpha = alpha;
-  const bw = Math.min(340, W * 0.32), bh2 = 20, bx3 = W / 2 - bw / 2, by3 = 86;
+  const bw = W < 760 ? Math.min(300, W * 0.8) : Math.min(340, W * 0.32), bh2 = 20, bx3 = W / 2 - bw / 2, by3 = 86;
   ctx.fillStyle = 'rgba(5,6,11,0.72)';
   ctx.fillRect(bx3 - 6, by3 - 6, bw + 12, bh2 + 12);
   ctx.strokeStyle = 'rgba(217,180,91,0.5)';

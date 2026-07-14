@@ -1099,3 +1099,44 @@ html.smooth { scroll-behavior: auto; }
 
 /* the chat window fills its slot — properly centred */
 .film #npc { width: 100%; max-width: none; margin: 0 auto; }
+
+/* ---------- v5.7: the film on a phone ---------- */
+
+@media (max-width: 760px) {
+  .site-head { padding: 12px 16px; }
+  .site-head nav { gap: 11px; }
+  .site-head nav a { font-size: 9px; letter-spacing: 0.08em; }
+
+  /* interface scenes read top-down: headline first, furniture below */
+  .scene-ov[data-scene="4"] .sc-head,
+  .scene-ov[data-scene="5"] .sc-head,
+  .scene-ov[data-scene="6"] .sc-head { top: 9vh; bottom: auto; transform: none; }
+  .scene-ov[data-scene="4"] .sc-head .sc-sub,
+  .scene-ov[data-scene="5"] .sc-head .sc-sub,
+  .scene-ov[data-scene="6"] .sc-head .sc-sub { display: none; }
+
+  #quest-slot { top: 30vh; }
+  .film #quests .quest { padding: 6px 4px; }
+  .film #quests .quest h3 { font-size: 13px; }
+  .film #quests .quests { padding: 22px 18px 18px; }
+
+  #clog-slot { top: 26vh; }
+  .film #clog .clog-grid { grid-template-columns: 1fr 1fr; gap: 5px; padding: 8px 8px 10px; }
+  .film #clog .clog-item { padding: 7px 9px; }
+  .film #clog .clog-item h3 { font-size: 11px; }
+  .clog-titlebar span { font-size: 17px; }
+  .clog-tabs span { font-size: 12px; }
+  .clog-obtained { font-size: 13px; padding: 6px 10px 0; }
+
+  .film #npc .npc-line { font-size: 12px; }
+  .film #npc .npc-name { font-size: 13px; }
+  .film #npc { padding: 8px 10px 6px; gap: 10px; }
+  .film #npc .npc-face { width: 52px; height: 52px; }
+
+  .sc-h1, .scene-ov h2 { font-size: clamp(40px, 12vw, 64px); }
+  .sc-sub { font-size: 12.5px; line-height: 1.55; }
+  .sc-tags li { font-size: 9px; padding: 3px 8px; }
+  .sc-tag { top: 64px; left: 16px; font-size: 9px; }
+  .sc-head { left: 16px; right: 16px; max-width: none; bottom: 14vh; }
+  .sc-foot { bottom: 12px; font-size: 8px; letter-spacing: 0.12em; }
+}
