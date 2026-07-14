@@ -1110,7 +1110,7 @@ html.smooth { scroll-behavior: auto; }
   /* interface scenes read top-down: headline first, furniture below */
   .scene-ov[data-scene="4"] .sc-head,
   .scene-ov[data-scene="5"] .sc-head,
-  .scene-ov[data-scene="6"] .sc-head { top: 9vh; bottom: auto; transform: none; }
+  .scene-ov[data-scene="6"] .sc-head { top: 10.5vh; bottom: auto; transform: none; }
   .scene-ov[data-scene="4"] .sc-head .sc-sub,
   .scene-ov[data-scene="5"] .sc-head .sc-sub,
   .scene-ov[data-scene="6"] .sc-head .sc-sub { display: none; }
@@ -1136,7 +1136,7 @@ html.smooth { scroll-behavior: auto; }
   .sc-h1, .scene-ov h2 { font-size: clamp(40px, 12vw, 64px); }
   .sc-sub { font-size: 12.5px; line-height: 1.55; }
   .sc-tags li { font-size: 9px; padding: 3px 8px; }
-  .sc-tag { top: 64px; left: 16px; font-size: 9px; }
+  .sc-tag { top: 54px; left: 16px; font-size: 9px; }
   .sc-head { left: 16px; right: 16px; max-width: none; bottom: 14vh; }
   .sc-foot { bottom: 12px; font-size: 8px; letter-spacing: 0.12em; }
 }
