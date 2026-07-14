@@ -623,7 +623,7 @@ function paintGielinorFlyover(ctx, f) {
     var a = ridgePt(seed, N, ii), b = ridgePt(seed, N, ii + 1);
     return -(a + (b - a) * fr) * amp;
   }
-  function ridgeStrip(name, seed, N, amp, fillDepth, cBase, cLit, cDark, snow) {
+  function ridgeStrip(name, seed, N, amp, fillDepth, cBase, cLit, cDark, snow, chart) {
     var baseY = amp + 6;
     var hgt = Math.ceil(baseY + fillDepth);
     var img = f.cache(K + name + ':' + DIM, TW, hgt, function (c) {
@@ -661,6 +661,32 @@ function paintGielinorFlyover(ctx, f) {
             c.lineTo(p[0] + (slx - p[0]) * 0.35, p[1] + (sly - p[1]) * 0.35);
             c.closePath(); c.fill();
           }
+        }
+      }
+      if (chart) {
+        // the ridge IS the price chart: dashed rolling average weaving the peaks...
+        var avg = [];
+        for (q = 0; q <= N; q++) {
+          var acc = 0;
+          for (var w3 = -2; w3 <= 2; w3++) acc += baseY + ridgeY(seed, N, amp, ((q + w3) % N + N) % N * TW / N);
+          avg.push(acc / 5);
+        }
+        c.strokeStyle = 'rgba(217,180,91,0.65)';
+        c.lineWidth = 1.2;
+        c.setLineDash([9, 7]);
+        c.beginPath(); c.moveTo(pts[0][0], avg[0]);
+        for (q = 1; q <= N; q++) c.lineTo(pts[q][0], avg[q]);
+        c.stroke();
+        c.setLineDash([]);
+        // ...and the glowing gold price line traced along the summits
+        c.lineJoin = 'round'; c.lineCap = 'round';
+        var passes = [[6, 0.10], [2.8, 0.24], [1.4, 0.9]];
+        for (var pq = 0; pq < 3; pq++) {
+          c.strokeStyle = 'rgba(245,197,24,' + passes[pq][1] + ')';
+          c.lineWidth = passes[pq][0];
+          c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+          for (q = 1; q <= N; q++) c.lineTo(pts[q][0], pts[q][1]);
+          c.stroke();
         }
       }
     });
@@ -866,7 +892,7 @@ function paintGielinorFlyover(ctx, f) {
   }
 
   // ---- near hills: near-black ----
-  var nearL = ridgeStrip('near', 303, 10, H * 0.09, H * 0.14, '#10141f', '#1a2130', '#0a0d15', false);
+  var nearL = ridgeStrip('near', 303, 10, H * 0.09, H * 0.14, '#10141f', '#1a2130', '#0a0d15', false, true);
   var entN = ent(3), slN = (1 - entN) * H * 0.18;
   var yNear = horizon + H * 0.16 - nearL.baseY + slN;
   al(entN);
@@ -2221,7 +2247,9 @@ function paintWealthHalo(ctx, f) {
   for (i = 0; i < 4; i++) {
     var oe = f.ease(f.clamp01((f.in01 - 0.32 - i * 0.09) / 0.45));
     if (oe <= 0.001) continue;
-    var oa = Math.PI + 0.62 - i * 0.38;
+    var segStart = a0;
+    for (k = 0; k < i; k++) segStart += fracs[k] * TAU;
+    var oa = segStart + fracs[i] * TAU / 2;
     var det = eo * R * (0.55 + 0.12 * i);
     var orad = R * 1.015 + det;
     var ox = cx + Math.cos(oa) * orad;
@@ -2253,15 +2281,21 @@ function paintWealthHalo(ctx, f) {
     ctx.beginPath(); ctx.arc(-gr * 0.33, -gr * 0.35, gr * 0.28, 0, TAU); ctx.fill();
     A(al * 0.5); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(0, 0, gr * puls, 0, TAU); ctx.stroke();
-    // percentage tab to the orb's left
-    var tw2 = 34, th2 = 18;
-    var tx = -orbR - 8 - tw2, ty = -th2 / 2;
+    // named label, radially outward from its orb
+    var LBL = ['stocks', 'pension', 'cash', 'play'];
+    var txt = LBL[i] + ' ' + pcts[i] + '%';
+    ctx.font = '14px VT323, monospace';
+    var tw2 = ctx.measureText(txt).width + 16, th2 = 19;
+    var ldx = Math.cos(oa), ldy = Math.sin(oa);
+    var lx = ldx * (orbR + 12), ly = ldy * (orbR + 12);
+    var tx = ldx >= 0 ? lx + 2 : lx - tw2 - 2;
+    if (Math.abs(ldx) < 0.35) { tx = -tw2 / 2; ly = ldy * (orbR + 24); }
+    var ty = ly - th2 / 2;
     A(al * 0.88); ctx.fillStyle = '#14100b'; rr(tx, ty, tw2, th2, 4); ctx.fill();
-    A(al * 0.6); ctx.strokeStyle = f.hexA(cols[i], 0.5); ctx.lineWidth = 1; rr(tx, ty, tw2, th2, 4); ctx.stroke();
+    A(al * 0.7); ctx.strokeStyle = f.hexA(cols[i], 0.55); ctx.lineWidth = 1; rr(tx, ty, tw2, th2, 4); ctx.stroke();
     A(al); ctx.fillStyle = cols[i];
-    ctx.font = '15px VT323, monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(pcts[i] + '%', tx + tw2 / 2, 1);
+    ctx.fillText(txt, tx + tw2 / 2, ty + th2 / 2 + 1);
     ctx.restore();
   }
 

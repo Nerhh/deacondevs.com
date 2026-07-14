@@ -1050,3 +1050,46 @@ html.smooth { scroll-behavior: auto; }
 @media (max-width: 760px) {
   .sc-foot { white-space: normal; text-align: center; width: 92vw; }
 }
+
+/* ---------- v5.3: the dialogue becomes the OSRS chat window, docked at the foot ---------- */
+
+.npc-tabs { display: none; }
+
+.film #npc-slot {
+  top: auto; right: auto;
+  left: 50%; bottom: 64px;
+  transform: translateX(-50%);
+  width: min(880px, 74vw);
+}
+.film #npc {
+  flex-wrap: wrap;
+  background: linear-gradient(#d3c7ab, #c6b897);
+  border: 2px solid #2a2014;
+  box-shadow: inset 0 0 0 2px #6b5b40, inset 0 0 0 3px #91805f, 0 10px 34px rgba(0, 0, 0, 0.55);
+  border-radius: 2px;
+  padding: 10px 16px 8px;
+}
+.film #npc .npc-line { font-size: 13.5px; line-height: 1.55; }
+.film #npc .npc-tabs {
+  display: flex; flex: 1 1 100%;
+  gap: 3px; margin-top: 10px;
+  border-top: 2px solid #5c4e38;
+  padding-top: 6px;
+}
+.film #npc .npc-tabs span {
+  flex: 1; text-align: center;
+  font: 500 10px var(--mono); letter-spacing: 0.03em;
+  color: #e8dcc0;
+  background: linear-gradient(#4c4438, #37302a);
+  border: 1px solid #241d15; border-radius: 3px;
+  padding: 3px 2px;
+  white-space: nowrap;
+}
+.film #npc .npc-tabs span b { color: #35d435; font-weight: 500; }
+.film #npc .npc-tabs .report { background: linear-gradient(#7a1c14, #55130d); }
+
+@media (max-width: 760px) {
+  .film #npc-slot { left: 3vw; right: 3vw; width: auto; transform: none; bottom: 56px; }
+  .film #npc .npc-tabs span { font-size: 8px; }
+  .film #npc .npc-tabs .report { display: none; }
+}
