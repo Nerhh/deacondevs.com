@@ -3579,6 +3579,23 @@ function drawSplatPx(x, y, cell, gold) {
   }
 }
 
+// the dragon's facet art uses translucent fills — composite it offscreen so the
+// world never bleeds through its body
+let dScratch = null, dsCtx = null;
+function drawDragonOpaque(args) {
+  if (!ACTORS.dragon) return;
+  if (!dScratch || dScratch.width !== filmCanvas.width) {
+    dScratch = document.createElement('canvas');
+    dScratch.width = filmCanvas.width;
+    dScratch.height = filmCanvas.height;
+    dsCtx = dScratch.getContext('2d');
+  }
+  dsCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  dsCtx.clearRect(0, 0, W, H);
+  ACTORS.dragon(dsCtx, args);
+  ctx.drawImage(dScratch, 0, 0, W, H);
+}
+
 const boss = { hp: 255, maxHp: 255, dead: 0, deadT: 0, rear: 0, jaw: 0, hurt: 0, nextBreath: 0, breathHit: false };
 const champ = { draw: 0, fire: 0, roll: 0, rollT: -9e9, hurt: 0, shotT: 0 };
 let bArrows = [], bSplats = [], bFlames = [], bSparks = [];
@@ -3720,14 +3737,12 @@ function drawBossFight(now, alpha, t) {
   ctx.beginPath(); ctx.ellipse(bossX() - 40 * s, groundY() + 6, 170 * s, 22 * s, 0, 0, 6.2832); ctx.fill();
   ctx.beginPath(); ctx.ellipse(champX(now), groundY() + 5, 34 * s, 8 * s, 0, 0, 6.2832); ctx.fill();
 
-  if (ACTORS.dragon) {
-    ACTORS.dragon(ctx, {
-      x: bossX(), y: groundY(), s, dir: 1, ms: now,
-      flap: 0.5 + 0.5 * Math.sin(now / (boss.rear > 0.4 ? 420 : 1150)),
-      rear: boss.rear, jaw: boss.jaw, sway: Math.sin(now / 1700),
-      hurt: boss.hurt, dead: boss.dead, hexA,
-    });
-  }
+  drawDragonOpaque({
+    x: bossX(), y: groundY(), s, dir: 1, ms: now,
+    flap: 0.5 + 0.5 * Math.sin(now / (boss.rear > 0.4 ? 420 : 1150)),
+    rear: boss.rear, jaw: boss.jaw, sway: Math.sin(now / 1700),
+    hurt: boss.hurt, dead: boss.dead, hexA,
+  });
   if (ACTORS.ranger) {
     ACTORS.ranger(ctx, {
       x: champX(now), y: groundY(), s: s * 1.05, dir: 1, ms: now,
@@ -3848,7 +3863,7 @@ function drawDragonFlight(t, ms, alpha) {
   const y = H * 0.4 - Math.sin(k * Math.PI) * H * 0.09 + Math.sin(ms / 320) * 7;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ACTORS.dragon(ctx, {
+  drawDragonOpaque({
     x, y: y + 130 * s, s, dir: -1, ms,
     flap: 0.5 + 0.5 * Math.sin(ms / 300),
     rear: 0.22, jaw: 0, sway: Math.sin(ms / 900),
