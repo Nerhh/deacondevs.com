@@ -2307,16 +2307,20 @@ function paintWealthHalo(ctx, f) {
     var plateH = Math.max(24, orbR * 1.1);
     var ldx = Math.cos(oa), ldy = Math.sin(oa);
     var pxx, pyy;
-    if (Math.abs(ldx) >= 0.35) { pxx = ldx >= 0 ? -2 : 2 - plateW; pyy = -plateH / 2; }
-    else { pxx = -plateW / 2; pyy = ldy >= 0 ? -2 : 2 - plateH; }
+    if (Math.abs(ldx) >= 0.35) {
+      pxx = ldx >= 0 ? orbR - 6 : -(orbR - 6) - plateW;
+      pyy = -plateH / 2;
+    } else {
+      pxx = -plateW / 2;
+      pyy = ldy >= 0 ? orbR - 6 : -(orbR - 6) - plateH;
+    }
     A(al * 0.95); ctx.fillStyle = '#221c13';
     rr(pxx, pyy, plateW, plateH, plateH / 2); ctx.fill();
     A(al); ctx.strokeStyle = '#494034'; ctx.lineWidth = 3;
     rr(pxx, pyy, plateW, plateH, plateH / 2); ctx.stroke();
     A(al); ctx.fillStyle = cols[i];
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    var tcx = pxx + plateW / 2 + (Math.abs(ldx) >= 0.35 ? (ldx >= 0 ? orbR * 0.45 : -orbR * 0.45) : 0);
-    ctx.fillText(txt, tcx, pyy + plateH / 2 + 1);
+    ctx.fillText(txt, pxx + plateW / 2, pyy + plateH / 2 + 1);
     A(al * 0.95); ctx.fillStyle = '#221c13';
     ctx.beginPath(); ctx.arc(0, 0, orbR, 0, TAU); ctx.fill();
     A(al * 0.6); ctx.strokeStyle = '#0f0c08'; ctx.lineWidth = 2;
