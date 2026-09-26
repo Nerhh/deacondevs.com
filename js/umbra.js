@@ -129,9 +129,9 @@ MD.safe('umbra', function umbra() {
     for (let yy = y + 4; yy < y + 17; yy += 2) hl(g, x + 3, yy, w - 6);
     g.fillStyle = PAPER; g.fillRect(x + 8, y + 3, 15, 15);
     g.fillStyle = INK; frame(g, x + 10, y + 5, 11, 11);
-    const tw = Math.min(textW(g, title, fs, 500), w - 90);
-    g.fillStyle = PAPER; g.fillRect(round(x + w / 2 - tw / 2 - 9), y + 2, round(tw + 18), 17);
-    label(g, title, round(x + w / 2), y + 11, w - 90, fs, 500, INK, 'center');
+    const tw = Math.min(textW(g, title, fs, 500), w - 60);
+    g.fillStyle = PAPER; g.fillRect(round(x + w / 2 - tw / 2 - 7), y + 2, round(tw + 14), 17);
+    label(g, title, round(x + w / 2), y + 11, w - 60, fs, 500, INK, 'center');
   }
   // the desktop behind everything: the faintest ordered-dither tone, as an old machine's pattern
   function desk(g, W, H, dpr) {
@@ -176,11 +176,11 @@ MD.safe('umbra', function umbra() {
     const cx = x + 1, cy = y + TB + TS + 1, cw = w - 2, ch = h - TB - TS - 2;
     // chapter 2 draws the four walls in, one after another, eight steps each
     for (let j = 0; j < 4; j++) WALLS[j] = round(steps(seg(xs, 0.22 + j * 0.1, 0.52 + j * 0.1), 8) * ch);
-    return { m, fs, lab, TB, TS, k, hy, x, y, w, h, cx, cy, cw, ch, walls: WALLS, s: W < 420 ? 5 : 7 };
+    return { m, fs, lab, TB, TS, k, hy, x, y, w, h, cx, cy, cw, ch, walls: WALLS, s: W < 420 ? 5 : W < 560 ? 6 : 8 };
   }
 
   // where the cookies rest in a still: [x within its partition, height (1 = the floor)]
-  const STILL_ONE = [[0.16, 1], [0.47, 0.32], [0.8, 0.7]];
+  const STILL_ONE = [[0.1, 1], [0.3, 0.42], [0.52, 0.78], [0.7, 1], [0.88, 0.3]];
   const STILL_MANY = [[0.22, 1], [0.66, 0.46], [0.4, 0.14], [0.7, 1], [0.3, 0.62]];
 
   function browserScene(g, W, H, S, G, dpr) {
@@ -510,7 +510,7 @@ MD.safe('umbra', function umbra() {
     if (cw < 20 || ch < 20) return;
     if (!sim.cw) {
       sim.cw = cw; sim.ch = ch;
-      [[0.18, 0.2, 110], [0.52, 0.6, -80], [0.8, 0.35, 60]].forEach(f => sim.list.push({ u: f[0] * cw, v: f[1] * ch, home: 0, kind: 0, vx: f[2], vy: 0 }));
+      [[0.12, 0.2, 110], [0.3, 0.7, -90], [0.5, 0.4, 70], [0.68, 0.15, -60], [0.86, 0.55, 100]].forEach(f => sim.list.push({ u: f[0] * cw, v: f[1] * ch, home: 0, kind: 0, vx: f[2], vy: 0 }));
     }
     if (cw !== sim.cw || ch !== sim.ch) {
       const fx = cw / sim.cw, fy = ch / sim.ch;
