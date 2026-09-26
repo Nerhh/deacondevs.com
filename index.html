@@ -16,13 +16,11 @@
   <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
   <meta name="theme-color" content="#0c0a08">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15' shape-rendering='crispEdges'%3E%3Crect x='4' y='2' width='7' height='11' fill='%23c0281a'/%3E%3Crect x='2' y='4' width='11' height='7' fill='%23c0281a'/%3E%3Crect x='1' y='7' width='1' height='2' fill='%236f100a'/%3E%3Crect x='13' y='6' width='1' height='2' fill='%236f100a'/%3E%3Crect x='7' y='1' width='2' height='1' fill='%236f100a'/%3E%3Crect x='6' y='13' width='2' height='1' fill='%236f100a'/%3E%3C/svg%3E">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/vt323-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/ibm-plex-mono-400.woff2">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="noise" aria-hidden="true"></div>
   <canvas class="fx" id="fx" aria-hidden="true"></canvas>
 
   <header class="site-head">
@@ -33,7 +31,7 @@
       <a href="/log/" data-xp="15">Log</a>
       <a href="#about" data-xp="15">About</a>
       <a href="#contact" data-xp="15">Contact</a>
-      <button id="theme-toggle" class="stone stone-sm" aria-label="Toggle colour theme" data-ex="Let there be light. Or not." data-name="the lights">☀</button>
+      <button id="theme-toggle" class="stone stone-sm" aria-label="Toggle colour theme" data-ex="Let there be light. Or not." data-name="the lights"><canvas id="theme-icon" width="8" height="8" aria-hidden="true"></canvas></button>
     </nav>
   </header>
 
@@ -41,35 +39,33 @@
 
     <section class="hero">
       <div class="login">
-        <canvas class="fire" id="fire-l" aria-hidden="true" data-ex="A fire. It has burned since 2007." data-name="fire"></canvas>
+        <canvas class="fire" id="fire-l" width="24" height="48" aria-hidden="true" data-ex="A fire. It has burned since 2007." data-name="fire"></canvas>
         <div class="login-box panel">
           <h1 class="logo">marcus<span>.gg</span></h1>
           <p class="welcome">Welcome to marcus.gg</p>
-          <p class="tagline"><strong>Marcus Deacon</strong> — software developer, UK born, father. I build tools that do the boring work.</p>
+          <p class="who">Marcus Deacon · software developer · UK</p>
+          <p class="news">Now building: <a href="#p-umbra" data-xp="15">Umbra</a>, a multi-session browser</p>
           <div class="login-btns">
             <a class="stone" href="#projects" data-xp="20" data-ex="Mind the step." data-name="the door">Enter</a>
             <a class="stone" href="/log/" data-xp="15" data-ex="Build notes. Everything in it actually happened." data-name="the adventure log">Adventure log</a>
           </div>
         </div>
-        <canvas class="fire" id="fire-r" aria-hidden="true" data-ex="Another fire. Symmetry matters." data-name="fire"></canvas>
+        <canvas class="fire" id="fire-r" width="24" height="48" aria-hidden="true" data-ex="Another fire. Symmetry matters." data-name="fire"></canvas>
       </div>
-
-      <p class="status"><span class="prompt">$</span> now building <a href="#p-umbra">umbra</a> — a multi-session browser<span class="cursor">█</span></p>
 
       <div class="arena" id="arena" data-ex="Two halves of the same adventurer, settling it properly." data-name="the duel">
         <canvas id="hero-canvas" role="img" aria-label="An Old School RuneScape style duel between Marcus the ranger and Deacon the mage"></canvas>
         <noscript><p class="hero-noscript">MARCUS DEACON</p></noscript>
-        <p class="arena-hint" aria-hidden="true">click a fighter to unleash their special attack · right-click for options</p>
+        <p class="arena-hint" aria-hidden="true">click a fighter to unleash their special attack<span class="hint-rc"> · right-click for options</span></p>
       </div>
     </section>
 
     <section id="projects" class="section">
-      <div class="ui-head"><h2 class="ui-title">Projects</h2><span class="ui-count">live demos, drawn on canvas</span></div>
-      <p class="section-note">Four builds and a spare slot. Every demo is rendered in real time by the same hand-written JavaScript that runs the rest of this page — not a screenshot among them.</p>
+      <div class="ui-head"><h2 class="ui-title">Projects</h2></div>
 
       <div class="cards">
 
-        <article class="card panel reveal" id="p-umbra" data-ex="Every tab, its own shadow." data-name="Umbra">
+        <article class="card panel" id="p-umbra" data-ex="Every tab, its own shadow." data-name="Umbra">
           <header class="card-head">
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>umbra</h3>
@@ -80,7 +76,7 @@
           <ul class="tags"><li>electron</li><li>react</li><li>typescript</li><li>go</li></ul>
         </article>
 
-        <article class="card panel reveal" id="p-vestra" data-ex="A ledger for people who count their coins." data-name="Vestra">
+        <article class="card panel" id="p-vestra" data-ex="A ledger for people who count their coins." data-name="Vestra">
           <header class="card-head">
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>vestra</h3>
@@ -94,7 +90,7 @@
           <ul class="tags"><li>node</li><li>sqlite</li><li>pwa</li></ul>
         </article>
 
-        <article class="card panel reveal" id="p-stubhub" data-ex="It watches ticket prices so you don't have to." data-name="StubHub Lens">
+        <article class="card panel" id="p-stubhub" data-ex="It watches ticket prices so you don't have to." data-name="StubHub Lens">
           <header class="card-head">
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>stubhub lens</h3>
@@ -105,7 +101,7 @@
           <ul class="tags"><li>chrome-extension</li><li>javascript</li><li>price-analysis</li></ul>
         </article>
 
-        <article class="card panel reveal" id="p-dial" data-ex="Point it at a watch, learn the truth." data-name="Dial">
+        <article class="card panel" id="p-dial" data-ex="Point it at a watch, learn the truth." data-name="Dial">
           <header class="card-head">
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>dial</h3>
@@ -116,7 +112,7 @@
           <ul class="tags"><li>expo</li><li>react-native</li><li>node</li></ul>
         </article>
 
-        <article class="card panel reveal card-queued" data-ex="Empty... for now." data-name="the next build">
+        <article class="card panel card-queued" data-ex="Empty... for now." data-name="the next build">
           <header class="card-head">
             <span class="studs" aria-hidden="true"><i></i><i></i></span>
             <h3>next build</h3>
@@ -155,96 +151,93 @@
     </section>
 
     <section id="quests" class="section">
-      <div class="ui-head"><h2 class="ui-title">Quest List</h2><span class="ui-count">Quest Points: <b id="quest-points">—</b></span></div>
-      <p class="section-note">A quest list instead of a skills grid — red not started, yellow in progress, green complete. No self-assigned levels. Click a quest to open its journal.</p>
-      <ul class="quests">
-        <li class="quest quest-done reveal" data-qp="2">
-          <button class="quest-btn" type="button" aria-expanded="false"><span class="qname">Portfolio, Brick by Brick</span><span class="qp">2 QP</span></button>
-          <div class="journal"><div><div class="journal-in">
-            <h4>Portfolio, Brick by Brick</h4>
-            <p>Design and ship this site by hand — no frameworks, no build step. You're looking at the proof.</p>
-            <div class="jmeta"><span>Status: <b>Completed</b></span><span>Reward: <b>2 Quest Points</b></span></div>
-          </div></div></div>
-        </li>
-        <li class="quest quest-done reveal" data-qp="2">
-          <button class="quest-btn" type="button" aria-expanded="false"><span class="qname">Portfolio II: The Old School Coat</span><span class="qp">2 QP</span></button>
-          <div class="journal"><div><div class="journal-in">
-            <h4>Portfolio II: The Old School Coat</h4>
-            <p>Give the whole place the game's interface: pixel type, stone panels, the login-screen fires, a proper quest list and collection log, right-click menus and a chatbox. Keep it minimal. Still no frameworks.</p>
-            <div class="jmeta"><span>Status: <b>Completed</b></span><span>Reward: <b>2 Quest Points</b></span></div>
-          </div></div></div>
-        </li>
-        <li class="quest quest-active reveal" data-qp="1">
-          <button class="quest-btn" type="button" aria-expanded="false"><span class="qname">Umbra I: One Browser, Many Shadows</span><span class="qp">1 QP</span></button>
-          <div class="journal"><div><div class="journal-in">
-            <h4>Umbra I: One Browser, Many Shadows</h4>
-            <p>Build a multi-session browser where every tab is its own machine — sealed cookies, its own exit IP, a fingerprint that holds together. Currently in beta, and where most evenings go.</p>
-            <div class="jmeta"><span>Status: <b>In progress</b></span><span>Requirements: <b>Electron, patience</b></span></div>
-          </div></div></div>
-        </li>
-        <li class="quest quest-active reveal" data-qp="1">
-          <button class="quest-btn" type="button" aria-expanded="false"><span class="qname">Vestra Saga I: The Ledger</span><span class="qp">1 QP</span></button>
-          <div class="journal"><div><div class="journal-in">
-            <h4>Vestra Saga I: The Ledger</h4>
-            <p>A wealth-management app worth opening daily — accounts, holdings, habits and a monthly Wrapped.</p>
-            <div class="jmeta"><span>Status: <b>In progress</b></span></div>
-          </div></div></div>
-        </li>
-        <li class="quest quest-active reveal" data-qp="1">
-          <button class="quest-btn" type="button" aria-expanded="false"><span class="qname">The Appraiser's Eye</span><span class="qp">1 QP</span></button>
-          <div class="journal"><div><div class="journal-in">
-            <h4>The Appraiser's Eye</h4>
-            <p>Dial — scan a watch, pull the live market, and price it honestly from the 20 cheapest listings.</p>
-            <div class="jmeta"><span>Status: <b>In progress</b></span></div>
-          </div></div></div>
-        </li>
-        <li class="quest quest-active reveal" data-qp="1">
-          <button class="quest-btn" type="button" aria-expanded="false"><span class="qname">The Ticket Watcher</span><span class="qp">1 QP</span></button>
-          <div class="journal"><div><div class="journal-in">
-            <h4>The Ticket Watcher</h4>
-            <p>Build a Chrome extension that watches StubHub prices and flags genuine deals before checkout regret sets in.</p>
-            <div class="jmeta"><span>Status: <b>In progress</b></span></div>
-          </div></div></div>
-        </li>
-        <li class="quest quest-active reveal" data-qp="1">
-          <button class="quest-btn" type="button" aria-expanded="false"><span class="qname">Tutorial Island: Fatherhood</span><span class="qp">1 QP</span></button>
-          <div class="journal"><div><div class="journal-in">
-            <h4>Tutorial Island: Fatherhood</h4>
-            <p>Permanent membership. Cannot be abandoned. XP rate: immeasurable.</p>
-            <div class="jmeta"><span>Status: <b>In progress, forever</b></span></div>
-          </div></div></div>
-        </li>
-        <li class="quest quest-locked reveal" data-qp="0">
-          <button class="quest-btn" type="button" aria-expanded="false"><span class="qname">???</span><span class="qp">0 QP</span></button>
-          <div class="journal"><div><div class="journal-in">
-            <h4>???</h4>
-            <p>Quest not yet discovered. Check back soon.</p>
-            <div class="jmeta"><span>Status: <b>Not started</b></span></div>
-          </div></div></div>
-        </li>
-      </ul>
+      <div class="ui-head"><h2 class="ui-title">Quest List</h2><span class="ui-count">Quest Points: <b id="quest-points" class="is-progress">—</b></span></div>
+      <div class="panel dark-ui quests-panel">
+        <ul class="quests">
+          <li class="quest quest-done" data-qp="2">
+            <button class="quest-btn" type="button" aria-expanded="false" aria-controls="j1">Portfolio, Brick by Brick</button>
+            <div class="journal" id="j1" inert><div><div class="journal-in">
+              <h4>Portfolio, Brick by Brick</h4>
+              <p>Design and ship this site by hand — no frameworks, no build step. You're looking at the proof.</p>
+              <div class="jmeta"><span>Status: <b>Completed</b></span><span>Reward: <b>2 Quest Points</b></span></div>
+            </div></div></div>
+          </li>
+          <li class="quest quest-done" data-qp="2">
+            <button class="quest-btn" type="button" aria-expanded="false" aria-controls="j2">Portfolio II: The Old School Coat</button>
+            <div class="journal" id="j2" inert><div><div class="journal-in">
+              <h4>Portfolio II: The Old School Coat</h4>
+              <p>Give the whole place the game's interface: pixel type, stone panels, the login-screen fires, a proper quest list and collection log, right-click menus and a chatbox. Keep it minimal.</p>
+              <div class="jmeta"><span>Status: <b>Completed</b></span><span>Reward: <b>2 Quest Points</b></span></div>
+            </div></div></div>
+          </li>
+          <li class="quest quest-active" data-qp="1">
+            <button class="quest-btn" type="button" aria-expanded="false" aria-controls="j3">Umbra I: One Browser, Many Shadows</button>
+            <div class="journal" id="j3" inert><div><div class="journal-in">
+              <h4>Umbra I: One Browser, Many Shadows</h4>
+              <p>Build a multi-session browser where every tab is its own machine — sealed cookies, its own exit IP, a fingerprint that holds together. Currently in beta, and where most evenings go.</p>
+              <div class="jmeta"><span>Status: <b>In progress</b></span><span>Reward: <b>1 Quest Point</b></span><span>Requirements: <b>Electron, patience</b></span></div>
+            </div></div></div>
+          </li>
+          <li class="quest quest-active" data-qp="1">
+            <button class="quest-btn" type="button" aria-expanded="false" aria-controls="j4">Vestra Saga I: The Ledger</button>
+            <div class="journal" id="j4" inert><div><div class="journal-in">
+              <h4>Vestra Saga I: The Ledger</h4>
+              <p>A wealth-management app worth opening daily — accounts, holdings, habits and a monthly Wrapped.</p>
+              <div class="jmeta"><span>Status: <b>In progress</b></span><span>Reward: <b>1 Quest Point</b></span></div>
+            </div></div></div>
+          </li>
+          <li class="quest quest-active" data-qp="1">
+            <button class="quest-btn" type="button" aria-expanded="false" aria-controls="j5">The Appraiser's Eye</button>
+            <div class="journal" id="j5" inert><div><div class="journal-in">
+              <h4>The Appraiser's Eye</h4>
+              <p>Dial — scan a watch, pull the live market, and price it honestly from the 20 cheapest listings.</p>
+              <div class="jmeta"><span>Status: <b>In progress</b></span><span>Reward: <b>1 Quest Point</b></span></div>
+            </div></div></div>
+          </li>
+          <li class="quest quest-active" data-qp="1">
+            <button class="quest-btn" type="button" aria-expanded="false" aria-controls="j6">The Ticket Watcher</button>
+            <div class="journal" id="j6" inert><div><div class="journal-in">
+              <h4>The Ticket Watcher</h4>
+              <p>Build a Chrome extension that watches StubHub prices and flags genuine deals before checkout regret sets in.</p>
+              <div class="jmeta"><span>Status: <b>In progress</b></span><span>Reward: <b>1 Quest Point</b></span></div>
+            </div></div></div>
+          </li>
+          <li class="quest quest-active" data-qp="1">
+            <button class="quest-btn" type="button" aria-expanded="false" aria-controls="j7">Tutorial Island: Fatherhood</button>
+            <div class="journal" id="j7" inert><div><div class="journal-in">
+              <h4>Tutorial Island: Fatherhood</h4>
+              <p>Permanent membership. Cannot be abandoned. XP rate: immeasurable.</p>
+              <div class="jmeta"><span>Status: <b>In progress, forever</b></span></div>
+            </div></div></div>
+          </li>
+          <li class="quest quest-locked" data-qp="0">
+            <button class="quest-btn" type="button" aria-expanded="false" aria-controls="j8">???</button>
+            <div class="journal" id="j8" inert><div><div class="journal-in">
+              <h4>???</h4>
+              <p>Quest not yet discovered. Check back soon.</p>
+              <div class="jmeta"><span>Status: <b>Not started</b></span></div>
+            </div></div></div>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <section id="clog" class="section">
-      <div class="ui-head"><h2 class="ui-title">Collection Log</h2><span class="ui-count">things a visitor can discover</span></div>
-      <p class="section-note">Poke around. Progress lives only in your browser — fill the log and the whole page turns gilded.</p>
-      <div class="clog panel reveal" id="clog-box">
-        <div class="clog-head"><span>marcus.gg</span><span>Obtained: <b><span id="clog-count">0</span>/<span id="clog-total">10</span></b></span></div>
+      <div class="ui-head"><h2 class="ui-title">Collection Log</h2></div>
+      <div class="clog panel dark-ui" id="clog-box">
+        <div class="clog-head"><span>marcus.gg</span><span>Obtained: <b id="clog-obtained" class="is-locked"><span id="clog-count">0</span>/<span id="clog-total">10</span></b></span></div>
         <ul class="clog-grid" id="clog-grid"></ul>
-        <ul class="clog-list" id="clog-list"></ul>
       </div>
     </section>
 
     <section id="about" class="section">
-      <div class="ui-head"><h2 class="ui-title">About</h2><span class="ui-count">the grind is the point</span></div>
+      <div class="ui-head"><h2 class="ui-title">About</h2></div>
       <div class="about-grid">
         <div class="about-col">
-          <p class="reveal"><strong>I'm Marcus Deacon</strong> — 30, UK born and raised, and a father, which means my patience has been professionally load-tested.</p>
-          <p class="reveal">By day I build software: browser tooling, data-heavy apps, and small sharp utilities that quietly save people money. The current obsession is <a href="#p-umbra">Umbra</a>, a browser where every tab is its own isolated machine — alongside <a href="#p-stubhub">ticket-price analysis</a> and <a href="#p-vestra">personal wealth tracking</a>.</p>
-          <p class="reveal">Off the clock it's <strong>LEGO</strong> — proper sets and freeform builds — and <strong>Old School RuneScape</strong>, which taught me everything I know about long-term incremental progress. Hence the interface.</p>
-          <p class="reveal">This site is hand-built: no frameworks, no build step — just HTML, CSS and vanilla JavaScript doing every animation you can see, including the fires and the duel up top.</p>
+          <p><strong>I'm Marcus Deacon</strong> — 30, UK born and raised, and a father. By day I build software: browser tooling, data-heavy apps, and small sharp utilities that quietly save people money. The current obsession is <a href="#p-umbra">Umbra</a>, a browser where every tab is its own isolated machine — alongside <a href="#p-stubhub">ticket-price analysis</a> and <a href="#p-vestra">personal wealth tracking</a>.</p>
+          <p>Off the clock it's <strong>LEGO</strong> — proper sets and freeform builds — and <strong>Old School RuneScape</strong>, which taught me everything I know about long-term incremental progress. Hence the interface. This site is hand-built: HTML, CSS and vanilla JavaScript doing every animation you can see, including the fires and the duel up top.</p>
         </div>
-        <aside class="parch reveal" aria-label="Player details" data-ex="It's him. The man himself." data-name="Marcus">
+        <aside class="parch" aria-label="Player details" data-ex="It's him. The man himself." data-name="Marcus">
           <h3>Player details</h3>
           <dl>
             <dt>Name</dt><dd>Marcus Deacon</dd>
@@ -262,25 +255,19 @@
 
     <section id="contact" class="section section-last">
       <div class="ui-head"><h2 class="ui-title">Contact</h2><span class="ui-count">XP is awarded on click</span></div>
-      <div class="contact-grid">
-        <div class="npc reveal" id="npc" data-ex="It's him. The man himself." data-name="Marcus">
-          <canvas class="npc-face" id="npc-face" width="72" height="72" aria-hidden="true"></canvas>
-          <div class="npc-body">
-            <div class="npc-name">Marcus Deacon</div>
-            <p class="npc-line" id="npc-line">Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.</p>
-            <div class="npc-options" id="npc-options" hidden>
-              <span class="npc-opt-title">Select an option</span>
-              <a href="https://x.com/nerhhx" target="_blank" rel="noopener" data-xp="42">1. Message me on X</a>
-              <a href="https://open.spotify.com/user/z4c56k3259wkjrmovv3xabag4" target="_blank" rel="noopener" data-xp="27">2. What are you listening to?</a>
-              <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="84">3. Show me the code</a>
-              <button type="button" id="npc-email" data-xp="120">4. What’s your email?</button>
-            </div>
-            <button type="button" class="npc-continue" id="npc-continue">Click here to continue</button>
+      <div class="npc" id="npc" data-ex="It's him. The man himself." data-name="Marcus">
+        <canvas class="npc-face" id="npc-face" width="72" height="72" aria-hidden="true"></canvas>
+        <div class="npc-body">
+          <div class="npc-name">Marcus Deacon</div>
+          <p class="npc-line" id="npc-line">Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.</p>
+          <div class="npc-options" id="npc-options" hidden>
+            <span class="npc-opt-title">Select an option</span>
+            <a href="https://x.com/nerhhx" target="_blank" rel="noopener" data-xp="42">1. Message me on X</a>
+            <a href="https://open.spotify.com/user/z4c56k3259wkjrmovv3xabag4" target="_blank" rel="noopener" data-xp="27">2. What are you listening to?</a>
+            <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="84">3. Show me the code</a>
+            <button type="button" id="npc-email" data-xp="120">4. What’s your email?</button>
           </div>
-        </div>
-        <div class="contact-side reveal">
-          <p class="big">Talk to the NPC.</p>
-          <p>Tickets, watches, wealth, browsers or bricks. He knows where the email is hidden — scrapers never find it.</p>
+          <button type="button" class="npc-continue" id="npc-continue">Click here to continue</button>
         </div>
       </div>
     </section>
@@ -290,26 +277,24 @@
   <footer>
     <p class="logout-q">Are you sure you want to logout?</p>
     <button type="button" class="stone" id="logout" data-xp="10" data-ex="Back to the login screen." data-name="the logout button">Click here to logout</button>
-    <p class="foot-meta">© 2026 Marcus Deacon · marcus.gg · built brick by brick — no frameworks harmed · <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="20">source ↗</a></p>
+    <p class="foot-meta">© 2026 Marcus Deacon · marcus.gg · built brick by brick · <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="20">source ↗</a></p>
   </footer>
 
-  <aside class="chat panel" id="chat" aria-live="polite" aria-label="Game messages">
+  <aside class="chat panel dark-ui" id="chat" aria-label="Game messages">
     <div class="chat-tabs">
-      <button type="button" class="stone stone-sm chat-tab" id="chat-toggle" aria-expanded="false">Game</button>
-      <span class="chat-hint" id="chat-hint">click to expand</span>
+      <button type="button" class="stone stone-sm chat-tab" id="chat-toggle" aria-expanded="false" aria-controls="chat-log">Game</button>
     </div>
-    <div class="chat-log" id="chat-log"></div>
+    <div class="chat-log" id="chat-log" aria-live="polite"></div>
+    <div class="lvl" id="lvl" hidden role="status">
+      <h4>Congratulations, you've just advanced a Clicking level.</h4>
+      <p id="lvl-text">Your Clicking level is now 2.</p>
+      <button type="button" class="npc-continue" id="lvl-close">Click here to continue</button>
+    </div>
   </aside>
 
-  <div class="xp-track panel" id="xp-track" hidden aria-live="polite">
+  <div class="xp-track panel dark-ui" id="xp-track" hidden>
     <canvas id="xp-lamp" width="8" height="8" aria-hidden="true"></canvas>
     <span>Clicking <b id="xp-lvl">1</b> · <span id="xp-total">0</span> xp</span>
-  </div>
-
-  <div class="lvl" id="lvl" hidden role="dialog" aria-live="assertive" aria-label="Level up">
-    <h4>Congratulations, you've just advanced a Clicking level.</h4>
-    <p id="lvl-text">Your Clicking level is now 2.</p>
-    <button type="button" class="npc-continue" id="lvl-close">Click here to continue</button>
   </div>
 
   <script src="js/main.js"></script>

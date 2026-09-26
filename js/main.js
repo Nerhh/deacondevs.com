@@ -15,17 +15,141 @@ function hexA(hex, a) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
-function countUp(el, to, dur) {
-  if (!el) return;
-  if (REDUCED) { el.textContent = to; return; }
-  const t0 = performance.now();
-  const tick = now => {
-    const p = Math.min(1, (now - t0) / dur);
-    el.textContent = Math.max(0, Math.round(to * easeOut(p)));
-    if (p < 1) requestAnimationFrame(tick);
-  };
-  tick(t0);
+// each module initialises inside safe(): one broken module never blanks the page
+function safe(name, fn) {
+  try { fn(); } catch (e) { if (window.console && console.error) console.error('marcus.gg: ' + name + ' failed', e); }
 }
+
+/* ---------- fireworks: the level-up burst ---------- */
+
+const fxCanvas = document.getElementById('fx');
+const fxCtx = fxCanvas ? fxCanvas.getContext('2d') : null;
+let fxParts = [], fxRaf = 0;
+function fxSize() {
+  if (!fxCanvas) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (fxCanvas.width === w && fxCanvas.height === h) return;
+  fxCanvas.width = w;
+  fxCanvas.height = h;
+  fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function fxLoop() {
+  fxCtx.clearRect(0, 0, innerWidth, innerHeight);
+  fxParts = fxParts.filter(p => p.life > 0);
+  for (const p of fxParts) {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.16; p.vx *= 0.985; p.life--;
+    fxCtx.globalAlpha = Math.min(1, p.life / 18);
+    fxCtx.fillStyle = p.c;
+    fxCtx.fillRect(Math.round(p.x), Math.round(p.y), p.s, p.s);
+  }
+  fxCtx.globalAlpha = 1;
+  if (fxParts.length) fxRaf = requestAnimationFrame(fxLoop); else { fxRaf = 0; fxCanvas.width = fxCanvas.height = 0; }
+}
+function fireworks(x, y) {
+  if (!fxCtx || REDUCED) return;
+  fxSize();
+  const COLS = ['#ffff00', '#ff3c3c', '#3cff3c', '#5ab4ff', '#ffffff', '#ff9a3c'];
+  for (let b = 0; b < 3; b++) {
+    const bx = x + (b - 1) * 26, by = y - 10 - b * 14;
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 1.4 + Math.random() * 3.2;
+      fxParts.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.6, s: Math.random() < 0.3 ? 3 : 2, c: COLS[(Math.random() * COLS.length) | 0], life: 34 + Math.random() * 26 });
+    }
+  }
+  if (!fxRaf) fxRaf = requestAnimationFrame(fxLoop);
+}
+
+
+/* ---------- chatbox: game messages ---------- */
+
+let chatReady = false;
+const chatQueue = [];
+function toast(text, kind) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (kind || 'game');
+  t.setAttribute('role', 'status');
+  t.textContent = text;
+  document.body.appendChild(t);
+  t.addEventListener('animationend', () => t.remove());
+  setTimeout(() => t.remove(), 4000);
+}
+function gameMessage(text, kind) {
+  if (!chatReady) { chatQueue.push([text, kind]); return; }
+  const log = document.getElementById('chat-log');
+  const box = document.getElementById('chat');
+  if (!log || !box) { toast(text, kind); return; }
+  const line = document.createElement('div');
+  line.className = 'chat-line ' + (kind || 'game') + (REDUCED ? '' : ' new');
+  line.textContent = text;
+  log.appendChild(line);
+  while (log.children.length > 60) log.removeChild(log.firstChild);
+  log.scrollTop = log.scrollHeight;
+  // the chatbox is hidden on small screens — fall back to a brief toast there
+  if (getComputedStyle(box).display === 'none') toast(text, kind);
+}
+
+/* ---------- xp: the real Old School table, a tracker, and level-ups ---------- */
+
+const XP_TABLE = (() => {
+  const t = [0, 0];
+  let pts = 0;
+  for (let l = 1; l < 99; l++) {
+    pts += Math.floor(l + 300 * Math.pow(2, l / 7));
+    t.push(Math.floor(pts / 4)); // t[L] = xp needed to reach level L
+  }
+  return t;
+})();
+function levelFor(xp) { let L = 1; while (L < 99 && xp >= XP_TABLE[L + 1]) L++; return L; }
+
+safe('drawLamp', function drawLamp() {
+  const c = document.getElementById('xp-lamp');
+  if (!c) return;
+  const g = c.getContext('2d');
+  const MAP = ['.....y..', '....yy..', '..bbbb..', '.bBBBBbb', 'bBBBBBBb', '.bBBBBb.', '..bbbb..', '...bb...'];
+  const P = { y: '#ffe98a', b: '#8a6d1d', B: '#d9a821' };
+  MAP.forEach((row, ry) => { for (let rx = 0; rx < 8; rx++) { if (row[rx] === '.') continue; g.fillStyle = P[row[rx]]; g.fillRect(rx, ry, 1, 1); } });
+});
+
+let xpLevel = -1;
+function updateXpTracker(total, gained) {
+  const box = document.getElementById('xp-track');
+  if (!box) return;
+  const lvl = levelFor(total);
+  if (xpLevel < 0) xpLevel = gained ? levelFor(total - gained) : lvl;
+  const lvlEl = document.getElementById('xp-lvl');
+  const totEl = document.getElementById('xp-total');
+  if (lvlEl) lvlEl.textContent = String(lvl);
+  if (totEl) totEl.textContent = total.toLocaleString('en-GB');
+  box.hidden = false;
+  if (lvl > xpLevel && gained) {
+    const r = box.getBoundingClientRect();
+    fireworks(r.left + r.width / 2, r.top + r.height / 2);
+    gameMessage("Congratulations, you've just advanced a Clicking level. Your Clicking level is now " + lvl + '.', 'level');
+    const dlg = document.getElementById('lvl');
+    const txt = document.getElementById('lvl-text');
+    const chat = document.getElementById('chat');
+    if (dlg && txt) {
+      txt.textContent = 'Your Clicking level is now ' + lvl + '.';
+      dlg.hidden = false;
+      if (chat) chat.classList.add('lvl-on');
+      clearTimeout(dlg._t);
+      dlg._t = setTimeout(() => { dlg.hidden = true; if (chat) chat.classList.remove('lvl-on'); }, 6000);
+    }
+  }
+  xpLevel = lvl;
+}
+safe('initLevelDialog', function initLevelDialog() {
+  const close = document.getElementById('lvl-close');
+  const dlg = document.getElementById('lvl');
+  if (close && dlg) close.addEventListener('click', () => {
+    dlg.hidden = true;
+    clearTimeout(dlg._t);
+    const chat = document.getElementById('chat');
+    if (chat) chat.classList.remove('lvl-on');
+  });
+});
+
 
 /* ---------- OSRS hitsplat pixel art (shared by the duel and the favicon) ---------- */
 
@@ -67,7 +191,7 @@ function drawSplatPixels(g, x, y, cell, kind) {
 
 /* ---------- favicon: the hitsplat, drawn live ---------- */
 
-(function initFavicon() {
+safe('initFavicon', function initFavicon() {
   try {
     const c = document.createElement('canvas');
     c.width = 30; c.height = 30;
@@ -89,7 +213,7 @@ function drawSplatPixels(g, x, y, cell, kind) {
     }
     link.href = c.toDataURL('image/png');
   } catch (e) { /* static icon stays */ }
-})();
+});
 
 /* ---------- theme + palette ---------- */
 
@@ -108,8 +232,16 @@ function refreshPalette() {
 const THEME_KEY = 'dd-theme';
 function applyTheme(t) {
   root.setAttribute('data-theme', t);
-  const btn = document.getElementById('theme-toggle');
-  if (btn) btn.textContent = t === 'dark' ? '☀' : '☾';
+  const icon = document.getElementById('theme-icon');
+  if (icon) {
+    const g = icon.getContext('2d');
+    g.clearRect(0, 0, 8, 8);
+    const sun = ['...y..y.', '.y.yy.y.', '..yYYy..', 'yyYYYYyy', '..yYYy..', '.y.yy.y.', '...y..y.', '........'];
+    const moon = ['...mmm..', '..mm....', '.mm.....', '.mm.....', '.mm.....', '..mm....', '...mmmm.', '........'];
+    const map = t === 'dark' ? sun : moon;
+    const pal = { y: '#ffdf5e', Y: '#fff1a8', m: '#e9e0c8' };
+    map.forEach((row, ry) => { for (let rx = 0; rx < 8; rx++) { if (row[rx] === '.') continue; g.fillStyle = pal[row[rx]]; g.fillRect(rx, ry, 1, 1); } });
+  }
   refreshPalette();
   repaints.forEach(fn => fn());
 }
@@ -182,10 +314,10 @@ const CLOG_ENTRIES = [
 ];
 let clogState = {};
 try { clogState = JSON.parse(localStorage.getItem('dd-clog') || '{}'); } catch (e) { /* ignore */ }
+if (!clogState || typeof clogState !== 'object' || Array.isArray(clogState)) clogState = {};
 
 function clogRender(justId) {
   const grid = document.getElementById('clog-grid');
-  const list = document.getElementById('clog-list');
   const count = document.getElementById('clog-count');
   const total = document.getElementById('clog-total');
   const box = document.getElementById('clog-box');
@@ -204,16 +336,12 @@ function clogRender(justId) {
     li.appendChild(c);
     grid.appendChild(li);
   });
-  if (list) {
-    list.innerHTML = CLOG_ENTRIES.map(en => {
-      const done = !!clogState[en.id];
-      return '<li class="' + (done ? 'done' : '') + '"><b>' + en.name + '</b> — ' + en.hint + '</li>';
-    }).join('');
-  }
   const n = CLOG_ENTRIES.filter(en => clogState[en.id]).length;
   if (count) count.textContent = String(n);
   if (total) total.textContent = String(CLOG_ENTRIES.length);
   if (box) box.classList.toggle('complete', n === CLOG_ENTRIES.length);
+  const obtained = document.getElementById('clog-obtained');
+  if (obtained) obtained.className = n === 0 ? 'is-locked' : n === CLOG_ENTRIES.length ? 'is-done' : 'is-progress';
 }
 
 function clogComplete() {
@@ -248,7 +376,7 @@ checkMoon();
 
 /* ---------- hero: Marcus (range, Masori) vs Deacon (mage, Ancestral) ---------- */
 
-(function initDuel() {
+safe('initDuel', function initDuel() {
   const canvas = document.getElementById('hero-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -283,11 +411,13 @@ checkMoon();
   let projectiles = [], particles = [], splats = [], xpFloats = [], aoes = [];
   let shake = 0, nextAttack = 0, turn = 0, specReady = 0, respawnAt = 0;
 
+  let lastDpr = 0;
   function size() {
-    W = canvas.clientWidth;
-    H = canvas.clientHeight;
+    const w = canvas.clientWidth, h = canvas.clientHeight, d = Math.min(window.devicePixelRatio || 1, 2);
+    if (w === W && h === H && d === lastDpr) return;
+    W = w; H = h; lastDpr = d;
     if (!W || !H) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = d;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -936,18 +1066,18 @@ checkMoon();
   }
 
   if (document.fonts && document.fonts.load) {
-    Promise.all([
-      document.fonts.load('19px VT323'),
-      document.fonts.load('700 100px "IBM Plex Mono"'),
+    Promise.race([
+      Promise.all([document.fonts.load('19px VT323'), document.fonts.load('700 100px "IBM Plex Mono"')]),
+      new Promise(resolve => setTimeout(resolve, 1500)),
     ]).then(start, start);
   } else {
     start();
   }
-})();
+});
 
 /* ---------- stubhub lens: live price sparkline ---------- */
 
-(function initSpark() {
+safe('initSpark', function initSpark() {
   const canvas = document.getElementById('spark-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -964,11 +1094,13 @@ checkMoon();
 
   let W = 0, H = 0, running = false, revealT0 = 0, lastTick = 0, raf = 0;
 
+  let lastDpr = 0;
   function size() {
-    W = canvas.clientWidth;
-    H = canvas.clientHeight;
+    const w = canvas.clientWidth, h = canvas.clientHeight, d = Math.min(window.devicePixelRatio || 1, 2);
+    if (w === W && h === H && d === lastDpr) return;
+    W = w; H = h; lastDpr = d;
     if (!W || !H) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = d;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1063,11 +1195,11 @@ checkMoon();
     io.observe(canvas);
   }
   repaints.push(() => { size(); draw(1, 0); });
-})();
+});
 
 /* ---------- vestra: allocation donut ---------- */
 
-(function initDonut() {
+safe('initDonut', function initDonut() {
   const canvas = document.getElementById('donut-canvas');
   if (!canvas) return;
   const SEGS = [['index funds', 52], ['pension', 28], ['cash', 12], ['play money', 8]];
@@ -1145,11 +1277,11 @@ checkMoon();
     io.observe(canvas);
   }
   repaints.push(() => { size(); if (played) draw(1); });
-})();
+});
 
 /* ---------- dial: watch scan & valuation ---------- */
 
-(function initWatch() {
+safe('initWatch', function initWatch() {
   const canvas = document.getElementById('watch-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -1169,11 +1301,13 @@ checkMoon();
     return { name: w.name, dial: w.dial, hand: w.hand, mark: w.mark, low: r10(w.low), est: r10(w.est), high: r10(w.high) };
   }
 
+  let lastDpr = 0;
   function size() {
-    W = canvas.clientWidth;
-    H = canvas.clientHeight;
+    const w = canvas.clientWidth, h = canvas.clientHeight, d = Math.min(window.devicePixelRatio || 1, 2);
+    if (w === W && h === H && d === lastDpr) return;
+    W = w; H = h; lastDpr = d;
     if (!W || !H) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = d;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1331,11 +1465,11 @@ checkMoon();
     io.observe(canvas);
   }
   repaints.push(() => { size(); render(phaseT0 || 1); });
-})();
+});
 
 /* ---------- umbra: every tab is its own browser ---------- */
 
-(function initUmbra() {
+safe('initUmbra', function initUmbra() {
   const canvas = document.getElementById('umbra-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -1383,11 +1517,13 @@ checkMoon();
   let active = -1, phase = 'spawn', phaseT0 = 0, stepT0 = 0, step = 0;
   let from = null, to = null, morphT0 = 0;
 
+  let lastDpr = 0;
   function size() {
-    W = canvas.clientWidth;
-    H = canvas.clientHeight;
+    const w = canvas.clientWidth, h = canvas.clientHeight, d = Math.min(window.devicePixelRatio || 1, 2);
+    if (w === W && h === H && d === lastDpr) return;
+    W = w; H = h; lastDpr = d;
     if (!W || !H) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = d;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1692,11 +1828,11 @@ checkMoon();
     io.observe(canvas);
   }
   repaints.push(() => { size(); render(performance.now()); });
-})();
+});
 
 /* ---------- grand exchange: live ledger from the GitHub API ---------- */
 
-(function initTicker() {
+safe('initTicker', function initTicker() {
   const el = document.getElementById('ge-ticker');
   if (!el || !window.fetch) return;
   const ledger = el.querySelector('.ge-link');
@@ -1746,11 +1882,11 @@ checkMoon();
       io.observe(el);
     })
     .catch(() => { /* rate-limited or offline — show nothing rather than fake data */ });
-})();
+});
 
 /* ---------- quest log ---------- */
 
-(function initQuests() {
+safe('initQuests', function initQuests() {
   const section = document.getElementById('quests');
   const qp = document.getElementById('quest-points');
   if (!section || !qp) return;
@@ -1760,18 +1896,9 @@ checkMoon();
     total += v;
     if (q.classList.contains('quest-done')) done += v;
   });
-  const fill = document.getElementById('qp-fill');
-  const pct = total ? Math.round((done / total) * 100) + '%' : '0%';
-  if (REDUCED) { qp.textContent = total; if (fill) fill.style.width = pct; return; }
-  const io = new IntersectionObserver(es => {
-    if (es.some(e => e.isIntersecting)) {
-      countUp(qp, total, 900);
-      if (fill) requestAnimationFrame(() => { fill.style.width = pct; });
-      io.disconnect();
-    }
-  }, { threshold: 0.25 });
-  io.observe(section);
-})();
+  qp.textContent = String(done);
+  qp.className = done === 0 ? 'is-locked' : done === total ? 'is-done' : 'is-progress';
+});
 
 /* ---------- OSRS xp drops on click ---------- */
 
@@ -1800,7 +1927,7 @@ document.addEventListener('click', e => {
 
 /* ---------- npc contact dialogue ---------- */
 
-(function initDialogue() {
+safe('initDialogue', function initDialogue() {
   const box = document.getElementById('npc');
   if (!box) return;
 
@@ -1862,11 +1989,11 @@ document.addEventListener('click', e => {
     line.innerHTML = 'You can write to me at <a href="mailto:' + addr + '">' + addr + '</a>. Tell them the duel sent you.';
     clogUnlock('email-reveal');
   });
-})();
+});
 
 /* ---------- examine tooltips ---------- */
 
-(function initExamine() {
+safe('initExamine', function initExamine() {
   if (!window.matchMedia || !matchMedia('(hover: hover)').matches) return;
   const tip = document.createElement('div');
   tip.className = 'examine';
@@ -1892,43 +2019,23 @@ document.addEventListener('click', e => {
     tip.style.top = y + 'px';
   });
   document.addEventListener('click', () => { tip.classList.remove('on'); showing = false; });
-})();
-
-/* ---------- scroll reveal ---------- */
-
-(function initReveal() {
-  const els = Array.from(document.querySelectorAll('.reveal'));
-  if (REDUCED || !('IntersectionObserver' in window)) {
-    els.forEach(el => el.classList.add('in'));
-    return;
-  }
-  const io = new IntersectionObserver(entries => {
-    entries.forEach(en => {
-      if (en.isIntersecting) {
-        en.target.classList.add('in');
-        io.unobserve(en.target);
-      }
-    });
-  }, { threshold: 0.1, rootMargin: '0px 0px -6% 0px' });
-  els.forEach((el, i) => {
-    el.style.transitionDelay = ((i % 4) * 70) + 'ms';
-    io.observe(el);
-  });
-})();
+});
 
 /* ---------- login screen fires (the classic doom-fire propagation) ---------- */
 
-(function initFires() {
+safe('initFires', function initFires() {
   const cvs = ['fire-l', 'fire-r'].map(id => document.getElementById(id)).filter(Boolean);
   if (!cvs.length) return;
-  const CW = 24, CH = 34, TORCH = 8; // fire cells, plus a torch under them
+  const CW = 24, CH = 40, TORCH = 8; // fire cells, plus a torch under them (24x48, drawn at 3x / 2x)
   // 32 heat levels, torch-coloured: nothing → ember red → orange → yellow → near-white
   const STOPS = [[0, 0, 0, 0], [40, 6, 0, 0.6], [110, 18, 0, 0.9], [170, 40, 4, 1], [214, 74, 10, 1], [240, 122, 18, 1], [255, 176, 32, 1], [255, 224, 96, 1], [255, 246, 200, 1]];
-  const PALF = [];
+  // palette as packed little-endian RGBA so a frame is one putImageData, not ~600 fillRects
+  const PAL32 = new Uint32Array(32);
   for (let i = 0; i < 32; i++) {
     const f = i / 31 * (STOPS.length - 1), k = Math.min(STOPS.length - 2, Math.floor(f)), p = f - k;
     const a = STOPS[k], b = STOPS[k + 1];
-    PALF.push(`rgba(${Math.round(a[0] + (b[0] - a[0]) * p)},${Math.round(a[1] + (b[1] - a[1]) * p)},${Math.round(a[2] + (b[2] - a[2]) * p)},${(a[3] + (b[3] - a[3]) * p).toFixed(2)})`);
+    const r = Math.round(a[0] + (b[0] - a[0]) * p), gg = Math.round(a[1] + (b[1] - a[1]) * p), bb = Math.round(a[2] + (b[2] - a[2]) * p), al = Math.round((a[3] + (b[3] - a[3]) * p) * 255);
+    PAL32[i] = (al << 24 | bb << 16 | gg << 8 | r) >>> 0;
   }
   const fires = cvs.map(canvas => {
     canvas.width = CW;
@@ -1939,7 +2046,8 @@ document.addEventListener('click', e => {
       const d = Math.abs(x - (CW - 1) / 2) / (CW / 2);
       heat[(CH - 1) * CW + x] = d < 0.42 ? 31 : d < 0.7 ? 22 : 8;
     }
-    return { canvas, ctx: canvas.getContext('2d'), heat, seed: Math.random() * 1000 };
+    const img = new ImageData(CW, CH);
+    return { canvas, ctx: canvas.getContext('2d'), heat, img, px: new Uint32Array(img.data.buffer) };
   });
 
   function step(f) {
@@ -1951,7 +2059,7 @@ document.addEventListener('click', e => {
         let dx = x - r + 1;
         if (dx < 0) dx = 0; else if (dx >= CW) dx = CW - 1;
         const dst = (y - 1) * CW + dx;
-        const v = h[src] - (r & 1) - (Math.random() < 0.18 ? 1 : 0);
+        const v = h[src] - (r & 1) - (Math.random() < 0.55 ? 1 : 0) - (Math.random() < 0.15 ? 1 : 0);
         h[dst] = v < 0 ? 0 : v;
       }
     }
@@ -1959,15 +2067,10 @@ document.addEventListener('click', e => {
 
   function draw(f) {
     const g = f.ctx;
-    g.clearRect(0, 0, CW, CH + TORCH);
-    for (let y = 0; y < CH; y++) {
-      for (let x = 0; x < CW; x++) {
-        const v = f.heat[y * CW + x];
-        if (!v) continue;
-        g.fillStyle = PALF[v];
-        g.fillRect(x, y, 1, 1);
-      }
-    }
+    const h = f.heat, px = f.px;
+    for (let i = 0; i < CW * CH; i++) px[i] = PAL32[h[i]];
+    g.clearRect(0, CH, CW, TORCH);
+    g.putImageData(f.img, 0, 0);
     // the torch: iron sconce and a dark wooden handle
     const cx = CW / 2;
     g.fillStyle = '#5a5045'; g.fillRect(cx - 4, CH - 1, 8, 2);
@@ -1995,11 +2098,11 @@ document.addEventListener('click', e => {
     else if (!vis) running = false;
   }, { threshold: 0.1 });
   io.observe(cvs[0]);
-})();
+});
 
 /* ---------- click cross: yellow to walk, red to interact ---------- */
 
-(function initClickCross() {
+safe('initClickCross', function initClickCross() {
   if (REDUCED || !window.matchMedia || !matchMedia('(pointer: fine)').matches) return;
   document.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
@@ -2012,85 +2115,16 @@ document.addEventListener('click', e => {
     el.addEventListener('animationend', () => el.remove());
     setTimeout(() => el.remove(), 700);
   }, { passive: true });
-})();
+});
 
-/* ---------- fireworks: the level-up burst ---------- */
-
-const fxCanvas = document.getElementById('fx');
-const fxCtx = fxCanvas ? fxCanvas.getContext('2d') : null;
-let fxParts = [], fxRaf = 0;
-function fxSize() {
-  if (!fxCanvas) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  fxCanvas.width = innerWidth * dpr;
-  fxCanvas.height = innerHeight * dpr;
-  fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-function fxLoop() {
-  fxCtx.clearRect(0, 0, innerWidth, innerHeight);
-  fxParts = fxParts.filter(p => p.life > 0);
-  for (const p of fxParts) {
-    p.x += p.vx; p.y += p.vy; p.vy += 0.16; p.vx *= 0.985; p.life--;
-    fxCtx.globalAlpha = Math.min(1, p.life / 18);
-    fxCtx.fillStyle = p.c;
-    fxCtx.fillRect(Math.round(p.x), Math.round(p.y), p.s, p.s);
-  }
-  fxCtx.globalAlpha = 1;
-  if (fxParts.length) fxRaf = requestAnimationFrame(fxLoop); else { fxRaf = 0; fxCtx.clearRect(0, 0, innerWidth, innerHeight); }
-}
-function fireworks(x, y) {
-  if (!fxCtx || REDUCED) return;
-  if (!fxCanvas.width) fxSize();
-  const COLS = ['#ffff00', '#ff3c3c', '#3cff3c', '#5ab4ff', '#ffffff', '#ff9a3c'];
-  for (let b = 0; b < 3; b++) {
-    const bx = x + (b - 1) * 26, by = y - 10 - b * 14;
-    for (let i = 0; i < 26; i++) {
-      const a = Math.random() * Math.PI * 2, sp = 1.4 + Math.random() * 3.2;
-      fxParts.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.6, s: Math.random() < 0.3 ? 3 : 2, c: COLS[(Math.random() * COLS.length) | 0], life: 34 + Math.random() * 26 });
-    }
-  }
-  if (!fxRaf) fxRaf = requestAnimationFrame(fxLoop);
-}
-if (fxCanvas) { fxSize(); window.addEventListener('resize', fxSize); }
-
-/* ---------- chatbox: game messages ---------- */
-
-let chatReady = false;
-const chatQueue = [];
-function toast(text, kind) {
-  if (REDUCED) return;
-  const t = document.createElement('div');
-  t.className = 'toast ' + (kind || 'game');
-  t.textContent = text;
-  document.body.appendChild(t);
-  t.addEventListener('animationend', () => t.remove());
-  setTimeout(() => t.remove(), 4000);
-}
-function gameMessage(text, kind) {
-  if (!chatReady) { chatQueue.push([text, kind]); return; }
-  const log = document.getElementById('chat-log');
-  const box = document.getElementById('chat');
-  if (!log || !box) { toast(text, kind); return; }
-  const line = document.createElement('div');
-  line.className = 'chat-line ' + (kind || 'game') + (REDUCED ? '' : ' new');
-  line.textContent = text;
-  log.appendChild(line);
-  while (log.children.length > 60) log.removeChild(log.firstChild);
-  log.scrollTop = log.scrollHeight;
-  // the chatbox is hidden on small screens — fall back to a brief toast there
-  if (getComputedStyle(box).display === 'none') toast(text, kind);
-}
-
-(function initChat() {
+safe('initChat', function initChat() {
   const box = document.getElementById('chat');
   const toggle = document.getElementById('chat-toggle');
-  const hint = document.getElementById('chat-hint');
   chatReady = true;
   if (!box) { chatQueue.splice(0).forEach(([t, k]) => toast(t, k)); return; }
   const open = on => {
     box.classList.toggle('open', on);
     if (toggle) toggle.setAttribute('aria-expanded', String(on));
-    if (hint) hint.textContent = on ? 'click to collapse' : 'click to expand';
     const log = document.getElementById('chat-log');
     if (log) log.scrollTop = log.scrollHeight;
   };
@@ -2099,77 +2133,46 @@ function gameMessage(text, kind) {
   gameMessage('Welcome to marcus.gg.');
   chatQueue.splice(0).forEach(([t, k]) => gameMessage(t, k));
   setTimeout(() => gameMessage('Marcus is currently building Umbra — a multi-session browser.'), 1400);
-  setTimeout(() => gameMessage('Right-click things to examine them.'), 4200);
-})();
-
-/* ---------- xp: the real Old School table, a tracker, and level-ups ---------- */
-
-const XP_TABLE = (() => {
-  const t = [0, 0];
-  let pts = 0;
-  for (let l = 1; l < 99; l++) {
-    pts += Math.floor(l + 300 * Math.pow(2, l / 7));
-    t.push(Math.floor(pts / 4)); // t[L] = xp needed to reach level L
-  }
-  return t;
-})();
-function levelFor(xp) { let L = 1; while (L < 99 && xp >= XP_TABLE[L + 1]) L++; return L; }
-
-(function drawLamp() {
-  const c = document.getElementById('xp-lamp');
-  if (!c) return;
-  const g = c.getContext('2d');
-  const MAP = ['.....y..', '....yy..', '..bbbb..', '.bBBBBbb', 'bBBBBBBb', '.bBBBBb.', '..bbbb..', '...bb...'];
-  const P = { y: '#ffe98a', b: '#8a6d1d', B: '#d9a821' };
-  MAP.forEach((row, ry) => { for (let rx = 0; rx < 8; rx++) { if (row[rx] === '.') continue; g.fillStyle = P[row[rx]]; g.fillRect(rx, ry, 1, 1); } });
-})();
-
-let xpLevel = null;
-function updateXpTracker(total, gained) {
-  const box = document.getElementById('xp-track');
-  if (!box) return;
-  const lvl = levelFor(total);
-  const lvlEl = document.getElementById('xp-lvl');
-  const totEl = document.getElementById('xp-total');
-  if (lvlEl) lvlEl.textContent = String(lvl);
-  if (totEl) totEl.textContent = total.toLocaleString('en-GB');
-  box.hidden = false;
-  if (xpLevel !== null && lvl > xpLevel && gained) {
-    const r = box.getBoundingClientRect();
-    fireworks(r.left + r.width / 2, r.top + r.height / 2);
-    gameMessage("Congratulations, you've just advanced a Clicking level. Your Clicking level is now " + lvl + '.', 'level');
-    const dlg = document.getElementById('lvl');
-    const txt = document.getElementById('lvl-text');
-    if (dlg && txt) {
-      txt.textContent = 'Your Clicking level is now ' + lvl + '.';
-      dlg.hidden = false;
-      clearTimeout(dlg._t);
-      dlg._t = setTimeout(() => { dlg.hidden = true; }, 6000);
-    }
-  }
-  xpLevel = lvl;
-}
-(function initLevelDialog() {
-  const close = document.getElementById('lvl-close');
-  const dlg = document.getElementById('lvl');
-  if (close && dlg) close.addEventListener('click', () => { dlg.hidden = true; });
-})();
+  if (window.matchMedia && matchMedia('(pointer: fine)').matches) setTimeout(() => gameMessage('Right-click things to examine them.'), 4200);
+});
 
 /* ---------- right-click: choose option ---------- */
 
-(function initContextMenu() {
+safe('initContextMenu', function initContextMenu() {
   if (!window.matchMedia || !matchMedia('(pointer: fine)').matches) return;
   const menu = document.createElement('div');
   menu.className = 'ctx';
   menu.hidden = true;
   menu.setAttribute('role', 'menu');
   document.body.appendChild(menu);
-  const close = () => { menu.hidden = true; };
+  let opener = null;
+  const close = (restore) => {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    if (restore && opener && opener.focus) opener.focus({ preventScroll: true });
+  };
+  menu.addEventListener('keydown', e => {
+    const items = Array.from(menu.querySelectorAll('button'));
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const n = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+      items[n].focus();
+    } else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      items[e.key === 'Home' ? 0 : items.length - 1].focus();
+    } else if (e.key === 'Tab') {
+      close(true);
+    }
+  });
 
   document.addEventListener('contextmenu', e => {
     const el = e.target.closest('[data-ex]');
-    if (!el || e.target.closest('a, input, textarea, .npc-options')) { close(); return; }
+    if (!el || e.target.closest('input, textarea, .npc-options')) { close(); return; }
+    const link = e.target.closest('a');
+    if (link && link !== el) { close(); return; } // a plain link inside a panel keeps the browser menu
     e.preventDefault();
+    opener = el;
     const name = el.dataset.name || (el.querySelector('h3') || {}).textContent || 'this';
     const isNpc = /^(Marcus|Deacon|the duel)$/.test(name);
     const items = [];
@@ -2212,39 +2215,53 @@ function updateXpTracker(total, gained) {
     y = Math.max(4, Math.min(innerHeight - mh - 4, y));
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
+    const first = menu.querySelector('button');
+    if (first) first.focus({ preventScroll: true });
   });
   document.addEventListener('click', e => { if (!menu.contains(e.target)) close(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(true); });
   window.addEventListener('scroll', close, { passive: true });
   menu.addEventListener('mouseleave', close);
-})();
+});
 
 /* ---------- quest journal: click a quest, the parchment unrolls ---------- */
 
-(function initJournals() {
+function closeJournals() {
+  document.querySelectorAll('.quest.open').forEach(q => {
+    q.classList.remove('open');
+    const b = q.querySelector('.quest-btn');
+    if (b) b.setAttribute('aria-expanded', 'false');
+    const j = q.querySelector('.journal');
+    if (j) j.inert = true;
+  });
+}
+safe('initJournals', function initJournals() {
   document.querySelectorAll('.quest-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const li = btn.closest('.quest');
       const open = !li.classList.contains('open');
-      document.querySelectorAll('.quest.open').forEach(q => { q.classList.remove('open'); q.querySelector('.quest-btn').setAttribute('aria-expanded', 'false'); });
-      li.classList.toggle('open', open);
-      btn.setAttribute('aria-expanded', String(open));
-      if (open) gameMessage('You open the quest journal: ' + btn.querySelector('.qname').textContent + '.');
+      closeJournals();
+      if (!open) return;
+      li.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
+      const j = li.querySelector('.journal');
+      if (j) j.inert = false;
+      gameMessage('You open the quest journal: ' + btn.textContent.trim() + '.');
     });
   });
-})();
+});
 
 /* ---------- logout: back to the login screen ---------- */
 
-(function initLogout() {
+safe('initLogout', function initLogout() {
   const btn = document.getElementById('logout');
   if (!btn) return;
   btn.addEventListener('click', () => {
     gameMessage('You have been logged out. See you soon, adventurer.');
     window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' });
-    document.querySelectorAll('.quest.open').forEach(q => q.classList.remove('open'));
+    closeJournals();
   });
-})();
+});
 
 /* ---------- global repaint on resize ---------- */
 
