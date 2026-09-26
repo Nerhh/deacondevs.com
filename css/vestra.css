@@ -137,6 +137,5 @@ ul.vs-data { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 1
   .odo-w > span { will-change: auto; }
 }
 
-/* on narrow phones the rail crowds the figures; the statements read fine without it */
-/* below 901px the statements run to within a few pixels of the edge: no room for the rail beside them */
+/* below 901px the statements run to within a pixel of the edge: no room for the rail beside them; they read fine without it */
 @media (max-width: 900px) { .js .vs-rail { display: none; } }
