@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Umbra — Marcus Deacon</title>
+  <meta name="description" content="Umbra is a desktop browser where every tab is its own sealed browser, with its own cookies, its own exit IP and its own consistent device.">
+  <meta property="og:title" content="Umbra — Marcus Deacon">
+  <meta property="og:description" content="A desktop browser where every tab is its own sealed browser. Many accounts side by side on one machine, nothing linking them.">
+  <meta property="og:url" content="https://marcus.gg/umbra/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://marcus.gg/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
+  <meta name="theme-color" content="#fbfbf9">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23fbfbf9'/%3E%3Ccircle cx='8' cy='8' r='6' fill='%23151515'/%3E%3C/svg%3E">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-500.woff2">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/umbra.css">
+</head>
+<body class="pg-umbra">
+
+  <header class="menubar">
+    <a class="mb-home" href="/"><canvas id="mb-orb" width="16" height="16" aria-hidden="true"></canvas>marcus.gg</a>
+    <span class="mb-crumb">/<b>umbra</b></span>
+    <div class="mb-right" aria-hidden="true">
+      <span class="mb-dim" id="coords"></span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <main>
+    <header class="pg-head">
+      <p class="pg-kicker" data-dz data-at="120">01 / 04 — Desktop browser · In beta</p>
+      <h1 data-type data-at="260" data-cps="60">Umbra</h1>
+      <p class="pg-lede" data-dz data-at="1100">A desktop browser where every tab is its own sealed browser — its own cookies, its own exit IP, its own consistent device. Many accounts side by side on one machine, nothing linking them.</p>
+    </header>
+
+    <section class="um-story" id="um-story" aria-label="How Umbra works, in five steps">
+      <div class="um-stage">
+        <div class="um-screen">
+          <div class="um-view">
+            <canvas id="um-canvas" role="img" aria-label="A browser window divides into five sealed sessions. Each one runs out to its own exit address and region, one profile's readings line up, and a scorecard marks all five isolated."></canvas>
+          </div>
+          <p class="um-status" aria-hidden="true"><span id="um-live">1 window · 1 session</span><span id="um-step">01 / 05</span></p>
+        </div>
+      </div>
+
+      <div class="um-chapters">
+        <article class="um-ch">
+          <div class="um-txt">
+            <p class="um-k"><b>01</b> / 05</p>
+            <h2 data-type>One machine.</h2>
+            <p class="um-t" data-dz>It starts as any browser does: one window on one machine, and one session holding its cookies, storage and cache.</p>
+          </div>
+          <canvas class="um-still" role="img" aria-label="A single browser window with one session and a few cookies inside it."></canvas>
+        </article>
+
+        <article class="um-ch">
+          <div class="um-txt">
+            <p class="um-k"><b>02</b> / 05</p>
+            <h2 data-type>Sealed sessions.</h2>
+            <p class="um-t" data-dz>Every tab becomes its own sealed browser: a separate session partition per profile, or a throwaway one that leaves nothing on disk. Nothing set in one can reach another.</p>
+            <p class="um-hint" data-dz>Click or tap a partition to drop a cookie in. It stays on its own side of the wall.</p>
+          </div>
+          <canvas class="um-still" role="img" aria-label="The window divided into five partitions by walls, each holding its own cookies."></canvas>
+        </article>
+
+        <article class="um-ch">
+          <div class="um-txt">
+            <p class="um-k"><b>03</b> / 05</p>
+            <h2 data-type>Its own place.</h2>
+            <p class="um-t" data-dz>Each profile has its own proxy and exit IP, tested in one click, spread evenly across the pool and rotated on your schedule. Time zone and locale follow the exit region.</p>
+          </div>
+          <canvas class="um-still" role="img" aria-label="Each partition runs a dotted line down to its own point on the horizon: GB, US, DE, AU and CA, each with its own address."></canvas>
+        </article>
+
+        <article class="um-ch">
+          <div class="um-txt">
+            <p class="um-k"><b>04</b> / 05</p>
+            <h2 data-type>Every signal agrees.</h2>
+            <p class="um-t" data-dz>Each profile presents one consistent, realistic browser environment, set as a whole from real device templates. Its screen, clock, locale, network location and TLS/HTTP-2 signature all agree.</p>
+          </div>
+          <canvas class="um-still" role="img" aria-label="The Umbra mark drawn large, with five readings lined up on its rings: time zone, locale, screen, graphics and TLS, all coherent with the region."></canvas>
+        </article>
+
+        <article class="um-ch">
+          <div class="um-txt">
+            <p class="um-k"><b>05</b> / 05</p>
+            <h2 data-type>Verify, don't trust.</h2>
+            <p class="um-t" data-dz>A self-consistency scorecard gives each profile one verdict: isolated, warnings or exposed. A separation report names any link left between profiles, with a one-click fix.</p>
+          </div>
+          <canvas class="um-still" role="img" aria-label="A scorecard with five profiles, each marked isolated, and five of five separate."></canvas>
+        </article>
+      </div>
+    </section>
+
+    <section class="um-prose pg-prose" aria-label="Who it is for, and the rule">
+      <h2 data-type>Who it is for</h2>
+      <p data-dz>People who legitimately run many identities: agencies keeping client logins apart, QA across regions and locales, ad and landing-page verification, affiliate campaign testing, and market and privacy research. It is built for isolation and privacy, not concealment.</p>
+      <h2 data-type>The rule</h2>
+      <p data-dz><strong>Umbra never auto-buys.</strong> Managed automation stops at filling forms and navigating; the committing action is always a person's, and the tests hold it to that.</p>
+    </section>
+
+    <section class="pg-facts" aria-labelledby="facts-h">
+      <h2 id="facts-h" data-type>Facts</h2>
+      <dl data-dz>
+        <dt>Platform</dt><dd>Desktop app in Electron, React and TypeScript</dd>
+        <dt>Network engine</dt><dd>Go, loopback only; re-originates each connection so its TLS and HTTP/2 match the profile</dd>
+        <dt>Accounts and sync</dt><dd>Next.js account platform; data sealed with AES-256-GCM before upload, key derived from a passphrase with scrypt</dd>
+        <dt>Team</dt><dd>Live tab snapshots up, decisions back; owner, manager, operator and viewer roles enforced on the server</dd>
+        <dt>Tests</dt><dd>About 790 unit test files; the Go engine is 37 source files, 26 of them tests</dd>
+        <dt>Version</dt><dd>1.2.0 beta</dd>
+        <dt>Status</dt><dd>In beta</dd>
+      </dl>
+    </section>
+  </main>
+
+  <nav class="pg-next" aria-label="Next project">
+    <a href="/vestra/"><span class="k">Next project</span><span class="t">Vestra</span><span class="go" aria-hidden="true">→</span></a>
+  </nav>
+
+  <footer>
+    <span>© 2026 Marcus Deacon</span>
+    <span>Written by hand. No frameworks, no build step.</span>
+  </footer>
+
+  <script src="/js/core.js"></script>
+  <script src="/js/umbra.js"></script>
+</body>
+</html>
