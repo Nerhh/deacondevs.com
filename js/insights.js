@@ -255,9 +255,12 @@ function drawLoad(ctx, W, H, t) {
   if (complete) status = `All ${TOTAL} listings loaded`;
   else if (running) status = t >= LOAD.waves[0].end ? `Loading… ${loaded} / ${TOTAL}` : 'Loading… 0';
   else status = 'Detecting sections & zones…';
-  ctx.font = font(fs, complete ? 500 : 400);
-  const used = text(ctx, status, bx, sy, { size: fs, weight: complete ? 500 : 400, color: complete ? INK : INK2, w: bwid - (complete ? 16 : 0) });
-  if (complete) tick(ctx, bx + measure(ctx, status, used, 500) + 6, sy);
+  // under the bar when there is room for the longest message, otherwise from the left edge
+  const longest = measure(ctx, 'Detecting sections & zones…', fs, 400);
+  const sx = longest <= bwid ? bx : pad, sw = gridR - sx;
+  const wt = complete ? 500 : 400;
+  const used = text(ctx, status, sx, sy, { size: fs, weight: wt, color: complete ? INK : INK2, w: sw - (complete ? 16 : 0) });
+  if (complete) tick(ctx, sx + Math.min(sw - 12, measure(ctx, status, used, wt) + 6), sy);
 }
 
 /* ---- 2 and 3 share one geometry, so the lanes line up as the panels pass ---- */
@@ -738,6 +741,11 @@ safe('insights-track', function track() {
     return 3;
   }
 
+  // the window counts as seen while it covers the middle of the screen (no rect reads per frame)
+  let seen = false;
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => { seen = es[es.length - 1].isIntersecting; }, { rootMargin: '-45% 0px -45% 0px' }).observe(frame);
+  else seen = true;
+
   MD.loop(sec, (now, dt) => {
     if (!on) return;
     const target = at(MD.progress(sec));
@@ -749,12 +757,10 @@ safe('insights-track', function track() {
     if (idx !== lastStep) { lastStep = idx; if (stepEl) stepEl.textContent = String(idx + 1); if (nameEl) nameEl.textContent = names[idx] || ''; }
     const cells = Math.round(((s + 1) / 4) * 24);
     if (cells !== lastFill && fillEl) { lastFill = cells; fillEl.style.width = (cells / 24) * 100 + '%'; }
-    const r = frame.getBoundingClientRect();
-    const seen = r.top < innerHeight * 0.55 && r.bottom > innerHeight * 0.45;
     panels.forEach(p => {
       const d = Math.abs(s - p.idx);
       if (seen && d < 0.2) p.play();
-      else if (d > 0.999 || r.bottom < 0 || r.top > innerHeight) p.reset();
+      else if (d > 0.999) p.reset();
     });
   });
 
@@ -772,7 +778,7 @@ safe('insights-track', function track() {
 
   // rewind everything once the whole section has left the screen
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(es => { if (on && !es[0].isIntersecting) panels.forEach(p => p.reset()); }).observe(sec);
+    new IntersectionObserver(es => { if (on && !es[es.length - 1].isIntersecting) panels.forEach(p => p.reset()); }).observe(sec);
   }
 });
 
