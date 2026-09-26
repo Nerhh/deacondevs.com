@@ -275,7 +275,8 @@ main > .sec:first-child { border-top: 0; }
   .menubar a { padding: 0 7px; }
   .mb-right { gap: 14px; padding: 0 7px; }
   .row { grid-template-columns: 84px minmax(0, 1fr) auto; gap: 12px; }
-  .pg-facts dl { grid-template-columns: minmax(96px, 0.45fr) minmax(0, 1fr); }
+  .pg-facts dl { grid-template-columns: max-content minmax(0, 1fr); }
+  .pg-facts dt { padding-right: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
