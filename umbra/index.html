@@ -62,7 +62,16 @@
             <p class="um-k"><b>02</b> / 05</p>
             <h2 data-type>Sealed sessions.</h2>
             <p class="um-t" data-dz>Every tab becomes its own sealed browser: a separate session partition per profile, or a throwaway one that leaves nothing on disk. Nothing set in one can reach another.</p>
-            <p class="um-hint" data-dz>Click or tap a partition to drop a cookie in. It stays on its own side of the wall.</p>
+            <div class="um-act" data-dz>
+              <p>Click a partition to drop a cookie in, or use a key. It stays on its own side of the wall.</p>
+              <div class="um-keys" role="group" aria-label="Drop a cookie into a partition">
+                <button type="button" class="um-key" data-drop="0" aria-label="Drop a cookie into partition 1">p1</button>
+                <button type="button" class="um-key" data-drop="1" aria-label="Drop a cookie into partition 2">p2</button>
+                <button type="button" class="um-key" data-drop="2" aria-label="Drop a cookie into partition 3">p3</button>
+                <button type="button" class="um-key" data-drop="3" aria-label="Drop a cookie into partition 4">p4</button>
+                <button type="button" class="um-key" data-drop="4" aria-label="Drop a cookie into partition 5">p5</button>
+              </div>
+            </div>
           </div>
           <canvas class="um-still" role="img" aria-label="The window divided into five partitions by walls, each holding its own cookies."></canvas>
         </article>
@@ -81,6 +90,10 @@
             <p class="um-k"><b>04</b> / 05</p>
             <h2 data-type>Every signal agrees.</h2>
             <p class="um-t" data-dz>Each profile presents one consistent, realistic browser environment, set as a whole from real device templates. Its screen, clock, locale, network location and TLS/HTTP-2 signature all agree.</p>
+            <div class="um-act" data-dz>
+              <p>Scatter the readings and let them settle again.</p>
+              <div class="um-keys"><button type="button" class="um-key" data-act="align">Scatter</button></div>
+            </div>
           </div>
           <canvas class="um-still" role="img" aria-label="The Umbra mark drawn large, with five readings lined up on its rings: time zone, locale, screen, graphics and TLS, all coherent with the region."></canvas>
         </article>
@@ -90,6 +103,10 @@
             <p class="um-k"><b>05</b> / 05</p>
             <h2 data-type>Verify, don't trust.</h2>
             <p class="um-t" data-dz>A self-consistency scorecard gives each profile one verdict: isolated, warnings or exposed. A separation report names any link left between profiles, with a one-click fix.</p>
+            <div class="um-act" data-dz>
+              <p>Run the five checks again.</p>
+              <div class="um-keys"><button type="button" class="um-key" data-act="score">Re-run</button></div>
+            </div>
           </div>
           <canvas class="um-still" role="img" aria-label="A scorecard with five profiles, each marked isolated, and five of five separate."></canvas>
         </article>

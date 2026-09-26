@@ -572,6 +572,18 @@ MD.safe('vestra-deposit', function deposit() {
         fitText(ctx, '6 Apr · £15,000 paid in', xd - 8, top + 4, xd - 12, small ? 10.5 : 11, 400);
         ctx.textAlign = 'left';
       }
+      // once the step is being taken out, the balance stays behind as a dotted ghost
+      if (sv < 0.99 && xEnd >= xd) {
+        ctx.fillStyle = INK3;
+        const ya = Math.round(yv(twAt(KD))), yb = Math.round(yv(twAt(KD) + DEP));
+        for (let y = yb; y < ya; y += 3) ctx.fillRect(xd, y, 1, 1);
+        for (let x = xd; x <= xEnd; x += 3) { const f = kAt(x); ctx.fillRect(x, Math.round(yv(twAt(f) + dep(f))), 1, 1); }
+        if (xEnd >= W - 1 && sv < 0.5) {
+          ctx.textAlign = 'right';
+          fitText(ctx, 'balance', W, Math.round(yv(twAt(K) + dep(K))) - 10, W * 0.3, small ? 10.5 : 11, 400);
+          ctx.textAlign = 'left';
+        }
+      }
       ctx.fillStyle = INK;
       trace(ctx, 0, xEnd, x => { const f = kAt(x); return yv(twAt(f) + dep(f) * sv); }, 2);
 
@@ -600,10 +612,12 @@ MD.safe('vestra-deposit', function deposit() {
 /* ---------- 05 · Five hundred futures: seeded paths pile up into a dithered cone ---------- */
 
 MD.safe('vestra-futures', function futures() {
-  const P = 500, YEARS = 14, M = YEARS * 12, START = NET, FLOW = 600, TARGET = 400000, YMAX = 1000000;
+  // the invested slice of the tiles above (equity, crypto, commodity), run forward fourteen years
+  const P = 500, YEARS = 14, M = YEARS * 12, FLOW = 700, TARGET = 250000, YMAX = 600000;
+  const START = CLASSES[2][1] + CLASSES[3][1] + CLASSES[4][1]; // £78,620
   const vals = new Float32Array(P * (M + 1)), finals = new Float64Array(P);
   (function simulate() {
-    const muM = Math.pow(1.06, 1 / 12) - 1, sM = 0.14 / Math.sqrt(12), normal = gauss(mulberry32(20260702));
+    const muM = Math.pow(1.055, 1 / 12) - 1, sM = 0.13 / Math.sqrt(12), normal = gauss(mulberry32(20260702));
     for (let p = 0; p < P; p++) {
       let v = START;
       vals[p * (M + 1)] = v;
@@ -617,24 +631,13 @@ MD.safe('vestra-futures', function futures() {
   const oddsEl = document.getElementById('vs-odds');
   if (oddsEl) oddsEl.textContent = odds + '%';
 
-  // the density buffer: one count per CSS pixel, reduced to one bit through the Bayer matrix
-  const REF = 14, LUT = new Uint8Array(P + 1);
-  for (let c = 0; c <= P; c++) LUT[c] = c ? Math.max(1, Math.round(64 * Math.min(1, Math.pow(c / REF, 0.6)))) : 0;
+  // density: every path adds one count per pixel it crosses; a small box blur turns the hairs into tone,
+  // and the Bayer matrix turns the tone back into one bit
   const off = document.createElement('canvas'), og = off.getContext('2d');
-  let pw = 0, ph = 0, counts = null, img = null, buf = null, drawn = 0;
+  let pw = 0, ph = 0, counts = null, bx = null, dens = null, img = null, buf = null, drawn = 0, ref = 1;
+  const LUT = new Uint8Array(1024); // density / ref, in 1/256ths, to dither level 0..64
+  for (let i = 0; i < 1024; i++) LUT[i] = i ? Math.max(2, Math.round(64 * Math.min(0.84, 0.56 * Math.pow(i / 256, 0.8)))) : 0;
 
-  function plot(W, H) {
-    const right = W < 520 ? 44 : 60;
-    return { x: 0, y: 30, w: Math.max(40, W - right), h: Math.max(40, H - 30 - 26) };
-  }
-  function ensure(w, h) {
-    if (w === pw && h === ph) return;
-    pw = w; ph = h; off.width = w; off.height = h;
-    counts = new Uint16Array(w * h);
-    img = og.createImageData(w, h);
-    buf = new Uint32Array(img.data.buffer);
-    drawn = 0;
-  }
   const py = v => Math.round(ph - 1 - (v / YMAX) * (ph - 1));
   function pathY(p, x) {
     const f = (x / (pw - 1)) * M, i = Math.min(M - 1, Math.floor(f)), u = f - i, o = p * (M + 1);
@@ -645,70 +648,104 @@ MD.safe('vestra-futures', function futures() {
     for (let x = 0; x < pw; x++) {
       const y = py(pathY(p, x));
       const a = prev === null ? y : Math.min(prev, y), b = prev === null ? y : Math.max(prev, y);
-      for (let yy = Math.max(0, a); yy <= Math.min(ph - 1, b); yy++) { const i = yy * pw + x; if (counts[i] < 65535) counts[i]++; }
+      for (let yy = Math.max(0, a), e = Math.min(ph - 1, b); yy <= e; yy++) counts[yy * pw + x]++;
       prev = y;
     }
   }
+  function blur() {
+    for (let y = 0, i = 0; y < ph; y++) {
+      for (let x = 0; x < pw; x++, i++) bx[i] = (counts[x > 0 ? i - 1 : i] + counts[i] + counts[x < pw - 1 ? i + 1 : i]) / 3;
+    }
+    for (let x = 0; x < pw; x++) {
+      for (let y = 0; y < ph; y++) {
+        let s = 0;
+        for (let d = -2; d <= 2; d++) s += bx[clamp(y + d, 0, ph - 1) * pw + x];
+        dens[y * pw + x] = s / 5;
+      }
+    }
+  }
+  function ensure(w, h) {
+    if (w === pw && h === ph) return;
+    pw = w; ph = h; off.width = w; off.height = h;
+    counts = new Uint16Array(w * h); bx = new Float32Array(w * h); dens = new Float32Array(w * h);
+    img = og.createImageData(w, h);
+    buf = new Uint32Array(img.data.buffer);
+    // the tone scale comes from the finished cone, so it darkens as the paths arrive
+    for (let p = 0; p < P; p++) rasterise(p);
+    blur();
+    const col = [];
+    for (let y = 0, x = w >> 1; y < h; y++) if (dens[y * w + x] > 0) col.push(dens[y * w + x]);
+    col.sort((a, b) => a - b);
+    ref = col.length ? col[Math.floor(col.length * 0.9)] : 1;
+    counts.fill(0);
+    drawn = 0;
+  }
   function develop() {
+    blur();
+    const k = 256 / ref;
     for (let y = 0, i = 0; y < ph; y++) {
       const row = (y & 7) << 3;
-      for (let x = 0; x < pw; x++, i++) buf[i] = B8[row + (x & 7)] < LUT[Math.min(P, counts[i])] ? INK32 : 0;
+      for (let x = 0; x < pw; x++, i++) buf[i] = B8[row + (x & 7)] < LUT[Math.min(1023, (dens[i] * k) | 0)] ? INK32 : 0;
     }
     og.putImageData(img, 0, 0);
   }
 
-  const T0 = 200, ACC = 2400, TRACE = 1200, HOLD = 1300;
+  const T0 = 200, ACC = 2400, TRACE = 1400, HOLD = 1400;
   const sample = [37, 211, 402, 88, 316, 159, 471, 5, 264, 129];
+  const chip = gbp(TARGET) + ' by 2040';
   scene('vs-c5', {
     dur: T0 + ACC + 60, tick: 100,
     draw(ctx, W, H, ms) {
-      const r = plot(W, H);
-      ensure(r.w, r.h);
+      const small = W < 520, fs = small ? 11 : 12;
+      const ox = 0, oy = 30;
+      ensure(Math.max(40, W - (small ? 46 : 62)), Math.max(40, H - oy - 26));
       const n = Math.round(P * steps(phase(ms, T0, ACC), 50));
       if (n < drawn) { counts.fill(0); drawn = 0; }
-      if (n > drawn || !drawn) {
+      if (n > drawn) {
         for (let p = drawn; p < n; p++) rasterise(p);
         drawn = n;
         develop();
       }
-      if (n) ctx.drawImage(off, r.x, r.y, pw, ph);
-
-      const small = W < 520, fs = small ? 11 : 12;
-      const ox = r.x, oy = r.y, yT = oy + py(TARGET);
+      if (n) ctx.drawImage(off, ox, oy, pw, ph);
+      const yT = oy + py(TARGET);
 
       // while they pile up, the newest few are drawn crisp, like a pen
       ctx.fillStyle = INK;
       if (n > 0 && n < P) for (let p = Math.max(0, n - 3); p < n; p++) trace(ctx, 0, pw - 1, x => oy + Math.max(0, py(pathY(p, x))), 1);
-      // afterwards one future at a time is walked out, slowly, while you watch
+      // afterwards one future at a time is walked out, slowly
       if (n >= P && !REDUCED) {
         const idle = ms - (T0 + ACC), cyc = TRACE + HOLD, k = Math.floor(idle / cyc);
         const path = sample[k % sample.length], q = steps(clamp((idle - k * cyc) / TRACE, 0, 1), 14);
         const xe = Math.round(q * (pw - 1));
-        if (xe > 0) trace(ctx, 0, xe, x => oy + Math.max(0, py(pathY(path, x))), 1);
+        if (xe > 0) {
+          ctx.fillStyle = PAPER;
+          trace(ctx, 0, xe, x => oy + Math.max(0, py(pathY(path, x))) - 1, 3);
+          ctx.fillStyle = INK;
+          trace(ctx, 0, xe, x => oy + Math.max(0, py(pathY(path, x))), 1);
+        }
       }
 
-      // the target, and how many futures clear it by 2040
+      // the target, and the share of futures that clear it by 2040
       ctx.fillStyle = INK;
       for (let x = 0; x < pw; x += 6) ctx.fillRect(ox + x, yT, Math.min(3, pw - x), 1);
       ctx.font = font(fs, 500);
-      const chip = '£400,000 by 2040', cw = Math.min(pw - 16, ctx.measureText(chip).width + 12);
-      ctx.fillStyle = PAPER; ctx.fillRect(ox + 8, yT - fs - 9, cw, fs + 6);
-      frame(ctx, ox + 8, yT - fs - 9, cw, fs + 6, INK);
+      const cw = Math.min(pw - 16, Math.ceil(ctx.measureText(chip).width) + 12), ch = fs + 8;
+      ctx.fillStyle = PAPER; ctx.fillRect(ox + 8, yT - ch - 4, cw, ch);
+      frame(ctx, ox + 8, yT - ch - 4, cw, ch, INK);
       ctx.fillStyle = INK;
-      fitText(ctx, chip, ox + 14, yT - 7, cw - 12, fs, 500);
+      fitText(ctx, chip, ox + 14, yT - 9, cw - 12, fs, 500);
 
-      const bx = ox + pw + 8, up = n ? Math.round((above[n] / n) * 100) : 0;
+      const rx = ox + pw + 8, up = n ? Math.round((above[n] / n) * 100) : 0, lw = W - rx - 8;
       ctx.fillStyle = INK;
-      ctx.fillRect(bx, oy, 1, yT - oy); ctx.fillRect(bx, oy, 4, 1); ctx.fillRect(bx, yT - 1, 4, 1);
+      ctx.fillRect(rx, oy, 1, yT - oy); ctx.fillRect(rx, oy, 4, 1); ctx.fillRect(rx, yT - 1, 4, 1);
       ctx.fillStyle = RULE2;
-      ctx.fillRect(bx, yT + 2, 1, oy + ph - yT - 2); ctx.fillRect(bx, oy + ph - 1, 4, 1);
-      const lw = W - bx - 8;
+      ctx.fillRect(rx, yT + 2, 1, oy + ph - yT - 2); ctx.fillRect(rx, oy + ph - 1, 4, 1);
       ctx.fillStyle = INK;
-      fitText(ctx, n ? up + '%' : '—', bx + 7, Math.round((oy + yT) / 2) + 5, lw, small ? 13 : 16, 500);
+      fitText(ctx, n ? up + '%' : '—', rx + 7, Math.round((oy + yT) / 2) + 5, lw, small ? 13 : 16, 500);
       ctx.fillStyle = INK3;
-      fitText(ctx, n ? 100 - up + '%' : '—', bx + 7, Math.round((yT + oy + ph) / 2) + 5, lw, fs, 400);
+      fitText(ctx, n ? 100 - up + '%' : '—', rx + 7, Math.round((yT + oy + ph) / 2) + 5, lw, fs, 400);
 
-      // axes and the count
+      // axes, the count and the assumptions
       ctx.fillStyle = RULE2;
       ctx.fillRect(ox, oy + ph, pw, 1);
       ctx.fillStyle = INK3;
@@ -717,9 +754,9 @@ MD.safe('vestra-futures', function futures() {
       ctx.textAlign = 'center'; fitText(ctx, '2033', ox + pw / 2, yb, 60, 11, 400);
       ctx.textAlign = 'right'; fitText(ctx, '2040', ox + pw, yb, 60, 11, 400);
       ctx.textAlign = 'left';
-      pair(ctx, 'Paths', String(n).padStart(3, '0') + ' / 500', 0, 16, W * 0.42, fs, 'left');
+      pair(ctx, 'Paths', String(n).padStart(3, '0') + ' / 500', 0, 16, W * 0.4, fs, 'left');
       ctx.textAlign = 'right'; ctx.fillStyle = INK3;
-      fitText(ctx, small ? '£600/mo · 6% ± 14%' : '£600 a month · 6% return · 14% volatility', W, 16, W * 0.54, fs, 400);
+      fitText(ctx, small ? '£700/mo · 5.5% ± 13%' : gbp(START) + ' + £700 a month · 5.5% ± 13%', W, 16, W * 0.56, fs, 400);
       ctx.textAlign = 'left';
     },
   });
@@ -798,24 +835,18 @@ MD.safe('vestra-rail', function rail() {
   const sts = Array.from(document.querySelectorAll('.vs-st'));
   if (!nav || !sts.length) return;
   const links = Array.from(nav.querySelectorAll('a'));
-  let cur = -2, queued = false;
-  const update = () => {
-    queued = false;
-    const mid = window.innerHeight / 2;
-    let c = -1;
-    for (let i = 0; i < sts.length; i++) {
-      const r = sts[i].getBoundingClientRect();
-      if (r.top <= mid && r.bottom > mid) { c = i; break; }
-    }
-    if (c === cur) return;
-    cur = c;
+  const set = c => {
     nav.classList.toggle('on', c >= 0);
     links.forEach((a, i) => { if (i === c) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
   };
-  const req = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
-  window.addEventListener('scroll', req, { passive: true });
-  window.addEventListener('resize', req);
-  update();
+  if (!('IntersectionObserver' in window)) { set(0); return; }
+  // a thin band across the middle of the viewport: whichever statement crosses it is the current one
+  const on = new Array(sts.length).fill(false);
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { on[sts.indexOf(e.target)] = e.isIntersecting; });
+    set(on.indexOf(true));
+  }, { rootMargin: '-49.5% 0px -49.5% 0px', threshold: 0 });
+  sts.forEach(s => io.observe(s));
 });
 
 })();

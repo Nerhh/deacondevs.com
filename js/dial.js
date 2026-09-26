@@ -168,7 +168,7 @@ MD.safe('dial', function dial() {
       MD.fitText(g, str.slice(0, n), x, y, Math.max(8, maxW), sz, weight, sz);
     }
     const end = str.length * per;
-    const caretOn = t < end || (t < end + 800 && Math.floor((t - end) / 200) % 2 === 1);
+    const caretOn = t < end || (t < end + 480 && Math.floor((t - end) / 160) % 2 === 0);
     if (caretOn) {
       const cx = x + (n ? measure(str.slice(0, n), sz, weight) : 0);
       if (cx + sz * 0.6 <= x + maxW + 2) rect(cx + 1, y - sz * 0.8, sz * 0.6, sz * 0.98, INK);
@@ -225,6 +225,12 @@ MD.safe('dial', function dial() {
   function header(title, right) {
     const P = pad(), room = W - 2 * P, hs = W < 520 ? 13 : 14;
     let lines = wrap(title, room, hs, 500);
+    if (lines.length === 2) {
+      // balance the two lines so no single word is left hanging
+      let lo = room / 2, hi = room;
+      for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; if (wrap(title, m, hs, 500).length <= 2) hi = m; else lo = m; }
+      lines = wrap(title, Math.ceil(hi) + 1, hs, 500);
+    }
     if (lines.length > 2) lines = [lines[0], lines.slice(1).join(' ')];
     const rw = right ? measure(right, 11, 400) : 0;
     const showRight = !!right && lines.length === 1 && measure(lines[0], hs, 500) + rw + 28 <= room;
@@ -284,15 +290,6 @@ MD.safe('dial', function dial() {
     const pip = r * 0.07;
     g.beginPath(); g.moveTo(cx - pip, cy - r * 0.93); g.lineTo(cx + pip, cy - r * 0.93); g.lineTo(cx, cy - r * 0.93 + pip * 1.6); g.closePath();
     g.fillStyle = bg; g.fill();
-    if (full && r >= 100) {
-      const ns = Math.max(8, R(r * 0.07));
-      g.fillStyle = bg; g.textAlign = 'center'; g.textBaseline = 'middle';
-      [10, 20, 30, 40, 50].forEach(n => {
-        const a = n / 60 * TAU - Math.PI / 2;
-        MD.fitText(g, String(n), cx + Math.cos(a) * r * 0.86, cy + Math.sin(a) * r * 0.86 + 0.5, ns * 2, ns, 500, ns);
-      });
-      g.textBaseline = 'alphabetic';
-    }
     // dial and chapter ring
     circle(cx, cy, r * 0.77, null, fg);
     circle(cx, cy, r * 0.74, bg, fg);
@@ -602,8 +599,8 @@ MD.safe('dial', function dial() {
     const x0 = R(x - w / 2), y0 = R(bottom - h);
     if (state === 'out') {
       // faded to a sparse dither: dotted, excluded
-      tagShape(x0, y0, w, h, PAPER);
-      tagShape(x0, y0, w, h, dith(0.34, INK3));
+      tagShape(x0, y0, w, h, dith(0.5, INK3));
+      tagShape(x0 + 1, y0 + 1, w - 2, h - 2, PAPER);
       return;
     }
     tagShape(x0, y0, w, h, INK);
@@ -633,8 +630,8 @@ MD.safe('dial', function dial() {
     if (wide) { roW = R(Math.min(270, (W - 2 * P) * 0.34)); roX = W - P - roW; chX1 = roX - 40; }
     else { roX = P; roW = W - 2 * P; chX1 = W - P; }
     const chW = chX1 - chX0;
-    const tw = Math.max(7, Math.min(14, R(chW / 42)));
-    const th = Math.max(6, R(tw * 0.62));
+    const tw = Math.max(7, Math.min(18, R(chW / 31)));
+    const th = Math.max(6, R(tw * 0.6));
     const MAXP = Math.ceil((S.sorted[N - 1] * 1.08) / 1000) * 1000;
     const X = p => chX0 + tw / 2 + (p / MAXP) * (chW - tw);
 
@@ -650,10 +647,12 @@ MD.safe('dial', function dial() {
     const perRow = Math.min(N, Math.floor(chW / (tw + 2)));
     const qRows = Math.ceil(N / perRow), per = Math.ceil(N / qRows);
     const levels = Math.max(qRows, Math.max(...fin.map(f => f.lvl)) + 1);
-    const stackH = Math.max(56, levels * (th + 2) + 30);
     const laneH = 16, under = 50;
-    const blockH = laneH * 3 + 8 + stackH + under;
     const roH = 6 * rowH;
+    // the plot takes the room it is given, so the tags have somewhere to fall from
+    const room = wide ? H - P - top - 28 : H - P - roH - 28 - top - 12;
+    const stackH = Math.max(levels * (th + 2) + 30, Math.min(room - laneH * 3 - 8 - under, wide ? 170 : 150));
+    const blockH = laneH * 3 + 8 + stackH + under;
     let by;
     if (wide) by = R(top + 14 + Math.max(0, (H - P - top - 14 - blockH) / 2));
     else by = R(top + 12 + Math.max(0, (H - P - roH - 24 - top - 12 - blockH) / 2));
@@ -683,11 +682,6 @@ MD.safe('dial', function dial() {
     const floorX = X(S.floor);
     const fP = t >= T4.floor ? stepped((t - T4.floor) / T4.floorDur, 16) : -1;
     const fx = fP < 0 ? -1e9 : chX0 + (floorX - chX0) * fP;
-    if (fP >= 0) {
-      g.fillStyle = dith(0.07, INK);
-      g.fillRect(R(chX0), R(laneY[2] + 6), Math.max(0, R(fx - chX0)), R(axisY - laneY[2] - 6));
-    }
-
     let landed = 0, out = 0;
     for (let i = 0; i < N; i++) {
       const k = ORDER[i];
@@ -782,7 +776,7 @@ MD.safe('dial', function dial() {
 
   /* ---------- 5  Value ---------- */
 
-  const T5 = { card: 0, cardDur: 220, kicker: 260, count: 420, countDur: 720, cap: 1180, rows: [1600, 1950, 2300], note: 2700, btn: 3400 };
+  const T5 = { card: 0, cardDur: 220, kicker: 260, count: 700, countDur: 720, cap: 1450, rows: [2450, 3150, 3650], note: 4150, btn: 5100 };
 
   function drawValue(t) {
     const P = pad();
@@ -859,7 +853,7 @@ MD.safe('dial', function dial() {
   /* ---------- stepping ---------- */
 
   const SCREENS = [drawCapture, drawIdentify, drawDetails, drawMarket, drawValue];
-  const DUR = [4200, 4400, 4200, 8800, 5600];         // how long each step holds before the next
+  const DUR = [4200, 4400, 4200, 8800, 7000];         // how long each step holds before the next
   const ANIM = [T1.status + 1600, T2.curOut, T3.press + 400, T4.avg + T4.avgDur + 100, T5.btn + 100];
   let step = 0, tStep = 0, lastQ = -1, lastDraw = -1e9;
   let opened = REDUCED || !('IntersectionObserver' in window);

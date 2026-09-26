@@ -60,7 +60,7 @@
 .vs-fig-6 canvas { height: 312px; }
 
 .vs-cap {
-  margin-top: clamp(18px, 3.2vh, 30px); max-width: 46ch;
+  margin-top: clamp(18px, 3.2vh, 30px); max-width: 64ch;
   font-size: 13px; line-height: 1.6; color: var(--ink-2);
   text-wrap: balance;
 }
