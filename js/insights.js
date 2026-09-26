@@ -276,7 +276,7 @@ function lanes(W, H) {
   const x0 = pad + nameW;
   const xo = W - pad - offW / 2;
   const x1 = W - pad - offW - (narrow ? 10 : 14);
-  const skyH = clamp(Math.round(H * 0.17), 56, 92);
+  const skyH = clamp(Math.round(H * 0.14), 58, 80);
   const axisH = 24;
   const top = pad + skyH, bot = H - pad - axisH;
   const lh = (bot - top) / LANES.length;
@@ -322,13 +322,16 @@ function laneFrame(ctx, g, counts) {
   ctx.strokeStyle = INK; ctx.lineWidth = 1;
   [x1 + 4, x1 + 8].forEach(bx => { ctx.beginPath(); ctx.moveTo(bx - 2, bot + 4); ctx.lineTo(bx + 2, bot - 4); ctx.stroke(); });
   const every = narrow ? 200 : 100;
+  const offL = xo - measure(ctx, money(8000), 10, 400) / 2;
+  ctx.fillStyle = INK; ctx.fillRect(Math.round(xo), bot, 1, 4);
+  text(ctx, money(8000), xo, bot + 16, { size: 10, color: INK3, align: 'center', w: offW - 2 });
   for (let v = 0; v <= MAXP; v += every) {
     const x = Math.round(g.X(v));
     ctx.fillStyle = INK; ctx.fillRect(x, bot, 1, 4);
-    text(ctx, money(v), x, bot + 16, { size: 10, color: INK3, align: v === 0 ? 'left' : 'center', w: 44 });
+    const s = money(v), w = measure(ctx, s, 10, 400);
+    if (v && x + w / 2 > offL - 10) continue; // leave room for the off-scale label
+    text(ctx, s, x, bot + 16, { size: 10, color: INK3, align: v === 0 ? 'left' : 'center', w: 44 });
   }
-  ctx.fillStyle = INK; ctx.fillRect(Math.round(xo), bot, 1, 4);
-  text(ctx, money(8000), xo, bot + 16, { size: 10, color: INK3, align: 'center', w: offW - 2 });
 
   // lane names, markings and counts
   L.forEach(l => {

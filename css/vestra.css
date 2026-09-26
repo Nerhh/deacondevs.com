@@ -38,7 +38,7 @@
 /* odometer: each digit is a window one line high over a strip of 0-9-0 */
 .odo { display: inline-block; white-space: nowrap; }
 .odo-c, .odo-w { display: inline-block; height: 1em; line-height: 1; vertical-align: top; }
-.odo-w { width: 0.6em; overflow: hidden; }
+.odo-w { width: 0.6em; overflow: hidden; -webkit-user-select: none; user-select: none; }
 .odo-w > span { display: block; will-change: transform; }
 .odo-w > span > span { display: block; height: 1em; line-height: 1; }
 
@@ -60,7 +60,7 @@
 .vs-fig-6 canvas { height: 312px; }
 
 .vs-cap {
-  margin-top: clamp(18px, 3.2vh, 30px); max-width: 64ch;
+  margin-top: clamp(18px, 3.2vh, 30px); max-width: 72ch;
   font-size: 13px; line-height: 1.6; color: var(--ink-2);
   text-wrap: balance;
 }
@@ -72,9 +72,10 @@
   font-size: 12px; line-height: 1.7; color: var(--ink-2);
 }
 ul.vs-data { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 18px; }
-.js .vs-data, .vs-sr { position: absolute; width: 1px; height: 1px; margin: 0; clip-path: inset(50%); white-space: nowrap; }
+/* hidden visually but spoken: a 1px box whose children are blocks, so nothing spills into the page's scroll width */
+.js .vs-data, .vs-sr { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .js ul.vs-data { display: block; }
-.js .vs-data li { display: block; }
+.js .vs-data > *, .vs-sr > * { display: block; }
 
 /* money in / time-weighted: one toggle, two labelled halves, the pressed half inverted */
 .vs-toggle { display: none; }

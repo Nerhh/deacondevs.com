@@ -158,7 +158,7 @@ MD.safe('dial', function dial() {
     return out;
   }
   // text typed in behind a block caret; t is ms since typing began
-  function typed(str, x, y, maxW, size, weight, color, t, cps) {
+  function typed(str, x, y, maxW, size, weight, color, t, cps, trail) {
     if (t < 0) return;
     const per = cps || 30;
     const sz = fitSize(str, maxW, size, weight);
@@ -168,7 +168,7 @@ MD.safe('dial', function dial() {
       MD.fitText(g, str.slice(0, n), x, y, Math.max(8, maxW), sz, weight, sz);
     }
     const end = str.length * per;
-    const caretOn = t < end || (t < end + 480 && Math.floor((t - end) / 160) % 2 === 0);
+    const caretOn = t < end || (trail !== false && t < end + 480 && Math.floor((t - end) / 160) % 2 === 0);
     if (caretOn) {
       const cx = x + (n ? measure(str.slice(0, n), sz, weight) : 0);
       if (cx + sz * 0.6 <= x + maxW + 2) rect(cx + 1, y - sz * 0.8, sz * 0.6, sz * 0.98, INK);
@@ -633,7 +633,14 @@ MD.safe('dial', function dial() {
     const tw = Math.max(7, Math.min(18, R(chW / 31)));
     const th = Math.max(6, R(tw * 0.6));
     const MAXP = Math.ceil((S.sorted[N - 1] * 1.08) / 1000) * 1000;
-    const X = p => chX0 + tw / 2 + (p / MAXP) * (chW - tw);
+    // tick labels decide the margins, so the first and last can sit centred on their ticks
+    const probe = (chW - tw) * 1000 / MAXP;
+    const full = probe >= measure('£0,000', 10.5, 400) + 30;
+    const stepV = full || probe >= measure('£0k', 10.5, 400) + 20 ? 1000 : 2000;
+    const tickLab = v => (v === 0 ? '£0' : full ? gbp(v) : '£' + v / 1000 + 'k');
+    const padL = Math.max(tw / 2, measure(tickLab(0), 10.5, 400) / 2 + 1);
+    const padR = Math.max(tw / 2, measure(tickLab(MAXP), 10.5, 400) / 2 + 1);
+    const X = p => chX0 + padL + (p / MAXP) * (chW - padL - padR);
 
     // final resting places: a dot plot of tags, stacked where they would touch
     const fin = [];
@@ -664,14 +671,11 @@ MD.safe('dial', function dial() {
     // the axis draws itself, then its ticks
     const axP = stepped(t / T4.axis, 8);
     hline(chX0, chX0 + chW * axP, axisY, INK);
-    const px1000 = (chW - tw) * 1000 / MAXP;
-    const full = px1000 >= measure('£0,000', 10.5, 400) + 14;
-    const stepV = full || px1000 >= measure('£0k', 10.5, 400) + 12 ? 1000 : 2000;
     if (axP >= 1) {
       for (let v = 0; v <= MAXP; v += stepV) {
         const x = X(v);
         vline(x, axisY + 1, axisY + 5, INK);
-        const lab = v === 0 ? '£0' : full ? gbp(v) : '£' + v / 1000 + 'k';
+        const lab = tickLab(v);
         const lw = measure(lab, 10.5, 400);
         const lx = Math.max(chX0, Math.min(chX1 - lw, x - lw / 2));
         text(lab, lx, axisY + 18, lw + 2, 10.5, 400, INK3);
@@ -711,14 +715,15 @@ MD.safe('dial', function dial() {
       tag(x, y, tw, th, state);
     }
 
-    const mid = (chX0 + chX1) / 2;
+    // median and average labels point away from each other, so neither crosses the other's line
+    const medRight = S.median >= S.lowNAverage;
     const labels = [];
     // median: a dotted line that grows up from the axis
     if (t >= T4.med) {
       const x = R(X(S.median));
       const p = stepped((t - T4.med) / T4.medDur, 5);
       dotV(x, axisY - (axisY - laneY[0] + 4) * p, axisY, INK);
-      if (p >= 1) labels.push(['median', x, laneY[0], x >= mid, INK]);
+      if (p >= 1) labels.push(['median', x, laneY[0], !medRight, INK]);
     }
     // floor line, and the count once it has stopped
     if (fP >= 0) {
@@ -750,7 +755,7 @@ MD.safe('dial', function dial() {
       rect(x, laneY[1] - 4, 1, axisY - laneY[1] + 4, INK);
       g.beginPath(); g.moveTo(x + 0.5, bY - 1); g.lineTo(x + 5.5, bY - 7); g.lineTo(x - 4.5, bY - 7); g.closePath();
       g.fillStyle = INK; g.fill();
-      labels.push(['average', x, laneY[1], target >= mid, INK]);
+      labels.push(['average', x, laneY[1], medRight, INK]);
     }
     // labels last, each on its own lane with a paper knock-out, so no line runs through a word
     labels.forEach(l => laneLabel(l[0], l[1], l[2], l[3], chX0, chX1, l[4]));
@@ -776,12 +781,12 @@ MD.safe('dial', function dial() {
 
   /* ---------- 5  Value ---------- */
 
-  const T5 = { card: 0, cardDur: 220, kicker: 260, count: 700, countDur: 720, cap: 1450, rows: [2450, 3150, 3650], note: 4150, btn: 5100 };
+  const T5 = { card: 0, cardDur: 220, kicker: 260, count: 700, countDur: 720, cap: 1450, rows: [1950, 2400, 2650], note: 3150, btn: 3900 };
 
   function drawValue(t) {
     const P = pad();
     const top = header('Example diver 39 mm', 'GBP');
-    const wide = W >= 700;
+    const wide = W >= 600;
     const meta = 'Ref. EX-39 · 2019 · full set · excellent';
     let cx, cw, y0 = top + 18;
     if (wide) {
@@ -813,7 +818,7 @@ MD.safe('dial', function dial() {
     frame(cx, cy, cw, ch, INK);
     const ix = cx + p, iw = cw - 2 * p;
     let y = cy + p + 12;
-    typed('Marketplace asking prices', ix, y, iw, 10.5, 400, INK3, t - T5.kicker, 16);
+    typed('Marketplace asking prices', ix, y, iw, 10.5, 400, INK3, t - T5.kicker, 16, false);
     y += 10 + R(big * 0.78);
     if (t >= T5.count) {
       const q = stepped((t - T5.count) / T5.countDur, 12);
@@ -821,7 +826,7 @@ MD.safe('dial', function dial() {
       text(gbp(v), ix, y, iw, big, 500, INK);
     }
     y += 24;
-    typed('Lowest comparable ask', ix, y, iw, 12, 400, INK2, t - T5.cap, 22);
+    typed('Lowest comparable ask', ix, y, iw, 12, 400, INK2, t - T5.cap, 20, false);
     y += 16;
     hline(ix, ix + iw, y, INK);
     const rows = [
@@ -833,8 +838,8 @@ MD.safe('dial', function dial() {
       const ry = y + i * 28;
       const vw = measure(r[1], 12.5, 500);
       const t0 = T5.rows[i];
-      typed(r[0], ix, ry + 19, iw - vw - 16, 12, 400, INK2, t - t0, 22);
-      if (t >= t0 + r[0].length * 22) text(r[1], ix + iw, ry + 19, vw + 2, 12.5, 500, INK, 'right');
+      typed(r[0], ix, ry + 19, iw - vw - 16, 12, 400, INK2, t - t0, 20, false);
+      if (t >= t0 + r[0].length * 20) text(r[1], ix + iw, ry + 19, vw + 2, 12.5, 500, INK, 'right');
       if (i < rows.length - 1) hline(ix, ix + iw, ry + 28, RULE);
     });
     y += rowsH;
@@ -842,8 +847,8 @@ MD.safe('dial', function dial() {
     y += 16;
     let tn = t - T5.note;
     noteLines.forEach((ln, i) => {
-      typed(ln, ix, y + 12 + i * 17, iw, 11.5, 400, INK3, tn, 18);
-      tn -= ln.length * 18 + 1;
+      typed(ln, ix, y + 12 + i * 17, iw, 11.5, 400, INK3, tn, 16, i === noteLines.length - 1);
+      tn -= ln.length * 16 + 1;
     });
     y += noteLines.length * 17 + 14;
     if (t >= T5.btn) button('Scan another watch', ix, y, iw - 1, 32, false);
@@ -853,7 +858,7 @@ MD.safe('dial', function dial() {
   /* ---------- stepping ---------- */
 
   const SCREENS = [drawCapture, drawIdentify, drawDetails, drawMarket, drawValue];
-  const DUR = [4200, 4400, 4200, 8800, 7000];         // how long each step holds before the next
+  const DUR = [4200, 4400, 4200, 8800, 5800];         // how long each step holds before the next
   const ANIM = [T1.status + 1600, T2.curOut, T3.press + 400, T4.avg + T4.avgDur + 100, T5.btn + 100];
   let step = 0, tStep = 0, lastQ = -1, lastDraw = -1e9;
   let opened = REDUCED || !('IntersectionObserver' in window);

@@ -171,6 +171,7 @@ MD.safe('vestra-tiles', function tiles() {
   const T0 = 120, GAP = 230, FALL = 380, COUNT = 420;
   const land = i => T0 + i * GAP + FALL;
 
+  // a tile's label is only printed once the whole tile is inside the frame, so no text is ever cut by the edge
   function tile(ctx, x, y, t, c) {
     const inv = c[1] < 0, fg = inv ? PAPER : INK;
     const fs = t >= 104 ? 12 : 11, pad = t >= 100 ? 8 : 6;
@@ -181,6 +182,7 @@ MD.safe('vestra-tiles', function tiles() {
     ctx.fillStyle = fg;
     ctx.fillRect(x, y + band, t, 1);
     frame(ctx, x, y, t, t, INK);
+    if (y < 0) return;
     ctx.fillStyle = fg;
     fitText(ctx, c[0], x + pad, y + pad + fs, t - pad * 2, fs, 500);
     ctx.fillStyle = inv ? RULE2 : INK2;
@@ -277,10 +279,9 @@ MD.safe('vestra-networth', function networth() {
   let odo = null;
   if (el && !REDUCED) {
     const text = el.textContent.trim();
-    const sr = document.createElement('span');
-    sr.className = 'vs-sr';
-    sr.textContent = text;
-    el.parentNode.insertBefore(sr, el);
+    // the wheels are hidden from assistive technology; the spoken heading carries the figure instead
+    const sr = el.parentNode.querySelector('.vs-sr > span');
+    if (sr) sr.textContent = 'Net worth: ' + text;
     el.setAttribute('aria-hidden', 'true');
     el.textContent = '';
     let power = text.replace(/\D/g, '').length - 1;
@@ -347,7 +348,7 @@ MD.safe('vestra-networth', function networth() {
 
       ctx.fillStyle = INK3;
       const fs = W < 480 ? 10.5 : 11;
-      fitText(ctx, '1 Sep 2025', 0, H - 5, W / 2 - 8, fs, 400);
+      fitText(ctx, '12 months ago', 0, H - 5, W / 2 - 8, fs, 400);
       ctx.textAlign = 'right';
       fitText(ctx, p >= 1 ? 'today, 06:00' : 'snapshot ' + String(Math.max(1, Math.round((xEnd / (W - 1)) * N))).padStart(3, '0'), W, H - 5, W / 2 - 8, fs, 400);
       ctx.textAlign = 'left';
@@ -579,8 +580,14 @@ MD.safe('vestra-deposit', function deposit() {
         for (let y = yb; y < ya; y += 3) ctx.fillRect(xd, y, 1, 1);
         for (let x = xd; x <= xEnd; x += 3) { const f = kAt(x); ctx.fillRect(x, Math.round(yv(twAt(f) + dep(f))), 1, 1); }
         if (xEnd >= W - 1 && sv < 0.5) {
+          // sit the label clear of the ghost's highest point beneath it
+          const lsz = small ? 10.5 : 11;
+          ctx.font = font(lsz, 400);
+          const lx = W - Math.ceil(ctx.measureText('balance').width) - 2;
+          let peak = Infinity;
+          for (let x = lx; x < W; x++) { const f = kAt(x); peak = Math.min(peak, yv(twAt(f) + dep(f))); }
           ctx.textAlign = 'right';
-          fitText(ctx, 'balance', W, Math.round(yv(twAt(K) + dep(K))) - 10, W * 0.3, small ? 10.5 : 11, 400);
+          fitText(ctx, 'balance', W, Math.max(top + 10, Math.round(peak) - 7), W * 0.3, lsz, 400);
           ctx.textAlign = 'left';
         }
       }

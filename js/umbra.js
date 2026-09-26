@@ -56,8 +56,8 @@ MD.safe('umbra', function umbra() {
   /* ---------- one-bit tones: 2px ordered-dither cells, crisp at any pixel ratio ---------- */
 
   const tiles = new Map(), pats = new WeakMap();
-  function tone(g, level, dpr) {
-    const k = clamp(round(level * 16), 0, 16), c = Math.max(1, round(2 * dpr)), key = k + '@' + dpr;
+  function tone(g, level, dpr, color) {
+    const k = clamp(round(level * 16), 0, 16), c = Math.max(1, round(2 * dpr)), key = k + '@' + dpr + (color || '');
     let m = pats.get(g);
     if (!m) { m = new Map(); pats.set(g, m); }
     let p = m.get(key);
@@ -67,7 +67,7 @@ MD.safe('umbra', function umbra() {
         tile = document.createElement('canvas');
         tile.width = tile.height = 4 * c;
         const tg = tile.getContext('2d');
-        tg.fillStyle = INK;
+        tg.fillStyle = color || INK;
         for (let i = 0; i < 16; i++) if (MD.B4[i] < k) tg.fillRect((i & 3) * c, (i >> 2) * c, c, c);
         tiles.set(key, tile);
       }
@@ -133,8 +133,11 @@ MD.safe('umbra', function umbra() {
     g.fillStyle = PAPER; g.fillRect(round(x + w / 2 - tw / 2 - 9), y + 2, round(tw + 18), 17);
     label(g, title, round(x + w / 2), y + 11, w - 90, fs, 500, INK, 'center');
   }
-  function desk(g, W, H) {
+  // the desktop behind everything: the faintest ordered-dither tone, as an old machine's pattern
+  function desk(g, W, H, dpr) {
     g.fillStyle = PAPER;
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = tone(g, 1 / 16, dpr, MD.RULE);
     g.fillRect(0, 0, W, H);
   }
   function sizes(W, H) {
@@ -165,15 +168,15 @@ MD.safe('umbra', function umbra() {
     // chapter 3 lifts the window and narrows it, in six steps, to make room for the horizon
     const k = steps(seg(xs, 1.2, 1.56), 6);
     const hy = H - m - lab.h;
-    const ww0 = Math.min(W - 2 * m, 620), wh0 = Math.min(H - 2 * m, round(ww0 * 0.74));
-    const ww3 = Math.min(ww0, round((W - 2 * m) * 0.76));
-    const wh3 = clamp(round((hy - m) * 0.58), TB + TS + 40, wh0);
+    const ww0 = Math.min(W - 2 * m, 620), wh0 = Math.min(H - 2 * m, round(ww0 * 0.9));
+    const ww3 = Math.min(ww0, round((W - 2 * m) * 0.8));
+    const wh3 = clamp(round((hy - m) * 0.52), TB + TS + 40, wh0);
     const w = round(lerp(ww0, ww3, k)), h = round(lerp(wh0, wh3, k));
     const x = round((W - w) / 2), y = round(lerp((H - wh0) / 2, m, k));
     const cx = x + 1, cy = y + TB + TS + 1, cw = w - 2, ch = h - TB - TS - 2;
     // chapter 2 draws the four walls in, one after another, eight steps each
     for (let j = 0; j < 4; j++) WALLS[j] = round(steps(seg(xs, 0.22 + j * 0.1, 0.52 + j * 0.1), 8) * ch);
-    return { m, fs, lab, TB, TS, k, hy, x, y, w, h, cx, cy, cw, ch, walls: WALLS, s: W < 420 ? 5 : 6 };
+    return { m, fs, lab, TB, TS, k, hy, x, y, w, h, cx, cy, cw, ch, walls: WALLS, s: W < 420 ? 5 : 7 };
   }
 
   // where the cookies rest in a still: [x within its partition, height (1 = the floor)]
@@ -184,7 +187,7 @@ MD.safe('umbra', function umbra() {
     const xs = Math.min(S.xs, 2.5);
     const { m, fs, lab, TB, TS, hy, x, y, w, h, cx, cy, cw, ch, walls, s } = G;
     const colW = cw / 5, focus = xs > 2.14;
-    desk(g, W, H);
+    desk(g, W, H, dpr);
 
     // chapter 3: the horizon, and one dotted exit per partition
     const hp = steps(seg(xs, 1.34, 1.56), 8);
@@ -218,6 +221,8 @@ MD.safe('umbra', function umbra() {
       const lx = round(clamp(hx, 3 + half, W - 3 - half));
       if (r) { g.fillStyle = INK3; dots(g, hx, hy + 6, hx, top - 1, 2, 1); }
       const cyc = top + round(fs * 0.62);
+      g.fillStyle = PAPER;
+      g.fillRect(round(lx - half - 4), top - 2, round(half * 2 + 8), round(fs * 2.6) + 3);
       if (focus && i === 0) {
         const bw = round(textW(g, P.cc, fs + 1, 600) + 10);
         g.fillStyle = INK; g.fillRect(round(lx - bw / 2), cyc - round(fs * 0.75), bw, round(fs * 1.5));
@@ -294,11 +299,14 @@ MD.safe('umbra', function umbra() {
 
   function markScene(g, W, H, S, dpr) {
     const { m, fs } = sizes(W, H);
-    desk(g, W, H);
+    desk(g, W, H, dpr);
     const side = W > H * 0.9;
-    const tw = side ? clamp(round(W * 0.36), 110, 300) : Math.min(W - 2 * m, 400);
-    const keys = tw >= 240;
-    const rh = round(fs * 2.3), foot = round(fs * 3), th = 5 * rh + foot, tagH = round(fs + 12);
+    // the readings sit in a small window of their own: tw by th, with a pad inside
+    const pad = W < 420 ? 9 : 12;
+    const tw = side ? (W >= 600 ? clamp(round(W * 0.38), 250, 330) : clamp(round(W * 0.34), 118, 220)) : Math.min(W - 2 * m, 420);
+    const iw = tw - 2 * pad, keys = iw >= 200;
+    const rh = round(fs * (side && H < 420 ? 2.05 : 2.3)), foot = round(fs * 2.8);
+    const th = 21 + 2 * pad + 5 * rh + foot, tagH = round(fs + 12);
     let u, cx, cy, tx, ty;
     if (side) {
       const aw = W - tw - 3 * m, ah = H - 2 * m - tagH - 10;
@@ -372,24 +380,26 @@ MD.safe('umbra', function umbra() {
     label(g, TAG, tgx + tgw / 2, tagY + round(tagH / 2), tgw - 12, fs, 500, all ? PAPER : INK, 'center');
 
     // the readings, ticked off as each one lands
+    win(g, tx, ty, tw, th, 'Readings', fs);
+    const ix = tx + pad, iy = ty + 21 + pad;
     const keyW = keys ? round(textW(g, 'time zone', fs, 400) + fs * 1.6) : 0;
     for (let i = 0; i < 5; i++) {
-      const R0 = READINGS[i], p = alignP(i, S), yc = ty + i * rh + round(rh / 2);
-      if (keys) label(g, R0.k, tx, yc, keyW - 6, fs, 400, INK3);
-      label(g, R0.v, tx + keyW, yc, tw - keyW - 20, fs, p >= 1 ? 500 : 400, p >= 1 ? INK : INK3);
-      checkbox(g, tx + tw - 11, yc - 5, p >= 1 ? 1 : p > 0 ? 0.5 : 0, dpr);
-      if (i < 4) { g.fillStyle = tone(g, 0.5, dpr); g.fillRect(tx, ty + (i + 1) * rh, tw, 1); }
+      const R0 = READINGS[i], p = alignP(i, S), yc = iy + i * rh + round(rh / 2);
+      if (keys) label(g, R0.k, ix, yc, keyW - 6, fs, 400, INK3);
+      label(g, R0.v, ix + keyW, yc, iw - keyW - 20, fs, p >= 1 ? 500 : 400, p >= 1 ? INK : INK3);
+      checkbox(g, ix + iw - 11, yc - 5, p >= 1 ? 1 : p > 0 ? 0.5 : 0, dpr);
+      if (i < 4) { g.fillStyle = tone(g, 0.5, dpr); g.fillRect(ix, iy + (i + 1) * rh, iw, 1); }
     }
-    const fy = ty + 5 * rh + 3;
-    g.fillStyle = INK; hl(g, tx, fy, tw);
+    const fy = iy + 5 * rh + 3;
+    g.fillStyle = INK; hl(g, ix, fy, iw);
     const fyc = fy + round((foot - 3) / 2) + 1;
-    label(g, agreed + ' / 5', tx + tw, fyc, tw / 2, fs, 400, INK3, 'right');
+    label(g, agreed + ' / 5', ix + iw, fyc, iw / 2, fs, 400, INK3, 'right');
     const tc = S.live ? S.now - S.alignT0 - COHERENT_AT : 1e9;
     const n = clamp(Math.floor(tc / 55), 0, 8);
     if (n > 0) {
       const word = 'coherent'.slice(0, n);
-      label(g, word, tx, fyc, tw / 2, fs, 600, INK);
-      const wx = tx + textW(g, word, fs, 600);
+      label(g, word, ix, fyc, iw / 2, fs, 600, INK);
+      const wx = ix + textW(g, word, fs, 600);
       if (tc < 8 * 55 + 90) { g.fillStyle = INK; g.fillRect(round(wx + 1), fyc - round(fs * 0.6), round(fs * 0.6), round(fs * 1.2)); }
       else tick(g, round(wx + fs * 0.7), fyc - 3, INK);
     }
@@ -414,15 +424,16 @@ MD.safe('umbra', function umbra() {
   }
 
   function scoreScene(g, W, H, S, dpr) {
-    const { m, fs } = sizes(W, H);
-    desk(g, W, H);
+    const { m } = sizes(W, H);
+    const fs = W >= 560 && H >= 640 ? 12 : sizes(W, H).fs;
+    desk(g, W, H, dpr);
     const dw = Math.min(W - 2 * m, 560), pad = round(clamp(dw * 0.04, 10, 20)), inner = dw - 2 * pad;
     const cw1 = textW(g, '0', fs, 400), gap = round(cw1 * 2);
     const wP = cw1 * 2, wC = cw1 * 2, wIP = cw1 * 13, wV = cw1 * 8 + 8;
     const boxes = wP + wC + wIP + wV + 4 * gap + 4 * 11 + 3 * 5 <= inner;
-    const head = H >= 280 ? round(Math.max(46, fs * 4.4)) : 0;
-    const foot = round(fs * 3.4);
-    const rh = round(clamp((H - 2 * m - 21 - 2 * pad - head - foot) / 5, fs * 1.9, fs * 2.8));
+    const head = H >= 280 ? round(Math.max(46, fs * (H >= 640 ? 5.4 : 4.4))) : 0;
+    const foot = round(fs * (H >= 640 ? 4 : 3.4));
+    const rh = round(clamp((H - 2 * m - 21 - 2 * pad - head - foot) / 5, fs * 1.9, fs * (H >= 640 ? 3.3 : 2.8)));
     const dh = 21 + 2 * pad + head + 5 * rh + foot;
     const dx = round((W - dw) / 2), dy = round(Math.max(4, (H - dh) / 2));
     win(g, dx, dy, dw, dh, 'Scorecard', fs);
@@ -645,7 +656,7 @@ MD.safe('umbra', function umbra() {
     stepEl.textContent = '0' + (c + 1) + ' / 05';
   }
 
-  function frame(t, dt) {
+  function onFrame(t, dt) {
     S.now = t;
     const x = readX();
     S.xs += (x - S.xs) * (1 - Math.exp(-dt / 110));
@@ -669,7 +680,7 @@ MD.safe('umbra', function umbra() {
   S.G = browserGeo(st.ctx, st.W, st.H, Math.min(S.xs, 2.5));
   if ('ResizeObserver' in window) new ResizeObserver(measure).observe(section);
   MD.repaints.push(measure);
-  MD.loop(canvas, frame);
+  MD.loop(canvas, onFrame);
 
   // input: a click in a partition drops a cookie there; on the mark or the scorecard it plays the step again
   const at = e => {

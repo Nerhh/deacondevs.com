@@ -101,3 +101,9 @@ html:not(.js) .dl-cap { margin-top: 0; }
   .dl-step { justify-content: center; padding: 10px 4px 11px; }
   .dl-step .l { display: none; }
 }
+
+/* the facts list's longest label is one unbreakable word, so the label column sizes to it */
+@media (max-width: 480px) {
+  .pg-dial .pg-facts dl { grid-template-columns: max-content minmax(0, 1fr); }
+  .pg-dial .pg-facts dt { padding-right: 16px; }
+}
