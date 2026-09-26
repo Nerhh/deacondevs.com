@@ -167,12 +167,15 @@ MD.safe('umbra', function umbra() {
     const TB = 20, TS = round(fs + 12);
     // chapter 3 lifts the window and narrows it, in six steps, to make room for the horizon
     const k = steps(seg(xs, 1.2, 1.56), 6);
-    const hy = H - m - lab.h;
     const ww0 = Math.min(W - 2 * m, 620), wh0 = Math.min(H - 2 * m, round(ww0 * 0.9));
+    // in chapter 3 the window, its exit lines and the horizon share the height; lines never run longer than a third of it
+    const avail = H - 2 * m - lab.h, lineMax = Math.max(60, round(H * 0.34));
     const ww3 = Math.min(ww0, round((W - 2 * m) * 0.8));
-    const wh3 = clamp(round((hy - m) * 0.52), TB + TS + 40, wh0);
+    const wh3 = clamp(round(Math.max(avail * 0.52, avail - lineMax)), TB + TS + 40, wh0);
+    const run = Math.min(avail - wh3, lineMax), y3 = m + round((avail - wh3 - run) / 2);
+    const hy = y3 + wh3 + run;
     const w = round(lerp(ww0, ww3, k)), h = round(lerp(wh0, wh3, k));
-    const x = round((W - w) / 2), y = round(lerp((H - wh0) / 2, m, k));
+    const x = round((W - w) / 2), y = round(lerp((H - wh0) / 2, y3, k));
     const cx = x + 1, cy = y + TB + TS + 1, cw = w - 2, ch = h - TB - TS - 2;
     // chapter 2 draws the four walls in, one after another, eight steps each
     for (let j = 0; j < 4; j++) WALLS[j] = round(steps(seg(xs, 0.22 + j * 0.1, 0.52 + j * 0.1), 8) * ch);
@@ -569,7 +572,7 @@ MD.safe('umbra', function umbra() {
   const st = MD.stage(canvas, s => { off.width = s.canvas.width; off.height = s.canvas.height; });
   const narrow = window.matchMedia('(max-width: 900px)');
   const DZ = 440;
-  const M = { span: 0, yRead: 0, centers: [] };
+  const M = { span: 0, yRead: 0, centers: [], compact: false };
   const S = { xs: 0, live: true, now: 0, scene: 0, from: 0, tx0: -1e9, alignT0: 0, scoreT0: 0, G: null };
 
   // cache the section's geometry; per frame the only layout read is MD.progress
@@ -581,6 +584,7 @@ MD.safe('umbra', function umbra() {
     M.span = Math.max(0, section.offsetHeight - vh);
     M.yRead = ((narrow.matches ? bar + stageEl.offsetHeight : bar) + vh) / 2;
     M.centers = chapters.map(c => c.offsetTop + c.offsetHeight / 2);
+    M.compact = !!liveEl && liveEl.parentElement.clientWidth < 400;
   }
   // which chapter sits on the reading line, as a continuous 0–4
   function readX() {
@@ -641,17 +645,19 @@ MD.safe('umbra', function umbra() {
 
   let lastKey = -1;
   function status() {
+    if (!liveEl || !stepEl) return;
     const c = clamp(round(S.xs), 0, 4), n = sim.list.length;
     let a = 0, d = 0;
     if (S.scene === 1) for (let i = 0; i < 5; i++) if (alignP(i, S) >= 1) a++;
     if (S.scene === 2) for (let i = 0; i < 5; i++) if (scoreState(i, S) % 10 === 2) d++;
-    const key = c * 1e6 + n * 1e3 + a * 10 + d;
+    const key = c * 1e6 + n * 1e3 + a * 10 + d + (M.compact ? 0.5 : 0);
     if (key === lastKey) return;
     lastKey = key;
-    liveEl.textContent = c === 0 ? '1 window · 1 session · ' + n + (n === 1 ? ' cookie' : ' cookies')
-      : c === 1 ? '5 sessions · ' + n + ' cookies · 0 shared'
-      : c === 2 ? '5 profiles · 5 exit IPs · 5 regions'
-      : c === 3 ? PROFILES[0].id + ' · ' + PROFILES[0].cc + ' · ' + a + ' / 5 readings agree'
+    const nc = n + (n === 1 ? ' cookie' : ' cookies');
+    liveEl.textContent = c === 0 ? (M.compact ? '' : '1 window · ') + '1 session · ' + nc
+      : c === 1 ? (M.compact ? '' : '5 sessions · ') + nc + ' · 0 shared'
+      : c === 2 ? (M.compact ? '' : '5 profiles · ') + '5 exit IPs · 5 regions'
+      : c === 3 ? PROFILES[0].id + ' · ' + PROFILES[0].cc + ' · ' + a + (M.compact ? ' / 5 agree' : ' / 5 readings agree')
       : d + ' / 5 separate';
     stepEl.textContent = '0' + (c + 1) + ' / 05';
   }
@@ -691,8 +697,7 @@ MD.safe('umbra', function umbra() {
     const G = S.G;
     return S.scene === 0 && G && px >= G.cx && px < G.cx + G.cw && py >= G.cy && py < G.cy + G.ch;
   };
-  canvas.addEventListener('pointerdown', e => {
-    if (e.button > 0) return;
+  canvas.addEventListener('click', e => {
     const [px, py] = at(e);
     if (inContent(px, py)) {
       const G = S.G, u = px - G.cx;
