@@ -47,7 +47,11 @@
   background: var(--paper); border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink);
 }
 .ins-fig canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* without the script there are no figures, so the words take the full width */
 html:not(.js) .ins-fig { display: none; }
+html:not(.js) .ins-panel { grid-template-columns: minmax(0, 1fr); }
+html:not(.js) .ins-p4 { grid-template-areas: "copy" "tbl"; }
+html:not(.js) .ins-tbl { max-width: 520px; }
 
 .ins-p1 { --h: 300px; }
 .ins-p2, .ins-p3 { --h: 420px; }
@@ -60,13 +64,18 @@ html:not(.js) .ins-fig { display: none; }
 /* ---------- the retro table ---------- */
 
 .ins-tbl { min-width: 0; }
+/* the table sits in a well of its own, as in the extension's panel */
+.ins-tscroll {
+  background: var(--paper); border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink);
+  scrollbar-width: thin; scrollbar-color: var(--ink) var(--paper);
+}
 .ins-table {
   width: 100%; border-collapse: collapse;
   font-size: 12px; line-height: 1.35; font-variant-numeric: tabular-nums;
-  background: var(--paper); border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink);
 }
+.ins-table thead th { position: sticky; top: 0; z-index: 1; background: var(--paper); box-shadow: 0 1px 0 var(--ink); }
 .ins-table th, .ins-table td { padding: 5px 9px; text-align: right; white-space: nowrap; font-weight: 400; }
-.ins-table thead th { font-size: 11px; color: var(--ink-3); border-bottom: 1px solid var(--ink); }
+.ins-table thead th { font-size: 11px; color: var(--ink-3); }
 .ins-table thead th[aria-sort] { color: var(--ink); font-weight: 500; }
 .ins-table thead th:first-child, .ins-table tbody th { text-align: left; }
 .ins-table tbody tr + tr > * { border-top: 1px solid var(--rule); }
@@ -80,6 +89,14 @@ html:not(.js) .ins-fig { display: none; }
   border-left: 4px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent;
 }
 tr.open .car { transform: rotate(90deg); }
+/* headers sort and zone names open, as in the extension */
+.ins-table button {
+  font: inherit; color: inherit; background: none; border: 0; border-radius: 0; margin: 0; padding: 0;
+  text-align: inherit; cursor: pointer; white-space: nowrap;
+}
+.ins-table button:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.ins-table button:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+.ins-table thead th[aria-sort] button { font-weight: 500; }
 .ast { cursor: help; }
 .js .ins-table tr.off { visibility: hidden; }
 .ins-foot { margin-top: 12px; font-size: 11px; line-height: 1.55; color: var(--ink-3); }
@@ -103,8 +120,9 @@ tr.open .car { transform: rotate(90deg); }
   height: calc(100vh - var(--bar-h)); padding: 18px 0 26px;
   display: flex; flex-direction: column;
 }
+.ins-track .ins-stick { justify-content: center; }
 .ins-track .ins-frame {
-  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  flex: 0 1 820px; min-height: 0; display: flex; flex-direction: column;
   background: var(--paper); border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink);
 }
 .ins-track .ins-bar { display: flex; flex: none; }
@@ -120,6 +138,9 @@ tr.open .car { transform: rotate(90deg); }
 .ins-track .ins-p1 .ins-fig { height: min(100%, 440px); }
 .ins-track .ins-p4 .ins-fig { grid-row: 1 / span 2; align-self: center; width: 100%; max-width: none; height: min(100%, 600px); aspect-ratio: auto; }
 .ins-track .ins-p4 .ins-copy p:not(.ins-n) { margin-bottom: 0; }
+.ins-track .ins-p4 .ins-tbl { align-self: stretch; min-height: 0; display: flex; flex-direction: column; }
+.ins-track .ins-tscroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+.ins-track .ins-foot { flex: none; }
 
 /* the indicator below already counts the panels */
 .ins-track .ins-n { display: none; }

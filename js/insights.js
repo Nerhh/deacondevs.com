@@ -75,7 +75,7 @@ const ZST = ZONES.map((z, zi) => Object.assign({ zi, name: z.name }, priceStats(
 const BY_AVG = ZST.slice().sort((a, b) => a.avg - b.avg); // the table: cheapest average first
 const LANES = BY_AVG.slice().reverse();                   // the chart: cheapest lane at the bottom
 const OPEN = 0;                                           // the zone that opens into sections
-const SECS = ZONES[OPEN].secs.map(s => Object.assign({ name: s }, priceStats(LIST.filter(l => l.section === s).map(l => l.price)))).sort((a, b) => a.avg - b.avg);
+const SECS = ZONES[OPEN].secs; // the Field's six, opened by the demo
 const OUT = LIST.findIndex(l => l.price > 1000);
 const MAXP = 600;
 const money = n => '$' + Math.round(n).toLocaleString('en-GB');
@@ -130,25 +130,28 @@ const panels = [];
 function panel(id, idx, dur, draw, after) {
   const cv = document.getElementById(id);
   if (!cv) return;
-  const p = { idx, dur, cv, t0: 0, dirty: true, shown: -1 };
+  const p = { idx, dur, cv, t0: 0, dirty: true, shown: -1, locked: false, hot: 0 };
   p.st = MD.stage(cv, () => { p.dirty = true; });
   p.render = now => {
     const st = p.st;
     st.size();
-    const t = REDUCED ? dur : p.t0 ? clamp(now - p.t0, 0, dur) : 0;
+    const t = REDUCED || p.locked ? dur : p.t0 ? clamp(now - p.t0, 0, dur) : 0;
     if (after) after(t);
-    if (!st.W || !st.H || (!p.dirty && t === p.shown)) return;
+    if (!st.W || !st.H || (!p.dirty && t === p.shown && now > p.hot)) return;
     p.dirty = false; p.shown = t;
     const ctx = st.ctx;
     ctx.clearRect(0, 0, st.W, st.H);
     ctx.imageSmoothingEnabled = false;
-    draw(ctx, st.W, st.H, t);
+    draw(ctx, st.W, st.H, t, now);
   };
   p.play = () => { if (!p.t0) { p.t0 = performance.now(); p.dirty = true; } };
-  p.reset = () => { if (p.t0) { p.t0 = 0; p.dirty = true; } };
+  p.reset = () => { if (p.t0 && !p.locked) { p.t0 = 0; p.dirty = true; } };
+  // once someone has used the panel, it stays finished; kick() keeps it drawing for a moment
+  p.kick = ms => { p.locked = true; p.dirty = true; p.hot = performance.now() + (ms || 0); p.render(performance.now()); };
   panels.push(p);
   p.ctl = MD.loop(cv, now => p.render(now));
   MD.repaints.push(() => { p.dirty = true; p.render(performance.now()); });
+  return p;
 }
 
 /* ---- 1. all of it, at once: page one tells us the total, the rest arrive twelve at a time ---- */
@@ -501,26 +504,67 @@ function drawAvg(ctx, W, H, t) {
   }
 }
 
-/* ---- 4. zones, then sections: an invented bowl beside the table ---- */
+/* ---- 4. zones, then sections: an invented bowl beside a table you can use ---- */
 
 const BOWL = { rings: 140, ringStep: 230, rows: 1180, rowStep: 90, open: 1760, labels: 1960, labStep: 85 };
 BOWL.dur = BOWL.labels + SECS.length * BOWL.labStep + 240;
 const RINGS = [
-  { zi: 1, r0: 0.40, r1: 0.555 },
-  { zi: 2, r0: 0.575, r1: 0.665 },
-  { zi: 3, r0: 0.685, r1: 0.825 },
-  { zi: 4, r0: 0.845, r1: 1 },
+  { zi: 1, r0: 0.43, r1: 0.58 },
+  { zi: 2, r0: 0.60, r1: 0.685 },
+  { zi: 3, r0: 0.705, r1: 0.835 },
+  { zi: 4, r0: 0.855, r1: 1 },
 ];
-function drawBowl(ctx, W, H, t) {
+// each zone's sections, cheapest average first, as the extension lists them
+const SECTIONS = ZONES.map((z, zi) => z.secs
+  .map(s => Object.assign({ name: s }, priceStats(LIST.filter(l => l.zone === zi && l.section === s).map(l => l.price))))
+  .sort((a, b) => a.avg - b.avg));
+
+// the table's state; until someone touches it, the opening animation drives it
+const TBL = { key: 'avg', dir: 1, open: new Set([OPEN]), touched: false, at: new Map() };
+
+// how far a zone has opened (0..1) and which of its labels are showing
+function opening(zi, t, now) {
+  if (!TBL.touched) {
+    if (zi !== OPEN) return null;
+    const k = step((t - BOWL.open) / 200, 4);
+    return k > 0 ? { k, lab: j => t >= BOWL.labels + j * BOWL.labStep } : null;
+  }
+  if (!TBL.open.has(zi)) return null;
+  // the bowl labels the Field and the most recently opened ring, so labels never crowd
+  if (zi !== OPEN) {
+    let last = -1, when = -Infinity;
+    TBL.open.forEach(z => { if (z !== OPEN && (TBL.at.get(z) || 0) >= when) { when = TBL.at.get(z) || 0; last = z; } });
+    if (zi !== last) return null;
+  }
+  const since = REDUCED ? 1e9 : now - (TBL.at.get(zi) || 0);
+  const each = Math.min(80, 420 / ZONES[zi].secs.length);
+  return { k: Math.max(0.25, step(since / 200, 4)), lab: j => since >= 120 + j * each };
+}
+
+// a section label on a paper chip; where sectors are narrow, the chip loses its border
+function chip(ctx, s, x, y, fs, room) {
+  const tw = Math.ceil(measure(ctx, s, fs, 500));
+  const boxed = room == null || room >= tw + 7;
+  const w = tw + (boxed ? 6 : 2), h = fs + (boxed ? 5 : 3);
+  const lx = Math.round(x - w / 2), ly = Math.round(y - h / 2);
+  ctx.fillStyle = PAPER; ctx.fillRect(lx, ly, w, h);
+  if (boxed) { ctx.strokeStyle = INK; frameRect(ctx, lx, ly, w, h); }
+  text(ctx, s, x, ly + h / 2 + fs * 0.36, { size: fs, weight: 500, align: 'center', w: w - 1 });
+}
+
+function drawBowl(ctx, W, H, t, now) {
   const R = Math.floor(Math.min(W, H) / 2 - (W < 400 ? 12 : 18));
   const cx = Math.round(W / 2), cy = Math.round(H / 2 + R * 0.03);
   const GAP = 0.56, A0 = -Math.PI / 2 + GAP, SPAN = Math.PI * 2 - GAP * 2;
+  const fs = R >= 200 ? 10 : 9;
   ctx.lineWidth = 1; ctx.strokeStyle = INK;
 
   // rings step in from the middle out, one sector at a time
+  const ringLabels = [];
   RINGS.forEach((ring, k) => {
     const n = ZONES[ring.zi].secs.length, t0 = BOWL.rings + k * BOWL.ringStep;
     const shown = t >= t0 ? Math.min(n, Math.floor((t - t0) / (BOWL.ringStep * 0.9 / n)) + 1) : 0;
+    const op = opening(ring.zi, t, now);
     for (let j = 0; j < shown; j++) {
       const a = A0 + (SPAN * j) / n, b = A0 + (SPAN * (j + 1)) / n;
       ctx.beginPath();
@@ -529,9 +573,14 @@ function drawBowl(ctx, W, H, t) {
       ctx.closePath();
       ctx.fillStyle = PAPER; ctx.fill();
       ctx.fillStyle = pat(ctx, ring.zi); ctx.fill();
-      ctx.stroke();
+      ctx.strokeStyle = INK; ctx.stroke();
+      if (op && op.lab(j)) {
+        const m = (a + b) / 2, r = R * (ring.r0 + ring.r1) / 2;
+        ringLabels.push([ZONES[ring.zi].secs[j], cx + Math.cos(m) * r, cy + Math.sin(m) * r, r * (b - a)]);
+      }
     }
   });
+  ringLabels.forEach(([s, x, y, room]) => chip(ctx, s, x, y, fs, room));
 
   // the stage, in the open end of the bowl
   const sw = Math.round(R * 0.34), sh = Math.max(12, Math.round(R * 0.075));
@@ -543,70 +592,104 @@ function drawBowl(ctx, W, H, t) {
   const fw = Math.round(R * 0.52), fh = Math.round(R * 0.44);
   const fx = cx - Math.round(fw / 2), fy = Math.round(cy - R * 0.2);
   if (t < BOWL.rings * 0.5) return;
-  const opened = step((t - BOWL.open) / 200, 4);
-  if (opened <= 0) {
+  const op = opening(OPEN, t, now);
+  ctx.strokeStyle = INK;
+  if (!op) {
     ctx.fillStyle = PAPER; ctx.fillRect(fx, fy, fw, fh);
     ctx.fillStyle = pat(ctx, OPEN); ctx.fillRect(fx, fy, fw, fh);
     frameRect(ctx, fx, fy, fw, fh);
     return;
   }
-  const gp = Math.round(opened * (R > 140 ? 5 : 4));
+  const gp = Math.round(op.k * (R > 140 ? 5 : 4));
   const cw = (fw - gp * 2) / 3, ch = (fh - gp) / 2;
-  const names = ZONES[OPEN].secs;
-  names.forEach((s, i) => {
+  ZONES[OPEN].secs.forEach((s, i) => {
     const bx = Math.round(fx + (i % 3) * (cw + gp)), by = Math.round(fy + Math.floor(i / 3) * (ch + gp));
     const bw = Math.round(cw), bh = Math.round(ch);
     ctx.fillStyle = PAPER; ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = pat(ctx, OPEN); ctx.fillRect(bx, by, bw, bh);
     frameRect(ctx, bx, by, bw, bh);
-    const order = SECS.findIndex(q => q.name === s);
-    if (t >= BOWL.labels + order * BOWL.labStep) {
-      const fs = R > 150 ? 11 : 10;
-      const tw = Math.ceil(measure(ctx, s, fs, 500)) + 8, th = fs + 6;
-      const lx = Math.round(bx + (bw - tw) / 2), ly = Math.round(by + (bh - th) / 2);
-      ctx.fillStyle = PAPER; ctx.fillRect(lx, ly, tw, th);
-      frameRect(ctx, lx, ly, tw, th);
-      text(ctx, s, bx + bw / 2, ly + th / 2 + fs * 0.36, { size: fs, weight: 500, align: 'center', w: bw - 4 });
-    }
+    if (op.lab(SECTIONS[OPEN].findIndex(q => q.name === s))) chip(ctx, s, bx + bw / 2, by + bh / 2, R > 150 ? 11 : 10);
   });
 }
 
-/* the table is written from the same data, so it can never disagree with the canvases */
-let rowEls = [], rowAt = [], openRow = null;
-safe('insights-table', function table() {
-  const tb = document.querySelector('#ins-table tbody');
-  if (!tb) return;
-  const avgCell = r => money(r.avg) + (r.outliers ? `<span class="ast" title="${tip(r)}">*</span>` : '');
-  const cells = r => `<td>${money(r.min)}</td><td>${avgCell(r)}</td><td>${money(r.max)}</td><td>${r.count}</td>`;
+/* the table is written from the same data, so it can never disagree with the canvases;
+   like the extension's, its headers sort and its zones open into their sections */
+let rowEls = [], rowAt = [], openRow = null, bowlPanel = null;
+const COLS = [['name', 'Zone'], ['min', 'Min'], ['avg', 'Avg'], ['max', 'Max'], ['count', 'Count']];
+const avgCell = r => money(r.avg) + (r.outliers ? `<span class="ast" title="${tip(r)}">*</span>` : '');
+const cells = r => `<td>${money(r.min)}</td><td>${avgCell(r)}</td><td>${money(r.max)}</td><td>${r.count}</td>`;
+
+function renderTable() {
+  const table = document.getElementById('ins-table');
+  if (!table) return;
+  const { key, dir } = TBL;
+  table.tHead.innerHTML = '<tr>' + COLS.map(([k, label]) => {
+    const on = k === key;
+    return `<th scope="col"${on ? ` aria-sort="${dir > 0 ? 'ascending' : 'descending'}"` : ''}><button type="button" data-sort="${k}">${label}${on ? (dir > 0 ? ' ↑' : ' ↓') : ''}</button></th>`;
+  }).join('') + '</tr>';
+  const zs = ZST.slice().sort((a, b) => (key === 'name' ? a.name.localeCompare(b.name) : a[key] - b[key]) * dir);
   let html = '';
-  BY_AVG.forEach(z => {
-    html += `<tr class="z${z.zi === OPEN ? ' open' : ''}"><th scope="row"><i class="car"></i><i class="sw sw-${z.zi}"></i>${z.name}</th>${cells(z)}</tr>`;
-    if (z.zi === OPEN) SECS.forEach(s => { html += `<tr class="s"><th scope="row"><i class="sw sw-${OPEN}"></i>${s.name}</th>${cells(s)}</tr>`; });
+  zs.forEach(z => {
+    const open = TBL.open.has(z.zi);
+    html += `<tr class="z${open ? ' open' : ''}"><th scope="row"><button type="button" class="zb" data-z="${z.zi}" aria-expanded="${open}"><i class="car"></i><i class="sw sw-${z.zi}"></i>${z.name}</button></th>${cells(z)}</tr>`;
+    if (open) SECTIONS[z.zi].forEach(s => { html += `<tr class="s"><th scope="row"><i class="sw sw-${z.zi}"></i>${s.name}</th>${cells(s)}</tr>`; });
   });
-  tb.innerHTML = html;
+  table.tBodies[0].innerHTML = html;
+  rowEls = Array.from(table.tBodies[0].rows);
+  let zi = 0, si = 0;
+  rowAt = rowEls.map(r => (r.classList.contains('z') ? BOWL.rows + BOWL.rowStep * zi++ : BOWL.labels + BOWL.labStep * si++));
+  openRow = table.tBodies[0].querySelector('tr.open');
+}
+
+safe('insights-table', function table() {
+  const el = document.getElementById('ins-table');
+  if (!el) return;
+  renderTable();
   const foot = document.querySelector('.ins-foot');
   const oz = ZST[OPEN];
   if (foot && oz.outliers) foot.innerHTML = `Prices before fees. <span class="ast-k">*</span> ${tip(oz)}.`;
-
-  rowEls = Array.from(tb.rows);
-  let zi = 0, si = 0;
-  rowAt = rowEls.map(r => (r.classList.contains('z') ? BOWL.rows + BOWL.rowStep * zi++ : BOWL.labels + BOWL.labStep * si++));
-  openRow = tb.querySelector('tr.open');
   if (!REDUCED) rowEls.forEach(r => r.classList.add('off'));
+
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const refocus = b.dataset.sort ? `[data-sort="${b.dataset.sort}"]` : `[data-z="${b.dataset.z}"]`;
+    if (b.dataset.sort) {
+      const k = b.dataset.sort;
+      if (TBL.key === k) TBL.dir *= -1;
+      else { TBL.key = k; TBL.dir = k === 'count' ? -1 : 1; }
+    } else {
+      const z = +b.dataset.z;
+      if (TBL.open.has(z)) TBL.open.delete(z);
+      else { TBL.open.add(z); TBL.at.set(z, performance.now()); }
+    }
+    if (!TBL.touched) { TBL.touched = true; TBL.at.set(OPEN, -1e9); }
+    renderTable();
+    rowEls.forEach(r => r.classList.remove('off'));
+    const again = el.querySelector(refocus);
+    if (again) again.focus();
+    if (bowlPanel) bowlPanel.kick(700);
+  });
 });
+
 let rowT = -1;
 function tableAt(t) {
-  if (t === rowT || !rowEls.length) return;
+  if (TBL.touched || t === rowT || !rowEls.length) return;
   rowT = t;
   rowEls.forEach((r, i) => r.classList.toggle('off', t < rowAt[i]));
-  if (openRow) openRow.classList.toggle('open', t >= BOWL.open);
+  if (openRow) {
+    const open = t >= BOWL.open;
+    openRow.classList.toggle('open', open);
+    const b = openRow.querySelector('button');
+    if (b) b.setAttribute('aria-expanded', String(open));
+  }
 }
 
 safe('insights-panels', function build() {
   panel('cv-load', 0, LOAD.dur, drawLoad);
   panel('cv-zones', 1, ZONES_DUR, drawZones);
   panel('cv-avg', 2, AVG.dur, drawAvg);
-  panel('cv-bowl', 3, BOWL.dur, drawBowl, tableAt);
+  bowlPanel = panel('cv-bowl', 3, BOWL.dur, drawBowl, tableAt);
 });
 
 /* ---------- the track: vertical scroll moves the panels sideways, one transform per frame ---------- */
@@ -673,6 +756,18 @@ safe('insights-track', function track() {
       if (seen && d < 0.2) p.play();
       else if (d > 0.999 || r.bottom < 0 || r.top > innerHeight) p.reset();
     });
+  });
+
+  // a focused control inside a panel that is off to the side brings that panel round
+  const view = sec.querySelector('.ins-view');
+  rail.addEventListener('focusin', e => {
+    if (!on) return;
+    const art = e.target.closest('.ins-panel');
+    if (view) view.scrollLeft = 0;
+    if (!art) return;
+    const i = +art.dataset.step || 0;
+    const r = sec.getBoundingClientRect(), span = r.height - innerHeight;
+    if (Math.abs(s - i) > 0.01) window.scrollTo({ top: scrollY + r.top + (i * (D + M) + D / 2) * span, behavior: 'instant' });
   });
 
   // rewind everything once the whole section has left the screen
