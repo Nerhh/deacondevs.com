@@ -246,9 +246,9 @@ main > .sec:first-child { border-top: 0; }
 .js .tw.on .tw-text { animation: type calc(var(--n) * var(--cps, 34ms)) steps(var(--n), end) var(--d, 0ms) forwards; }
 .js .tw .tw-caret { position: absolute; left: 0; top: 0.08em; bottom: 0.08em; width: 1ch; background: var(--ink); opacity: 0; pointer-events: none; }
 .js .tw.on .tw-caret { opacity: 1; animation: caret calc(var(--n) * var(--cps, 34ms)) steps(var(--n), end) var(--d, 0ms) both; }
-.js .tw.done .tw-caret { transform: translateX(calc(var(--n) * 1ch)); animation: caret-out 0.9s steps(1, end) forwards; }
+.js .tw.done .tw-caret { transform: translateX(calc(var(--n) * (1ch + var(--ls, 0em)))); animation: caret-out 0.9s steps(1, end) forwards; }
 @keyframes type { to { clip-path: inset(0 0 0 0); } }
-@keyframes caret { from { transform: translateX(0); } to { transform: translateX(calc(var(--n) * 1ch)); } }
+@keyframes caret { from { transform: translateX(0); } to { transform: translateX(calc(var(--n) * (1ch + var(--ls, 0em)))); } }
 @keyframes caret-out { 0% { opacity: 1; } 33% { opacity: 0; } 66% { opacity: 1; } 100% { opacity: 0; } }
 
 /* cross-document navigation opens like an iris, in steps */

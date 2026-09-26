@@ -95,16 +95,18 @@ ul.vs-data { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 1
 
 .vs-rail { display: none; }
 .js .vs-rail {
-  position: fixed; right: 12px; top: 50%; z-index: 40;
-  display: flex; flex-direction: column; gap: 10px;
+  position: fixed; right: 4px; top: 50%; z-index: 40;
+  display: flex; flex-direction: column; gap: 0;
   transform: translateY(-50%);
   visibility: hidden; clip-path: inset(0 0 100% 0);
   transition: clip-path 0.24s steps(6, end), visibility 0s linear 0.24s;
 }
 .js .vs-rail.on { visibility: visible; clip-path: inset(0 0 0 0); transition: clip-path 0.24s steps(6, end), visibility 0s; }
-.vs-rail a { display: block; width: 9px; height: 9px; border: 1px solid var(--ink); background: var(--paper); }
-.vs-rail a[aria-current="true"], .vs-rail a:hover { background: var(--ink); }
-.vs-rail a:focus-visible { outline-offset: 2px; }
+/* each link is a 24px tap area; the square inside it is the mark */
+.vs-rail a { display: grid; place-items: center; width: 24px; height: 24px; -webkit-tap-highlight-color: transparent; }
+.vs-rail a::before { content: ""; width: 9px; height: 9px; border: 1px solid var(--ink); background: var(--paper); }
+.vs-rail a[aria-current="true"]::before, .vs-rail a:hover::before { background: var(--ink); }
+.vs-rail a:focus-visible { outline-offset: -3px; }
 
 /* ---------- about ---------- */
 
@@ -125,9 +127,6 @@ ul.vs-data { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 1
   .vs-fig-4 canvas { height: 300px; }
   .vs-fig-5 canvas { height: 320px; }
   .vs-fig-6 canvas { height: 300px; }
-  .vs-rail { right: 6px; }
-  .js .vs-rail { right: 6px; gap: 8px; }
-  .vs-rail a { width: 7px; height: 7px; }
 }
 
 @media (max-width: 380px) {
@@ -139,4 +138,5 @@ ul.vs-data { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 1
 }
 
 /* on narrow phones the rail crowds the figures; the statements read fine without it */
-@media (max-width: 560px) { .js .vs-rail { display: none; } }
+/* below 901px the statements run to within a few pixels of the edge: no room for the rail beside them */
+@media (max-width: 900px) { .js .vs-rail { display: none; } }

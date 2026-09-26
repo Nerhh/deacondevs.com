@@ -226,6 +226,9 @@ function prepType(el) {
   if (REDUCED || el.classList.contains('tw')) return;
   const text = el.textContent;
   el.style.setProperty('--n', String(Math.max(1, text.length)));
+  // each glyph advances 1ch plus any tracking; kept in em so the caret still lands right after a resize
+  const cs = getComputedStyle(el), ls = parseFloat(cs.letterSpacing) || 0;
+  if (ls) el.style.setProperty('--ls', (ls / parseFloat(cs.fontSize)).toFixed(4) + 'em');
   if (el.dataset.cps) el.style.setProperty('--cps', el.dataset.cps + 'ms');
   el.textContent = '';
   const t = document.createElement('span');
