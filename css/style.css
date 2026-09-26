@@ -148,31 +148,15 @@ main { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); }
 .pj-name { font-size: clamp(26px, 3.2vw, 34px); font-weight: 500; line-height: 1.15; }
 .pj-line { font-size: 14px; line-height: 1.6; color: var(--ink-2); max-width: 40ch; }
 .pj-meta { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
-.pj-open { display: inline-flex; gap: 10px; align-items: baseline; font-size: 12.5px; margin-top: 6px; }
+/* padded like a key: the text still lines up with the column, and the right padding holds the arrow's 6px nudge,
+   so on hover it ends as far from the edge as the text starts */
+.pj-open { display: inline-flex; gap: 10px; align-items: baseline; font-size: 12.5px; margin: 2px 0 -4px -8px; padding: 4px 14px 4px 8px; }
 .pj-open .go { display: inline-block; transition: transform 0.24s steps(3, end); }
-.pj:hover .pj-open, .pj:focus-visible .pj-open { background: var(--ink); color: var(--paper); box-shadow: 0 0 0 4px var(--ink); }
+.pj:hover .pj-open, .pj:focus-visible .pj-open { background: var(--ink); color: var(--paper); }
 .pj:hover .pj-open .go, .pj:focus-visible .pj-open .go { transform: translateX(6px); }
 .pj:focus-visible { outline: none; }
 .pj-fig .mini { width: 100%; height: clamp(200px, 22vw, 264px); }
 
-/* ---------- rows: log index and contact ---------- */
-
-.rows { list-style: none; margin: 0; padding: 0; border-bottom: 1px solid var(--rule); }
-.rows li { border-top: 1px solid var(--rule); }
-.row {
-  display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 18px; align-items: baseline;
-  width: calc(100% + 24px); margin: 0 -12px; padding: 13px 12px;
-  background: none; border: 0; text-align: left; text-decoration: none; cursor: pointer;
-}
-.row:hover, .row:focus-visible { background: var(--ink); color: var(--paper); outline: none; }
-.row .k { color: var(--ink-3); }
-.row:hover .k, .row:focus-visible .k { color: var(--rule-2); }
-.row .go { display: inline-block; transition: transform 0.24s steps(3, end); }
-.row:hover .go, .row:focus-visible .go { transform: translateX(6px); }
-.row > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
-.commit { margin: 18px 0 0; font-size: 12px; color: var(--ink-3); }
-.commit[hidden] { display: none; }
-.commit b { font-weight: 500; color: var(--ink); }
 
 /* ---------- about ---------- */
 
@@ -187,10 +171,17 @@ main { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); }
 
 footer {
   max-width: var(--max); margin: 0 auto; padding: 22px var(--gutter) 44px;
-  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px;
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px 24px;
   border-top: 1px solid var(--rule);
   font-size: 11.5px; color: var(--ink-3);
 }
+.foot-note { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; }
+/* each link is a padded key (24px+ to tap); the outer margins keep the text on the column edges, wrapped or not */
+.foot-links { display: flex; gap: 4px; list-style: none; margin: 0 -8px; padding: 0; }
+.foot-links a { display: inline-flex; gap: 6px; align-items: baseline; padding: 5px 8px; color: var(--ink); text-decoration: none; }
+.foot-links .go { display: inline-block; transition: transform 0.24s steps(3, end); }
+.foot-links a:hover, .foot-links a:focus-visible { background: var(--ink); color: var(--paper); outline: none; }
+.foot-links a:hover .go, .foot-links a:focus-visible .go { transform: translate(2px, -2px); }
 
 /* ---------- log page ---------- */
 
@@ -224,17 +215,22 @@ main > .sec:first-child { border-top: 0; }
 .pg-facts dl { display: grid; grid-template-columns: minmax(120px, 0.4fr) minmax(0, 1fr); font-size: 13px; border-top: 1px solid var(--rule); }
 .pg-facts dt, .pg-facts dd { padding: 11px 0; border-bottom: 1px solid var(--rule); }
 .pg-facts dt { color: var(--ink-3); padding-right: 24px; }
-.pg-next { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); }
+/* the rule spans the column; the link box reaches 12px past it each side, and its extra right padding
+   is the room the arrow nudges into */
+.pg-next {
+  max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter);
+  background: linear-gradient(var(--ink), var(--ink)) top / 100% 1px no-repeat content-box;
+}
 .pg-next a {
   display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 0 40px; align-items: baseline;
-  padding: 40px 0 44px; border-top: 1px solid var(--ink); text-decoration: none;
+  margin: 0 -12px; padding: 40px 20px 44px 12px; text-decoration: none;
 }
 .pg-next .k { font-size: 12px; color: var(--ink-3); }
 .pg-next .t { font-size: clamp(28px, 5vw, 56px); font-weight: 500; line-height: 1.1; }
 .pg-next .go { font-size: clamp(22px, 3vw, 34px); display: inline-block; transition: transform 0.24s steps(3, end); }
-.pg-next a:hover { background: var(--ink); color: var(--paper); }
-.pg-next a:hover .k { color: var(--rule-2); }
-.pg-next a:hover .go { transform: translateX(10px); }
+.pg-next a:hover, .pg-next a:focus-visible { background: var(--ink); color: var(--paper); outline: none; }
+.pg-next a:hover .k, .pg-next a:focus-visible .k { color: var(--rule-2); }
+.pg-next a:hover .go, .pg-next a:focus-visible .go { transform: translateX(8px); }
 
 /* ---------- motion ---------- */
 
@@ -278,7 +274,6 @@ main > .sec:first-child { border-top: 0; }
   .menubar { padding: 0 6px; font-size: 12px; }
   .menubar a { padding: 0 7px; }
   .mb-right { gap: 14px; padding: 0 7px; }
-  .row { grid-template-columns: 84px minmax(0, 1fr) auto; gap: 12px; }
   .pg-facts dl { grid-template-columns: max-content minmax(0, 1fr); }
   .pg-facts dt { padding-right: 16px; }
 }
