@@ -137,3 +137,6 @@ ul.vs-data { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 1
 @media (prefers-reduced-motion: reduce) {
   .odo-w > span { will-change: auto; }
 }
+
+/* on narrow phones the rail crowds the figures; the statements read fine without it */
+@media (max-width: 560px) { .js .vs-rail { display: none; } }
