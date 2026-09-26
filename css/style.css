@@ -7,6 +7,10 @@
 @font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../assets/fonts/ibm-plex-mono-400.woff2') format('woff2'); }
 @font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('../assets/fonts/ibm-plex-mono-500.woff2') format('woff2'); }
 @font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/fonts/ibm-plex-mono-600.woff2') format('woff2'); }
+/* arrows and the tick live in a separate tiny subset, so → ↗ ✓ render in Plex rather than a fallback face */
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../assets/fonts/ibm-plex-mono-400-symbols.woff2') format('woff2'); unicode-range: U+2190-2193, U+2197, U+2713; }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('../assets/fonts/ibm-plex-mono-500-symbols.woff2') format('woff2'); unicode-range: U+2190-2193, U+2197, U+2713; }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/fonts/ibm-plex-mono-600-symbols.woff2') format('woff2'); unicode-range: U+2190-2193, U+2197, U+2713; }
 
 :root {
   --bg: #f2f2ef;
