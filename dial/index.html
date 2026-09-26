@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dial — Marcus Deacon</title>
+  <meta name="description" content="Dial: photograph a watch, confirm the model, and see what the cheap end of the market is really asking, with the suspiciously cheap listings thrown out first.">
+  <meta property="og:title" content="Dial — Marcus Deacon">
+  <meta property="og:description" content="Dial: photograph a watch, confirm the model, and see what the cheap end of the market is really asking, with the suspiciously cheap listings thrown out first.">
+  <meta property="og:url" content="https://marcus.gg/dial/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://marcus.gg/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
+  <meta name="theme-color" content="#fbfbf9">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23fbfbf9'/%3E%3Ccircle cx='8' cy='8' r='6' fill='%23151515'/%3E%3C/svg%3E">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-500.woff2">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/dial.css">
+</head>
+<body class="pg-dial">
+
+  <header class="menubar">
+    <a class="mb-home" href="/"><canvas id="mb-orb" width="16" height="16" aria-hidden="true"></canvas>marcus.gg</a>
+    <span class="mb-crumb">/<b>dial</b></span>
+    <div class="mb-right" aria-hidden="true">
+      <span class="mb-dim" id="coords"></span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <main>
+    <header class="pg-head">
+      <p class="pg-kicker" data-dz data-at="120">03 / 04 — Watch valuation · Prototype</p>
+      <h1 data-type data-at="260" data-cps="60">Dial</h1>
+      <p class="pg-lede" data-dz data-at="1100">Photograph a watch, confirm the model, and see what the cheap end of the market is really asking — with the suspiciously cheap listings thrown out first.</p>
+    </header>
+
+    <section class="dl" aria-label="How Dial works, in five steps">
+      <figure class="dl-fig" data-zoom>
+        <div class="win active dl-win" id="dl-win" data-zoom-target>
+          <div class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Dial — Point. Scan. Value.</span></div>
+          <div class="dl-steps" id="dl-steps" role="group" aria-label="Steps">
+            <button type="button" class="dl-step" data-step="0" aria-label="Step 1: Capture" aria-current="step"><span class="n">1</span><span class="l">Capture</span><span class="bar" aria-hidden="true"></span></button>
+            <button type="button" class="dl-step" data-step="1" aria-label="Step 2: Identify"><span class="n">2</span><span class="l">Identify</span><span class="bar" aria-hidden="true"></span></button>
+            <button type="button" class="dl-step" data-step="2" aria-label="Step 3: Details"><span class="n">3</span><span class="l">Details</span><span class="bar" aria-hidden="true"></span></button>
+            <button type="button" class="dl-step" data-step="3" aria-label="Step 4: Market"><span class="n">4</span><span class="l">Market</span><span class="bar" aria-hidden="true"></span></button>
+            <button type="button" class="dl-step" data-step="4" aria-label="Step 5: Value"><span class="n">5</span><span class="l">Value</span><span class="bar" aria-hidden="true"></span></button>
+          </div>
+          <div class="dl-screen">
+            <canvas id="dl-canvas" role="img" aria-label="Viewfinder: an example diver's watch, its hands at your local time, being photographed."></canvas>
+          </div>
+        </div>
+        <figcaption class="dl-cap">
+          <ol class="dl-caps" id="dl-caps" data-dz>
+            <li class="on"><span class="k">1 Capture</span><span class="t">One photo of the watch goes to the server, which identifies it with Claude vision.</span></li>
+            <li><span class="k">2 Identify</span><span class="t">Up to three candidates come back, each with a confidence level and a way to verify it; when two sizes look alike, both are shown and you confirm the right one.</span></li>
+            <li><span class="k">3 Details</span><span class="t">You add what a photo can’t show: the year, whether it has its box and papers, and its condition.</span></li>
+            <li><span class="k">4 Market</span><span class="t">Asking prices for that reference are sorted, anything under 60% of the median is dropped, and the lowest 20 that remain are averaged.</span></li>
+            <li><span class="k">5 Value</span><span class="t">The lowest ask, the low-20 average, the median and the sample size arrive together, never as one confident number.</span></li>
+          </ol>
+          <p class="dl-note" data-dz>Figures are illustrative.</p>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="dl-how" aria-labelledby="how-h">
+      <h2 id="how-h" data-type>How it values</h2>
+      <div class="pg-prose" data-dz>
+        <p>The server gathers <strong>marketplace asking prices</strong> for the confirmed reference, cached for 24 hours per reference. The phone never talks to any outside service directly. With no keys, the server runs on demo data and says so with a banner.</p>
+        <ol class="dl-rules">
+          <li>If you said the watch comes with its box and papers, only full-set listings count; if not, only listings without.</li>
+          <li>The prices are sorted and the median found.</li>
+          <li>Anything below 60% of the median is dropped as suspiciously cheap. That end of the market is where fakes, parts and franken-watches live.</li>
+          <li>The report gives the lowest remaining ask as the headline figure, then the average of up to 20 lowest remaining asks, the median, the number of comparable listings and how many were excluded.</li>
+          <li>At least three listings are needed. Prices are in pounds sterling.</li>
+        </ol>
+        <p>It never gives one confident number. The lowest ask, the low-20 average, the median and the sample size sit together, so a thin market is plain to see. In the example above: <span data-dl="n">37</span> listings, a median of <span data-dl="median">£3,250</span>, a floor of <span data-dl="floor">£1,950</span>, <span data-dl="out">4</span> excluded, a lowest ask of <span data-dl="lowest">£2,450</span> and an average of <span data-dl="avg">£3,037</span> across the <span data-dl="lown">20</span> lowest.</p>
+      </div>
+    </section>
+
+    <section class="pg-facts" aria-labelledby="facts-h">
+      <h2 id="facts-h" data-type>Facts</h2>
+      <dl data-dz>
+        <dt>App</dt><dd>Expo, React Native</dd>
+        <dt>Server</dt><dd>Node 24, TypeScript</dd>
+        <dt>Identification</dt><dd>One photo, Claude vision; up to three candidates, confirmed by you</dd>
+        <dt>Prices</dt><dd>Marketplace asking prices, cached 24 hours per reference</dd>
+        <dt>Valuation</dt><dd>Floor at 60% of the median; average of up to 20 lowest</dd>
+        <dt>Currency</dt><dd>GBP</dd>
+        <dt>Version</dt><dd>App 1.0.0 · server 0.1.0</dd>
+        <dt>Status</dt><dd>Prototype</dd>
+      </dl>
+    </section>
+  </main>
+
+  <nav class="pg-next" aria-label="Next project">
+    <a href="/insights/"><span class="k">Next project</span><span class="t">Section Price Insights</span><span class="go" aria-hidden="true">→</span></a>
+  </nav>
+
+  <footer>
+    <span>© 2026 Marcus Deacon</span>
+    <span>Written by hand. No frameworks, no build step.</span>
+  </footer>
+
+  <script src="/js/core.js"></script>
+  <script src="/js/dial.js"></script>
+</body>
+</html>

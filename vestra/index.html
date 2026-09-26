@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vestra — Marcus Deacon</title>
+  <meta name="description" content="Vestra: a UK-focused, privacy-first net-worth tracker in development. Cash and debt, Premium Bonds, shares, crypto, metals, property and collectables, priced live and added up honestly.">
+  <meta property="og:title" content="Vestra — Marcus Deacon">
+  <meta property="og:description" content="A UK-focused, privacy-first net-worth tracker, priced live and added up honestly.">
+  <meta property="og:url" content="https://marcus.gg/vestra/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://marcus.gg/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
+  <meta name="theme-color" content="#fbfbf9">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23fbfbf9'/%3E%3Ccircle cx='8' cy='8' r='6' fill='%23151515'/%3E%3C/svg%3E">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-500.woff2">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/vestra.css">
+</head>
+<body class="pg-vestra">
+
+  <header class="menubar">
+    <a class="mb-home" href="/"><canvas id="mb-orb" width="16" height="16" aria-hidden="true"></canvas>marcus.gg</a>
+    <span class="mb-crumb">/<b>vestra</b></span>
+    <div class="mb-right" aria-hidden="true">
+      <span class="mb-dim" id="coords"></span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <main>
+    <header class="pg-head">
+      <p class="pg-kicker" data-dz data-at="120">02 / 04 — Net worth · In development</p>
+      <h1 data-type data-at="260" data-cps="60">Vestra</h1>
+      <p class="pg-lede" data-dz data-at="1100">Your entire net worth in one considered view — cash and debt, Premium Bonds, shares, crypto, metals, property and collectables — priced live and added up honestly.</p>
+      <p class="pg-note vs-note" data-dz data-at="1400">Figures are illustrative.</p>
+    </header>
+
+    <div class="vs-sts" id="vs-sts">
+
+      <section class="vs-st" id="vs-1" aria-labelledby="vs-1-h">
+        <p class="vs-k" data-type>01 · Nine asset classes</p>
+        <h2 class="vs-h" id="vs-1-h" data-dz>Everything counts.</h2>
+        <figure class="vs-fig vs-fig-1">
+          <canvas id="vs-c1" aria-hidden="true"></canvas>
+        </figure>
+        <ul class="vs-data">
+          <li>Cash £14,200</li>
+          <li>Premium Bonds £10,000</li>
+          <li>Equity £68,450</li>
+          <li>Crypto £5,860</li>
+          <li>Commodity £4,310</li>
+          <li>Property £265,000</li>
+          <li>Collectable £3,950</li>
+          <li>Other £1,200</li>
+          <li>Debt −£188,370</li>
+          <li>Net worth £184,600</li>
+        </ul>
+        <p class="vs-cap" data-dz>Nine asset classes, one figure. Assets added, debt taken away.</p>
+      </section>
+
+      <section class="vs-st" id="vs-2" aria-labelledby="vs-2-h">
+        <p class="vs-k" data-type>02 · Net worth</p>
+        <h2 class="vs-h vs-num" id="vs-2-h"><span class="sr-only">Net worth: </span><span class="odo" id="vs-odo" data-value="184600">£184,600</span></h2>
+        <figure class="vs-fig vs-fig-2">
+          <canvas id="vs-c2" aria-hidden="true"></canvas>
+        </figure>
+        <p class="vs-data">A year of daily snapshots, from £158,900 to £184,600.</p>
+        <p class="vs-cap" data-dz>Quantity × price, at ECB rates. A snapshot every day at 06:00.</p>
+      </section>
+
+      <section class="vs-st" id="vs-3" aria-labelledby="vs-3-h">
+        <p class="vs-k" data-type>03 · Month in review</p>
+        <h2 class="vs-h" id="vs-3-h" data-dz>The month, unfolded.</h2>
+        <figure class="vs-fig vs-fig-3">
+          <canvas id="vs-c3" aria-hidden="true"></canvas>
+        </figure>
+        <ul class="vs-data">
+          <li>August: start £180,240</li>
+          <li>The market +£2,686</li>
+          <li>You added +£1,500</li>
+          <li>Income +£212</li>
+          <li>Fees −£38</li>
+          <li>End £184,600, up £4,360 (+2.4%)</li>
+          <li>Best: Global ETF +4.1%</li>
+          <li>Toughest: Bitcoin −6.2%</li>
+          <li>14 transactions</li>
+        </ul>
+        <p class="vs-cap" data-dz>From your snapshots and ledger, nothing estimated.</p>
+      </section>
+
+      <section class="vs-st" id="vs-4" aria-labelledby="vs-4-h">
+        <p class="vs-k" data-type>04 · Honest returns</p>
+        <h2 class="vs-h" id="vs-4-h" data-dz>Deposits aren’t gains.</h2>
+        <figure class="vs-fig vs-fig-4">
+          <canvas id="vs-c4" aria-hidden="true"></canvas>
+          <button class="vs-toggle" id="vs-t4" type="button" aria-pressed="false"><span class="a">Money in</span><span class="b">Time-weighted</span></button>
+        </figure>
+        <p class="vs-data">An ISA grows from £47,188 to £68,450, up £21,262 (+45.1%), but £15,000 of that was paid in on 6 April. Time-weighted return: +10.8%. Money-weighted (XIRR): +11.8%.</p>
+        <p class="vs-cap" data-dz>The balance jumps when you pay in. The return does not.</p>
+      </section>
+
+      <section class="vs-st" id="vs-5" aria-labelledby="vs-5-h">
+        <p class="vs-k" data-type>05 · Planning</p>
+        <h2 class="vs-h" id="vs-5-h" data-dz>Five hundred futures.</h2>
+        <figure class="vs-fig vs-fig-5">
+          <canvas id="vs-c5" aria-hidden="true"></canvas>
+        </figure>
+        <p class="vs-data">500 seeded paths from £184,600, adding £600 a month at a 6% return and 14% volatility.</p>
+        <p class="vs-cap" data-dz><span id="vs-odds">68%</span> chance of reaching £400,000 by 2040.</p>
+      </section>
+
+      <section class="vs-st" id="vs-6" aria-labelledby="vs-6-h">
+        <p class="vs-k" data-type>06 · UK tax</p>
+        <h2 class="vs-h" id="vs-6-h" data-dz>ISA&nbsp;· LISA&nbsp;· SIPP&nbsp;· GIA</h2>
+        <figure class="vs-fig vs-fig-6">
+          <canvas id="vs-c6" aria-hidden="true"></canvas>
+        </figure>
+        <ul class="vs-data">
+          <li>ISA allowance £19,000 of £20,000</li>
+          <li>LISA £4,000 of £4,000, within the ISA allowance</li>
+          <li>SIPP annual allowance £9,600 of £60,000</li>
+          <li>GIA capital gains £1,240 of the £3,000 exempt amount</li>
+        </ul>
+        <p class="vs-cap" data-dz>Allowances tracked by tax year. Section 104 gains, exported as CSV.</p>
+      </section>
+
+    </div>
+
+    <nav class="vs-rail" id="vs-rail" aria-label="Statements">
+      <a href="#vs-1" aria-label="01 Everything counts"></a>
+      <a href="#vs-2" aria-label="02 Net worth"></a>
+      <a href="#vs-3" aria-label="03 The month, unfolded"></a>
+      <a href="#vs-4" aria-label="04 Deposits aren’t gains"></a>
+      <a href="#vs-5" aria-label="05 Five hundred futures"></a>
+      <a href="#vs-6" aria-label="06 UK tax wrappers"></a>
+    </nav>
+
+    <section class="vs-about" aria-labelledby="about-h">
+      <h2 id="about-h" data-type>About</h2>
+      <div class="pg-prose">
+        <p data-dz>Vestra is a UK-focused, privacy-first net-worth tracker. Bank accounts and debt, Premium Bonds, shares and ETFs, crypto, metals, property and collectables sit in one live-priced view, and the arithmetic is done properly: returns that ignore deposits, an allocation X-ray that splits ETFs into their real sector weights, target weights that show drift and the trades that rebalance, and a fee X-ray that shows twenty years of fund charges.</p>
+        <p data-dz>Three principles hold it together. <strong>Private by design</strong>: prices come from keyless public feeds, wallets are read on-chain and read-only, and a privacy blur hides every figure. <strong>Honest numbers</strong>: time-weighted and money-weighted returns, FX attribution and a benchmark overlay, so a gain is only ever a gain. <strong>Everything counts</strong>: if you own it, it belongs in the total.</p>
+      </div>
+    </section>
+
+    <section class="pg-facts" aria-labelledby="facts-h">
+      <h2 id="facts-h" data-type>Facts</h2>
+      <dl data-dz>
+        <dt>Stack</dt><dd>NestJS and Prisma API; React and Vite; Postgres in production, SQLite in development</dd>
+        <dt>Data</dt><dd>Open Banking bank sync; broker CSV imports from Trading 212, Freetrade, Sharesight and getquin; crypto wallets read on-chain, read-only</dd>
+        <dt>Prices</dt><dd>Five keyless public feeds, refreshed on a schedule; ECB exchange rates; a snapshot every day at 06:00</dd>
+        <dt>Returns</dt><dd>Time-weighted and money-weighted (XIRR); volatility, max drawdown and Sharpe; FX attribution; benchmark overlay</dd>
+        <dt>Planning</dt><dd>Monte Carlo over 500 seeded paths; a “will it last?” retirement test; a solver for the monthly contribution needed</dd>
+        <dt>UK tax</dt><dd>ISA, LISA, SIPP and GIA wrappers; allowance tracking; Section 104 capital gains by tax year, with CSV export</dd>
+        <dt>Install</dt><dd>Installable web app; command palette; privacy blur; 19 insight rules</dd>
+        <dt>Status</dt><dd>In development, not yet launched</dd>
+      </dl>
+    </section>
+  </main>
+
+  <nav class="pg-next" aria-label="Next project">
+    <a href="/dial/"><span class="k">Next project</span><span class="t">Dial</span><span class="go" aria-hidden="true">→</span></a>
+  </nav>
+
+  <footer>
+    <span>© 2026 Marcus Deacon</span>
+    <span>Written by hand. No frameworks, no build step.</span>
+  </footer>
+
+  <script src="/js/core.js"></script>
+  <script src="/js/vestra.js"></script>
+</body>
+</html>

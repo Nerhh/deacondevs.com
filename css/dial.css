@@ -1,0 +1,104 @@
+/* Dial — a single instrument you step through: capture, identify, details, market, value.
+   Shares every token with style.css; only the instrument and the rules list live here. */
+
+.dl { padding: 0 0 clamp(64px, 10vh, 104px); }
+.dl-fig { max-width: 900px; margin: 0 auto; }
+
+/* ---------- the step bar ---------- */
+
+.dl-steps {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-bottom: 1px solid var(--ink);
+}
+.dl-step {
+  position: relative;
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 10px 14px 11px;
+  background: none; border: 0; border-left: 1px solid var(--rule);
+  font-size: 12px; line-height: 1; text-align: left; color: var(--ink-3);
+  cursor: pointer;
+}
+.dl-step:first-child { border-left: 0; }
+.dl-step .n {
+  flex: none; display: inline-grid; place-items: center;
+  width: 19px; height: 19px; border: 1px solid currentColor;
+  font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.dl-step .l { min-width: 0; white-space: nowrap; }
+.dl-step[aria-current="step"] { color: var(--ink); font-weight: 500; }
+.dl-step[aria-current="step"] .n { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+/* hover is a selection, as everywhere else on the site */
+.dl-step:hover { background: var(--ink); color: var(--paper); }
+.dl-step:hover .n { border-color: var(--paper); }
+.dl-step[aria-current="step"]:hover .n { background: var(--paper); color: var(--ink); }
+.dl-step:focus-visible { outline: 1px solid var(--ink); outline-offset: -5px; }
+.dl-step:hover:focus-visible { outline-color: var(--paper); }
+/* the stepped progress line under the active step (driven by dial.js) */
+.dl-step .bar {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: var(--ink); transform: scaleX(0); transform-origin: left center;
+  pointer-events: none;
+}
+.dl-step:not([aria-current="step"]) .bar { visibility: hidden; }
+
+/* ---------- the screen ---------- */
+
+.dl-screen { position: relative; background: var(--paper); }
+#dl-canvas { width: 100%; height: 500px; }
+
+/* ---------- caption ---------- */
+
+.dl-cap {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 32px; align-items: start;
+  margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule);
+}
+.dl-caps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.dl-caps li { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 0 16px; font-size: 13px; line-height: 1.6; }
+.dl-caps .k { color: var(--ink-3); white-space: nowrap; }
+.dl-caps .t { color: var(--ink-2); max-width: 68ch; }
+.dl-note { font-size: 11.5px; line-height: 1.6; color: var(--ink-3); white-space: nowrap; padding-top: 1px; }
+
+/* with script, one caption shows at a time; all five share a cell so the height never jumps */
+.js .dl-caps li { grid-area: 1 / 1; visibility: hidden; }
+.js .dl-caps li.on { visibility: visible; }
+
+/* without script there is nothing to step through: the captions carry the story */
+html:not(.js) .dl-win { display: none; }
+html:not(.js) .dl-cap { margin-top: 0; }
+
+/* ---------- how it values ---------- */
+
+.dl-how {
+  display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0 40px;
+  padding: 72px 0 88px; border-top: 1px solid var(--rule);
+}
+.dl-how h2 { font-size: 12px; font-weight: 400; color: var(--ink-3); line-height: 1.65; }
+.dl-rules {
+  list-style: none; counter-reset: rule; margin: 4px 0 22px; padding: 0;
+  max-width: 60ch; border-top: 1px solid var(--rule);
+}
+.dl-rules li {
+  counter-increment: rule;
+  display: grid; grid-template-columns: 32px minmax(0, 1fr);
+  padding: 11px 0; border-bottom: 1px solid var(--rule);
+  font-size: 14px; line-height: 1.65; color: var(--ink-2);
+}
+.dl-rules li::before { content: counter(rule, decimal-leading-zero); color: var(--ink-3); font-size: 12px; line-height: 1.9; }
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 900px) {
+  .dl-how { grid-template-columns: 1fr; padding: 52px 0 64px; }
+  .dl-how h2 { margin-bottom: 20px; }
+}
+
+@media (max-width: 720px) {
+  .dl-cap { grid-template-columns: minmax(0, 1fr); }
+  .dl-caps li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+
+@media (max-width: 600px) {
+  .dl-step { justify-content: center; padding: 10px 4px 11px; }
+  .dl-step .l { display: none; }
+  #dl-canvas { height: 480px; }
+}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Section Price Insights — Marcus Deacon</title>
+  <meta name="description" content="A Chrome extension for StubHub event pages that reads every listing at once and shows the lowest, typical and highest price per ticket for each zone and section.">
+  <meta property="og:title" content="Section Price Insights — Marcus Deacon">
+  <meta property="og:description" content="A Chrome extension for StubHub event pages that reads every listing at once and shows the lowest, typical and highest price per ticket for each zone and section.">
+  <meta property="og:url" content="https://marcus.gg/insights/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://marcus.gg/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
+  <meta name="theme-color" content="#fbfbf9">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23fbfbf9'/%3E%3Ccircle cx='8' cy='8' r='6' fill='%23151515'/%3E%3C/svg%3E">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-500.woff2">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/insights.css">
+</head>
+<body class="pg-insights">
+
+  <header class="menubar">
+    <a class="mb-home" href="/"><canvas id="mb-orb" width="16" height="16" aria-hidden="true"></canvas>marcus.gg</a>
+    <span class="mb-crumb">/<b>insights</b></span>
+    <div class="mb-right" aria-hidden="true">
+      <span class="mb-dim" id="coords"></span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <main>
+    <header class="pg-head">
+      <p class="pg-kicker" data-dz data-at="120">04 / 04 — Chrome extension · Working build</p>
+      <h1><span class="ins-l" data-type data-at="260" data-cps="60">Section Price</span> <span class="ins-l" data-type data-at="1120" data-cps="60">Insights</span></h1>
+      <p class="pg-lede" data-dz data-at="1700">A Chrome extension for StubHub event pages. It reads every listing for the event at once and shows the lowest, typical and highest price per ticket for each zone and section — before fees, and without the outliers skewing the average.</p>
+    </header>
+
+    <!-- four panels: a horizontal track on wide screens, a plain stack everywhere else -->
+    <section class="ins-run" id="run" aria-label="How it works, in four steps">
+      <div class="ins-stick">
+        <div class="ins-frame win active">
+          <div class="win-bar ins-bar" aria-hidden="true"><span class="win-box"></span><span class="win-title">Section Price Insights</span></div>
+          <div class="ins-view">
+            <div class="ins-rail hscroll">
+
+              <article class="ins-panel ins-p1" data-step="0" aria-labelledby="p1-h">
+                <div class="ins-copy">
+                  <p class="ins-n">01</p>
+                  <h2 id="p1-h" data-type>All of it, at once.</h2>
+                  <p data-dz>StubHub shows a few listings at a time. The extension reads the listings the page already shows you, all at once, in your own browser session: the first page, then the rest in parallel batches of twelve.</p>
+                  <p class="ins-small" data-dz>On a typical event that is about 250 listings across 26 pages, in under a second. If loading fails, it falls back to the listing cards already on screen.</p>
+                </div>
+                <div class="ins-fig"><canvas id="cv-load" role="img" aria-label="Twenty-six page tiles fill in: the first page, then batches of twelve, while a progress bar counts up to all 254 listings loaded."></canvas></div>
+              </article>
+
+              <article class="ins-panel ins-p2" data-step="1" aria-labelledby="p2-h">
+                <div class="ins-copy">
+                  <p class="ins-n">02</p>
+                  <h2 id="p2-h" data-type>Into zones.</h2>
+                  <p data-dz>Each listing is grouped under StubHub's own zone name, such as Field or Upper Level. Zones keep a fixed order, so a zone and its sections always share the same marking.</p>
+                  <p class="ins-small" data-dz>Every dot is one listing, placed by its price per ticket.</p>
+                </div>
+                <div class="ins-fig"><canvas id="cv-zones" role="img" aria-label="254 price dots fall from a cloud into five zone lanes, each placed by its price."></canvas></div>
+              </article>
+
+              <article class="ins-panel ins-p3" data-step="2" aria-labelledby="p3-h">
+                <div class="ins-copy">
+                  <p class="ins-n">03</p>
+                  <h2 id="p3-h" data-type>The average, honestly.</h2>
+                  <p data-dz>Min and max show the real extremes. The average leaves out outliers by the standard 1.5 × IQR rule, but only once a group has at least four prices.</p>
+                  <p class="ins-small" data-dz>A trimmed average carries an asterisk, and its tooltip gives the true range.</p>
+                </div>
+                <div class="ins-fig"><canvas id="cv-avg" role="img" aria-label="Each zone lane becomes a bar from its lowest to its highest price with the average marked. An $8,000 listing is left out of the Field average, which drops from $568 to $336."></canvas></div>
+              </article>
+
+              <article class="ins-panel ins-p4" data-step="3" aria-labelledby="p4-h">
+                <div class="ins-copy">
+                  <p class="ins-n">04</p>
+                  <h2 id="p4-h" data-type>Zones, then sections.</h2>
+                  <p data-dz>Open a zone to see its section numbers, which match the labels on the seat map. Every column sorts; cheapest average first by default.</p>
+                </div>
+                <div class="ins-tbl">
+                  <table class="ins-table" id="ins-table">
+                    <caption class="sr-only">Zones by average price per ticket, cheapest first, with Field opened into its sections</caption>
+                    <thead>
+                      <tr><th scope="col">Zone</th><th scope="col">Min</th><th scope="col" aria-sort="ascending">Avg ↑</th><th scope="col">Max</th><th scope="col">Count</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr class="z"><th scope="row"><i class="car"></i><i class="sw sw-4"></i>Upper Level</th><td>$42</td><td>$86</td><td>$128</td><td>73</td></tr>
+                      <tr class="z"><th scope="row"><i class="car"></i><i class="sw sw-3"></i>Mezzanine</th><td>$84</td><td>$143</td><td>$197</td><td>52</td></tr>
+                      <tr class="z"><th scope="row"><i class="car"></i><i class="sw sw-1"></i>Lower Level</th><td>$118</td><td>$211</td><td>$304</td><td>66</td></tr>
+                      <tr class="z"><th scope="row"><i class="car"></i><i class="sw sw-2"></i>Club</th><td>$160</td><td>$258</td><td>$345</td><td>30</td></tr>
+                      <tr class="z open"><th scope="row"><i class="car"></i><i class="sw sw-0"></i>Field</th><td>$207</td><td>$336<span class="ast" title="Average excludes 1 outlier listing (true range $207–$8,000)">*</span></td><td>$8,000</td><td>33</td></tr>
+                      <tr class="s"><th scope="row"><i class="sw sw-0"></i>F4</th><td>$207</td><td>$273</td><td>$360</td><td>6</td></tr>
+                      <tr class="s"><th scope="row"><i class="sw sw-0"></i>F6</th><td>$226</td><td>$278</td><td>$307</td><td>5</td></tr>
+                      <tr class="s"><th scope="row"><i class="sw sw-0"></i>F3</th><td>$243</td><td>$316</td><td>$408</td><td>4</td></tr>
+                      <tr class="s"><th scope="row"><i class="sw sw-0"></i>F1</th><td>$306</td><td>$360</td><td>$412</td><td>5</td></tr>
+                      <tr class="s"><th scope="row"><i class="sw sw-0"></i>F5</th><td>$318</td><td>$368</td><td>$450</td><td>6</td></tr>
+                      <tr class="s"><th scope="row"><i class="sw sw-0"></i>F2</th><td>$337</td><td>$411<span class="ast" title="Average excludes 1 outlier listing (true range $337–$8,000)">*</span></td><td>$8,000</td><td>7</td></tr>
+                    </tbody>
+                  </table>
+                  <p class="ins-foot">Prices before fees. <span class="ast-k">*</span> Average excludes 1 outlier listing (true range $207–$8,000).</p>
+                </div>
+                <div class="ins-fig"><canvas id="cv-bowl" role="img" aria-label="An invented, bowl-shaped venue shaded by zone. The Field opens into sections F1 to F6."></canvas></div>
+              </article>
+
+            </div>
+          </div>
+          <div class="ins-steps" aria-hidden="true">
+            <span class="ins-count"><b id="ins-step">1</b> / 4</span>
+            <span class="ins-meter"><i id="ins-fill"></i><s></s><s></s><s></s></span>
+            <span class="ins-name" id="ins-name">All of it, at once.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <p class="pg-note ins-note" data-dz>The venue is invented and every figure on this page is illustrative: one made-up set of 254 listings, drawn live.</p>
+
+    <section class="ins-about" aria-labelledby="about-h">
+      <h2 id="about-h" data-type>About</h2>
+      <div class="pg-prose" data-dz>
+        <p>Section Price Insights adds a small, draggable panel to StubHub event pages. It reads every listing for the event, not just the handful of cards on screen, and shows the lowest, typical and highest price per ticket for each zone and each section, with a count of the listings behind every figure. Switch between <strong>Zones</strong> and <strong>Sections</strong>, sort any column, or open a zone to see its sections.</p>
+        <p>It is private by design. Everything stays in memory in that tab: nothing is saved, nothing is sent anywhere, and there is no backend and no analytics. It only has access to StubHub, and it resets itself when you move to another event. Prices are per ticket and before fees. Not affiliated with or endorsed by StubHub.</p>
+      </div>
+    </section>
+
+    <section class="pg-facts" aria-labelledby="facts-h">
+      <h2 id="facts-h" data-type>Facts</h2>
+      <dl data-dz>
+        <dt>Type</dt><dd>Chrome extension, Manifest V3</dd>
+        <dt>Runs on</dt><dd>StubHub event pages</dd>
+        <dt>Reads</dt><dd>Every listing for the event, in parallel batches of 12 pages</dd>
+        <dt>Average</dt><dd>Outliers left out by 1.5 × IQR, from four prices up</dd>
+        <dt>Prices</dt><dd>Per ticket, before fees</dd>
+        <dt>Privacy</dt><dd>In memory, in that tab. No backend, no analytics</dd>
+        <dt>Version</dt><dd>1.0.0</dd>
+        <dt>Status</dt><dd>Working build, installed unpacked (developer mode)</dd>
+      </dl>
+    </section>
+  </main>
+
+  <nav class="pg-next" aria-label="Next project">
+    <a href="/umbra/"><span class="k">Next project</span><span class="t">Umbra</span><span class="go" aria-hidden="true">→</span></a>
+  </nav>
+
+  <footer>
+    <span>© 2026 Marcus Deacon</span>
+    <span>Written by hand. No frameworks, no build step.</span>
+  </footer>
+
+  <script src="/js/core.js"></script>
+  <script src="/js/insights.js"></script>
+</body>
+</html>
