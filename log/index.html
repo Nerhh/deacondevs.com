@@ -22,36 +22,30 @@
 
   <header class="menubar">
     <a class="mb-home" href="/"><canvas id="mb-orb" width="16" height="16" aria-hidden="true"></canvas>marcus.gg</a>
-    <nav class="mb-nav" aria-label="Sections">
-      <a href="/#work">Work</a>
-      <a href="/log/" aria-current="page">Log</a>
-      <a href="/#about">About</a>
-      <a href="/#contact">Contact</a>
-    </nav>
+    <span class="mb-crumb">/<b>log</b></span>
     <div class="mb-right" aria-hidden="true">
       <span class="mb-dim" id="coords"></span>
-      <span class="mb-sec"><span class="odo" id="odo"></span><span class="sec-name" id="sec-name">Log</span></span>
       <span id="clock"></span>
     </div>
   </header>
 
   <main>
 
-    <section class="sec entry" id="umbra" data-sec="2" data-name="Entry II">
+    <section class="sec entry" id="umbra">
       <p class="sec-label"><span class="n">II</span><time datetime="2026-09-26" data-type>26.09.2026</time></p>
       <div>
         <h2 data-dz>Umbra, and a quieter room</h2>
         <p data-dz>The newest thing on the front page is <strong>Umbra</strong>: a multi-session desktop browser where every tab is its own isolated browser. Each tab gets its own cookies, storage and cache, its own proxy and exit IP, and its own fingerprint — screen, graphics, fonts and clock set together so they agree with each other and with the network they appear on. It's for people who genuinely need many accounts, QA across regions, or want to see a page from somewhere they aren't.</p>
-        <p data-dz>Under the hood it's an <strong>Electron, React and TypeScript</strong> desktop app, with a small <strong>Go</strong> network engine doing the wire-level work and a <strong>Next.js</strong> account platform behind it. It's in beta, and it's where most of my evenings go. The window on the front page re-enacts the core idea: five tabs, five identities, nothing shared between them.</p>
-        <p data-dz>The site changed with it. It is quieter now: off-white and grey, one typeface, and the manners of an older kind of computer. Windows zoom open from their centres. Text types itself in behind a block caret. Paragraphs arrive through a dithered dissolve. The sphere on the index is shaded per pixel, reduced to one bit with an ordered dither, and lit from wherever your cursor is. Still no frameworks, still no build step.</p>
+        <p data-dz>Under the hood it's an <strong>Electron, React and TypeScript</strong> desktop app, with a small <strong>Go</strong> network engine doing the wire-level work and a <strong>Next.js</strong> account platform behind it. It's in beta, and it's where most of my evenings go. Its page on this site walks through the core idea: one machine, five sealed sessions, nothing shared between them.</p>
+        <p data-dz>The site changed with it. It is quieter now: off-white and grey, one typeface, and the manners of an older kind of computer. Windows zoom open from their centres. Text types itself in behind a block caret. Paragraphs arrive through a dithered dissolve. The sphere on the index is shaded per pixel, reduced to one bit with an ordered dither, and lit from wherever your cursor is. Each project now has a page of its own, laid out around what that project actually does. Still no frameworks, still no build step.</p>
       </div>
     </section>
 
-    <section class="sec entry" id="building-this-place" data-sec="1" data-name="Entry I">
+    <section class="sec entry" id="building-this-place">
       <p class="sec-label"><span class="n">I</span><time datetime="2026-07-06" data-type>06.07.2026</time></p>
       <div>
         <h2 data-dz>Building this place</h2>
-        <p data-dz>This site went from an empty folder to a working page in a handful of build sessions: <strong>no frameworks, no build step</strong> — hand-written HTML, one stylesheet, and a single script doing everything you can see. The live charts in the Work section date from then, all hand-rolled canvas and plain JavaScript.</p>
+        <p data-dz>This site went from an empty folder to a working page in a handful of build sessions: <strong>no frameworks, no build step</strong> — hand-written HTML, one stylesheet, and a single script doing everything you can see. Everything drawn on the page was hand-rolled canvas and plain JavaScript then, and still is.</p>
         <p data-dz>Some things I learned shipping it. The <strong>.gg registry publishes its zone in batches</strong>, so marcus.gg spent its first afternoon registered but invisible to the entire internet — nothing was wrong, the Channel Islands just publish on their own schedule. GitHub Pages will quietly refuse to issue an HTTPS certificate if you attach a domain before its DNS exists; removing and re-adding the domain wakes it up. And Jekyll was processing this site on every deploy for no reason at all until a <strong>.nojekyll</strong> file put a stop to it.</p>
         <p data-dz>The first version opened on a duel between my two Old School RuneScape characters, with a quest log where a skills grid would usually go. Both have retired to the git history, where the duel is still perfectly playable.</p>
       </div>
@@ -64,6 +58,6 @@
     <span>Written by hand. No frameworks, no build step.</span>
   </footer>
 
-  <script src="/js/main.js"></script>
+  <script src="/js/core.js"></script>
 </body>
 </html>

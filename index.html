@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Marcus Deacon</title>
-  <meta name="description" content="Marcus Deacon — software developer in the UK. Building Umbra, a multi-session browser, alongside a wealth tracker, a ticket-price watcher and a watch appraiser.">
+  <meta name="description" content="Marcus Deacon — software developer in the UK. Building Umbra, a multi-session browser, alongside a net-worth tracker, a watch valuer and a ticket-price extension.">
   <meta property="og:title" content="Marcus Deacon">
   <meta property="og:description" content="Software developer, UK. Building Umbra, a multi-session browser.">
   <meta property="og:url" content="https://marcus.gg/">
@@ -24,27 +24,20 @@
 
   <header class="menubar">
     <a class="mb-home" href="#top"><canvas id="mb-orb" width="16" height="16" aria-hidden="true"></canvas>marcus.gg</a>
-    <nav class="mb-nav" aria-label="Sections">
-      <a href="#work">Work</a>
-      <a href="#log">Log</a>
-      <a href="#about">About</a>
-      <a href="#contact">Contact</a>
-    </nav>
     <div class="mb-right" aria-hidden="true">
       <span class="mb-dim" id="coords"></span>
-      <span class="mb-sec"><span class="odo" id="odo"></span><span class="sec-name" id="sec-name">Index</span></span>
       <span id="clock"></span>
     </div>
   </header>
 
   <main id="top">
 
-    <section class="hero" data-sec="0" data-name="Index">
+    <section class="hero" aria-label="Introduction">
       <div>
         <h1 data-type data-at="220" data-cps="52">Marcus Deacon</h1>
         <p class="role" data-type data-at="980" data-cps="26">Software developer, UK</p>
-        <p class="lede" data-dz data-at="1640">I build tools that do the boring work: a multi-session browser, a wealth tracker, a ticket-price watcher and a watch appraiser.</p>
-        <p class="now" data-dz data-at="1980">Currently building <a href="#umbra">Umbra</a><span class="caret" aria-hidden="true"></span></p>
+        <p class="lede" data-dz data-at="1640">I build tools that do the boring work: a multi-session browser, a net-worth tracker, a watch valuer and a ticket-price extension.</p>
+        <p class="now" data-dz data-at="1980">Currently building <a href="umbra/">Umbra</a><span class="caret" aria-hidden="true"></span></p>
       </div>
       <figure class="fig">
         <canvas id="orb" role="img" aria-label="A sphere drawn in one-bit dither, lit from the direction of your cursor. Drag to turn it."></canvas>
@@ -52,78 +45,70 @@
       </figure>
     </section>
 
-    <section class="sec" id="work" data-sec="1" data-name="Work">
-      <h2 class="sec-label"><span class="n">01</span><span data-type>Work</span></h2>
-      <div class="work">
+    <ol class="index" aria-label="Projects">
+      <li>
+        <a class="pj" href="umbra/" data-zoom>
+          <span class="pj-text">
+            <span class="pj-n">01</span>
+            <span class="pj-name" data-type>Umbra</span>
+            <span class="pj-line" data-dz>A desktop browser where every tab is its own sealed browser — its own cookies, its own exit IP, its own consistent device.</span>
+            <span class="pj-meta" data-dz>Desktop · Electron, Go · In beta</span>
+            <span class="pj-open" data-dz>Open project <span class="go" aria-hidden="true">→</span></span>
+          </span>
+          <span class="pj-fig win" data-zoom-target>
+            <span class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Umbra</span></span>
+            <canvas class="mini" data-mini="umbra" role="img" aria-label="Five sealed partitions; cookies bounce inside their own and never cross"></canvas>
+          </span>
+        </a>
+      </li>
+      <li>
+        <a class="pj" href="vestra/" data-zoom>
+          <span class="pj-text">
+            <span class="pj-n">02</span>
+            <span class="pj-name" data-type>Vestra</span>
+            <span class="pj-line" data-dz>Your entire net worth in one considered view, priced live and added up honestly — deposits never counted as gains.</span>
+            <span class="pj-meta" data-dz>Web app · NestJS, React · In development</span>
+            <span class="pj-open" data-dz>Open project <span class="go" aria-hidden="true">→</span></span>
+          </span>
+          <span class="pj-fig win" data-zoom-target>
+            <span class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Vestra</span></span>
+            <canvas class="mini" data-mini="vestra" role="img" aria-label="A net-worth figure rolling to each day's snapshot above its history"></canvas>
+          </span>
+        </a>
+      </li>
+      <li>
+        <a class="pj" href="dial/" data-zoom>
+          <span class="pj-text">
+            <span class="pj-n">03</span>
+            <span class="pj-name" data-type>Dial</span>
+            <span class="pj-line" data-dz>Photograph a watch and see what the cheap end of the market is really asking, with the suspiciously cheap listings thrown out first.</span>
+            <span class="pj-meta" data-dz>Mobile · Expo, Node · Prototype</span>
+            <span class="pj-open" data-dz>Open project <span class="go" aria-hidden="true">→</span></span>
+          </span>
+          <span class="pj-fig win" data-zoom-target>
+            <span class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Dial</span></span>
+            <canvas class="mini" data-mini="dial" role="img" aria-label="Listings land on a price axis; the cheap outliers are cut and the lowest twenty averaged"></canvas>
+          </span>
+        </a>
+      </li>
+      <li>
+        <a class="pj" href="insights/" data-zoom>
+          <span class="pj-text">
+            <span class="pj-n">04</span>
+            <span class="pj-name" data-type>Section Insights</span>
+            <span class="pj-line" data-dz>A Chrome extension that reads every listing on a StubHub event at once and shows the low, typical and high price for each zone and section.</span>
+            <span class="pj-meta" data-dz>Chrome extension · JavaScript · Working build</span>
+            <span class="pj-open" data-dz>Open project <span class="go" aria-hidden="true">→</span></span>
+          </span>
+          <span class="pj-fig win" data-zoom-target>
+            <span class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Section Price Insights</span></span>
+            <canvas class="mini" data-mini="insights" role="img" aria-label="Listings fall into zone lanes, then each lane becomes a low, typical and high price"></canvas>
+          </span>
+        </a>
+      </li>
+    </ol>
 
-        <figure class="proj" id="umbra">
-          <div class="win">
-            <div class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Umbra</span></div>
-            <div class="win-body"><canvas id="umbra-canvas" role="img" aria-label="A browser opens five tabs; each carries its own isolated cookies, exit IP, timezone and fingerprint"></canvas></div>
-          </div>
-          <figcaption class="meta">
-            <div class="meta-head"><h3 data-type>Umbra</h3><span class="tag">Beta</span></div>
-            <p data-dz>A multi-session desktop browser. Every tab is its own isolated browser, with its own cookies, its own proxy and exit IP, and a fingerprint that holds together.</p>
-            <p class="stack" data-dz>Electron, React, TypeScript, Go</p>
-          </figcaption>
-        </figure>
-
-        <figure class="proj" id="vestra">
-          <div class="win">
-            <div class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Vestra</span></div>
-            <div class="win-body">
-              <canvas id="donut-canvas" role="img" aria-label="Portfolio allocation drawn as a ring chart"></canvas>
-              <ul class="legend" id="donut-legend"></ul>
-            </div>
-          </div>
-          <figcaption class="meta">
-            <div class="meta-head"><h3 data-type>Vestra</h3><span class="tag">Active</span></div>
-            <p data-dz>Wealth management for people who like their money where they can see it: accounts, holdings, savings habits, and a monthly Wrapped for net worth.</p>
-            <p class="stack" data-dz>Node, SQLite, PWA</p>
-          </figcaption>
-        </figure>
-
-        <figure class="proj" id="stubhub">
-          <div class="win">
-            <div class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">StubHub Lens</span></div>
-            <div class="win-body"><canvas id="spark-canvas" role="img" aria-label="A live ticket price chart with a rolling average and deal detection"></canvas></div>
-          </div>
-          <figcaption class="meta">
-            <div class="meta-head"><h3 data-type>StubHub Lens</h3><span class="tag">In development</span></div>
-            <p data-dz>A Chrome extension that does the maths on StubHub listings: live price tracking, rolling averages and deal alerts, before you overpay.</p>
-            <p class="stack" data-dz>Chrome extension, JavaScript</p>
-          </figcaption>
-        </figure>
-
-        <figure class="proj" id="dial">
-          <div class="win">
-            <div class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Dial</span></div>
-            <div class="win-body"><canvas id="watch-canvas" role="img" aria-label="A ticking watch face is scanned and valued from market listings"></canvas></div>
-          </div>
-          <figcaption class="meta">
-            <div class="meta-head"><h3 data-type>Dial</h3><span class="tag">Prototype</span></div>
-            <p data-dz>Point a camera at a watch and get a straight answer on price, built from the twenty cheapest live listings rather than dealer optimism.</p>
-            <p class="stack" data-dz>Expo, React Native, Node</p>
-          </figcaption>
-        </figure>
-
-        <p class="note" data-dz>Every window is drawn live in the browser. Figures are illustrative.</p>
-      </div>
-    </section>
-
-    <section class="sec" id="log" data-sec="2" data-name="Log">
-      <h2 class="sec-label"><span class="n">02</span><span data-type>Log</span></h2>
-      <div>
-        <ul class="rows" data-dz>
-          <li><a class="row" href="/log/#umbra"><span class="k">26.09.2026</span><span>Umbra, and a quieter room</span><span class="go" aria-hidden="true">→</span></a></li>
-          <li><a class="row" href="/log/#building-this-place"><span class="k">06.07.2026</span><span>Building this place</span><span class="go" aria-hidden="true">→</span></a></li>
-        </ul>
-        <p class="commit" id="commit" hidden></p>
-      </div>
-    </section>
-
-    <section class="sec" id="about" data-sec="3" data-name="About">
-      <h2 class="sec-label"><span class="n">03</span><span data-type>About</span></h2>
+    <section class="band" aria-label="About">
       <div class="about">
         <div>
           <p data-dz>I'm Marcus: thirty, born and raised in the UK, and a father. By day I build software — browser tooling, data-heavy apps, and small, sharp utilities that quietly save people money.</p>
@@ -139,16 +124,21 @@
       </div>
     </section>
 
-    <section class="sec" id="contact" data-sec="4" data-name="Contact">
-      <h2 class="sec-label"><span class="n">04</span><span data-type>Contact</span></h2>
-      <div>
-        <ul class="rows" data-dz>
-          <li id="email-row"><button type="button" class="row" id="email"><span class="k">Email</span><span id="email-text">Reveal address</span><span class="go" aria-hidden="true">→</span></button></li>
-          <li><a class="row" href="https://x.com/nerhhx" target="_blank" rel="noopener"><span class="k">X</span><span>@nerhhx</span><span class="go" aria-hidden="true">↗</span></a></li>
-          <li><a class="row" href="https://github.com/Nerhh" target="_blank" rel="noopener"><span class="k">GitHub</span><span>Nerhh</span><span class="go" aria-hidden="true">↗</span></a></li>
-          <li><a class="row" href="https://open.spotify.com/user/z4c56k3259wkjrmovv3xabag4" target="_blank" rel="noopener"><span class="k">Spotify</span><span>What I'm listening to</span><span class="go" aria-hidden="true">↗</span></a></li>
-        </ul>
-      </div>
+    <section class="band" aria-label="Notes">
+      <ul class="rows" data-dz>
+        <li><a class="row" href="log/#umbra"><span class="k">26.09.2026</span><span>Umbra, and a quieter room</span><span class="go" aria-hidden="true">→</span></a></li>
+        <li><a class="row" href="log/#building-this-place"><span class="k">06.07.2026</span><span>Building this place</span><span class="go" aria-hidden="true">→</span></a></li>
+      </ul>
+      <p class="commit" id="commit" hidden></p>
+    </section>
+
+    <section class="band" aria-label="Contact">
+      <ul class="rows" data-dz>
+        <li id="email-row"><button type="button" class="row" id="email"><span class="k">Email</span><span id="email-text">Reveal address</span><span class="go" aria-hidden="true">→</span></button></li>
+        <li><a class="row" href="https://x.com/nerhhx" target="_blank" rel="noopener"><span class="k">X</span><span>@nerhhx</span><span class="go" aria-hidden="true">↗</span></a></li>
+        <li><a class="row" href="https://github.com/Nerhh" target="_blank" rel="noopener"><span class="k">GitHub</span><span>Nerhh</span><span class="go" aria-hidden="true">↗</span></a></li>
+        <li><a class="row" href="https://open.spotify.com/user/z4c56k3259wkjrmovv3xabag4" target="_blank" rel="noopener"><span class="k">Spotify</span><span>What I'm listening to</span><span class="go" aria-hidden="true">↗</span></a></li>
+      </ul>
     </section>
 
   </main>
@@ -158,6 +148,7 @@
     <span>Written by hand. No frameworks, no build step.</span>
   </footer>
 
-  <script src="js/main.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/home.js"></script>
 </body>
 </html>
