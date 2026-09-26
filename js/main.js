@@ -143,6 +143,31 @@ function applyTheme(t) {
 
 /* ---------- collection log: what has this visitor discovered? ---------- */
 
+// 8x8 pixel icons for the collection log slots
+const CLOG_ICONS = {
+  'spec-marcus': { p: { y: '#ffb020', o: '#e07000' }, m: ['....yy..', '...yyo..', '..yyo...', '.yyyyyo.', '...yyo..', '..yyo...', '.yo.....', '.y......'] },
+  'spec-deacon': { p: { c: '#9cc7ff', C: '#ffffff' }, m: ['...c....', '.c.c.c..', '..ccc...', 'cccCccc.', '..ccc...', '.c.c.c..', '...c....', '........'] },
+  'duel-death':  { p: { g: '#6d6d6d', G: '#9a9a9a', d: '#4a4a4a' }, m: ['..gggg..', '.gGGGGg.', '.gGdGGg.', '.gdddGg.', '.gGdGGg.', '.gGdGGg.', '.gGGGGg.', 'gggggggg'] },
+  'watch-scan':  { p: { s: '#8a7c52', w: '#c9c9c9', b: '#12395a', h: '#e9e7e0' }, m: ['..ssss..', '..s..s..', '.wwwwww.', 'wwbbbbww', 'wwbhhbww', 'wwbbbbww', '.wwwwww.', '..s..s..'] },
+  'umbra-cycle': { p: { t: '#34d1c9', T: '#ffffff' }, m: ['..tttt..', '.t....t.', 't..tt..t', 't.t..t..', 't.t.T...', 't..tt..t', '.t....t.', '..tttt..'] },
+  'theme-flip':  { p: { y: '#f5c518', Y: '#fff1a8' }, m: ['...y..y.', '.y.yy.y.', '..yYYy..', 'yyYYYYyy', '..yYYy..', '.y.yy.y.', '...y..y.', '........'] },
+  'email-reveal':{ p: { p: '#8a7a58', P: '#e9dcb8' }, m: ['........', 'pppppppp', 'pPPPPPPp', 'pPpPPpPp', 'pPPppPPp', 'pPPPPPPp', 'pppppppp', '........'] },
+  'ge-ledger':   { p: { g: '#b8860b', G: '#f5c518' }, m: ['........', '..gggg..', '.gGGGGg.', '.gGGGGg.', '..gggg..', '.gGGGGg.', '.gGGGGg.', '..gggg..'] },
+  'xp-100':      { p: { y: '#ffe98a', b: '#8a6d1d', B: '#d9a821' }, m: ['.....y..', '....yy..', '..bbbb..', '.bBBBBbb', 'bBBBBBBb', '.bBBBBb.', '..bbbb..', '...bb...'] },
+  'moon':        { p: { m: '#d8d4c8' }, m: ['...mmm..', '..mm....', '.mm.....', '.mm.....', '.mm.....', '..mm....', '...mmmm.', '........'] },
+};
+function drawIcon(canvas, icon) {
+  const g = canvas.getContext('2d');
+  icon.m.forEach((row, ry) => {
+    for (let rx = 0; rx < 8; rx++) {
+      const k = row[rx];
+      if (k === '.') continue;
+      g.fillStyle = icon.p[k];
+      g.fillRect(rx, ry, 1, 1);
+    }
+  });
+}
+
 const CLOG_ENTRIES = [
   { id: 'spec-marcus', name: "Marcus's special attack", hint: 'unleash it in the duel' },
   { id: 'spec-deacon', name: "Deacon's special attack", hint: 'the mage answers too' },
@@ -160,16 +185,35 @@ try { clogState = JSON.parse(localStorage.getItem('dd-clog') || '{}'); } catch (
 
 function clogRender(justId) {
   const grid = document.getElementById('clog-grid');
+  const list = document.getElementById('clog-list');
   const count = document.getElementById('clog-count');
   const total = document.getElementById('clog-total');
+  const box = document.getElementById('clog-box');
   if (!grid) return;
-  grid.innerHTML = CLOG_ENTRIES.map(en => {
+  grid.innerHTML = '';
+  CLOG_ENTRIES.forEach(en => {
     const done = !!clogState[en.id];
-    return '<li class="clog-item' + (done ? ' done' : '') + (en.id === justId ? ' just' : '') + '"><span class="clog-mark">' + (done ? '✓' : '?') +
-      '</span><div><h3>' + en.name + '</h3><p>' + en.hint + '</p></div></li>';
-  }).join('');
-  if (count) count.textContent = String(CLOG_ENTRIES.filter(en => clogState[en.id]).length);
+    const li = document.createElement('li');
+    li.className = 'slot' + (done ? ' done' : '') + (en.id === justId ? ' just' : '');
+    li.setAttribute('data-ex', done ? en.name : en.name + ' — ' + en.hint);
+    li.setAttribute('data-name', en.name);
+    li.setAttribute('title', done ? en.name : en.hint);
+    const c = document.createElement('canvas');
+    c.width = 8; c.height = 8;
+    drawIcon(c, CLOG_ICONS[en.id] || CLOG_ICONS.moon);
+    li.appendChild(c);
+    grid.appendChild(li);
+  });
+  if (list) {
+    list.innerHTML = CLOG_ENTRIES.map(en => {
+      const done = !!clogState[en.id];
+      return '<li class="' + (done ? 'done' : '') + '"><b>' + en.name + '</b> — ' + en.hint + '</li>';
+    }).join('');
+  }
+  const n = CLOG_ENTRIES.filter(en => clogState[en.id]).length;
+  if (count) count.textContent = String(n);
   if (total) total.textContent = String(CLOG_ENTRIES.length);
+  if (box) box.classList.toggle('complete', n === CLOG_ENTRIES.length);
 }
 
 function clogComplete() {
@@ -183,22 +227,12 @@ function clogUnlock(id) {
   clogRender(id);
   const finished = clogComplete() && !root.classList.contains('gilded');
   if (finished) root.classList.add('gilded');
-  if (REDUCED) return;
   const entry = CLOG_ENTRIES.find(en => en.id === id);
-  const t = document.createElement('div');
-  t.className = 'clog-toast';
-  t.textContent = 'Collection log: ' + entry.name;
-  document.body.appendChild(t);
-  t.addEventListener('animationend', () => t.remove());
-  setTimeout(() => t.remove(), 4500);
+  gameMessage('New item added to your collection log: ' + entry.name + '.', 'clog');
   if (finished) {
     setTimeout(() => {
-      const t2 = document.createElement('div');
-      t2.className = 'clog-toast gilded-toast';
-      t2.textContent = 'Collection log complete — gilded mode unlocked';
-      document.body.appendChild(t2);
-      t2.addEventListener('animationend', () => t2.remove());
-      setTimeout(() => t2.remove(), 5000);
+      gameMessage('Collection log complete — gilded mode unlocked.', 'clog');
+      fireworks(innerWidth / 2, innerHeight * 0.4);
     }, 1200);
   }
 }
@@ -420,6 +454,7 @@ checkMoon();
       pr.from.hopV = -3.4 * SC;
       pr.from.hopY = -0.1;
       burst(tgt.x, gy() - 5 * 4 * SC, dark() ? '#d8d4c8' : '#6a6456', 14, true);
+      gameMessage(pr.from.name + ' has defeated ' + tgt.name + '.');
       clogUnlock('duel-death');
     }
   }
@@ -1743,12 +1778,15 @@ checkMoon();
 let xpTotal = 0;
 try { xpTotal = parseInt(localStorage.getItem('dd-xp'), 10) || 0; } catch (e) { /* ignore */ }
 
+if (xpTotal > 0) updateXpTracker(xpTotal, 0);
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-xp]');
   if (!el) return;
-  xpTotal += parseInt(el.dataset.xp, 10) || 0;
+  const gained = parseInt(el.dataset.xp, 10) || 0;
+  xpTotal += gained;
   try { localStorage.setItem('dd-xp', String(xpTotal)); } catch (e2) { /* ignore */ }
   if (xpTotal >= 100) clogUnlock('xp-100');
+  updateXpTracker(xpTotal, gained);
   if (REDUCED) return;
   const d = document.createElement('span');
   d.className = 'xp-drop';
@@ -1878,134 +1916,334 @@ document.addEventListener('click', e => {
   });
 })();
 
-/* ---------- scroll progress ---------- */
+/* ---------- login screen fires (the classic doom-fire propagation) ---------- */
 
-(function initProgress() {
-  const el = document.querySelector('.progress');
-  if (!el) return;
-  let queued = false;
-  const update = () => {
-    queued = false;
-    const max = document.documentElement.scrollHeight - window.innerHeight;
-    root.style.setProperty('--scroll', max > 0 ? (window.scrollY / max).toFixed(4) : '0');
-  };
-  window.addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(update); } }, { passive: true });
-  window.addEventListener('resize', update);
-  update();
-})();
-
-/* ---------- nav: a pill that slides to the section you're in ---------- */
-
-(function initNav() {
-  const nav = document.querySelector('.site-head nav');
-  if (!nav) return;
-  const ind = nav.querySelector('.nav-ind');
-  const links = Array.from(nav.querySelectorAll('a[href]'));
-  if (!ind || !links.length) return;
-  let current = links.find(a => a.classList.contains('is-active')) || null;
-
-  function move(a, instant) {
-    links.forEach(l => l.classList.toggle('is-active', l === a));
-    if (!a) { ind.classList.remove('on'); return; }
-    const nr = nav.getBoundingClientRect(), r = a.getBoundingClientRect();
-    if (instant) ind.style.transition = 'none';
-    ind.style.width = r.width + 'px';
-    ind.style.transform = 'translateX(' + (r.left - nr.left) + 'px)';
-    ind.classList.add('on');
-    if (instant) requestAnimationFrame(() => { ind.style.transition = ''; });
+(function initFires() {
+  const cvs = ['fire-l', 'fire-r'].map(id => document.getElementById(id)).filter(Boolean);
+  if (!cvs.length) return;
+  const CW = 24, CH = 34, TORCH = 8; // fire cells, plus a torch under them
+  // 32 heat levels, torch-coloured: nothing → ember red → orange → yellow → near-white
+  const STOPS = [[0, 0, 0, 0], [40, 6, 0, 0.6], [110, 18, 0, 0.9], [170, 40, 4, 1], [214, 74, 10, 1], [240, 122, 18, 1], [255, 176, 32, 1], [255, 224, 96, 1], [255, 246, 200, 1]];
+  const PALF = [];
+  for (let i = 0; i < 32; i++) {
+    const f = i / 31 * (STOPS.length - 1), k = Math.min(STOPS.length - 2, Math.floor(f)), p = f - k;
+    const a = STOPS[k], b = STOPS[k + 1];
+    PALF.push(`rgba(${Math.round(a[0] + (b[0] - a[0]) * p)},${Math.round(a[1] + (b[1] - a[1]) * p)},${Math.round(a[2] + (b[2] - a[2]) * p)},${(a[3] + (b[3] - a[3]) * p).toFixed(2)})`);
   }
-
-  // hovering borrows the pill; leaving hands it back to the current section
-  if (!REDUCED) {
-    links.forEach(a => a.addEventListener('mouseenter', () => move(a)));
-    nav.addEventListener('mouseleave', () => move(current));
-  }
-
-  const map = new Map();
-  const hero = document.querySelector('.hero');
-  if (hero) map.set(hero, null);
-  links.forEach(a => {
-    const h = a.getAttribute('href');
-    if (h && h.charAt(0) === '#' && h.length > 1) {
-      const s = document.querySelector(h);
-      if (s) map.set(s, a);
+  const fires = cvs.map(canvas => {
+    canvas.width = CW;
+    canvas.height = CH + TORCH;
+    const heat = new Uint8Array(CW * CH);
+    // the source row: hottest in the middle, tapering to the sides like a torch flame
+    for (let x = 0; x < CW; x++) {
+      const d = Math.abs(x - (CW - 1) / 2) / (CW / 2);
+      heat[(CH - 1) * CW + x] = d < 0.42 ? 31 : d < 0.7 ? 22 : 8;
     }
+    return { canvas, ctx: canvas.getContext('2d'), heat, seed: Math.random() * 1000 };
   });
-  if (map.size && 'IntersectionObserver' in window) {
-    const io = new IntersectionObserver(entries => {
-      entries.forEach(en => {
-        if (en.isIntersecting) { current = map.get(en.target) || null; move(current); }
-      });
-    }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
-    map.forEach((a, s) => io.observe(s));
+
+  function step(f) {
+    const h = f.heat;
+    for (let x = 0; x < CW; x++) {
+      for (let y = 1; y < CH; y++) {
+        const src = y * CW + x;
+        const r = (Math.random() * 3) | 0;
+        let dx = x - r + 1;
+        if (dx < 0) dx = 0; else if (dx >= CW) dx = CW - 1;
+        const dst = (y - 1) * CW + dx;
+        const v = h[src] - (r & 1) - (Math.random() < 0.18 ? 1 : 0);
+        h[dst] = v < 0 ? 0 : v;
+      }
+    }
   }
-  if (current) move(current, true);
-  window.addEventListener('resize', () => { if (current) move(current, true); });
+
+  function draw(f) {
+    const g = f.ctx;
+    g.clearRect(0, 0, CW, CH + TORCH);
+    for (let y = 0; y < CH; y++) {
+      for (let x = 0; x < CW; x++) {
+        const v = f.heat[y * CW + x];
+        if (!v) continue;
+        g.fillStyle = PALF[v];
+        g.fillRect(x, y, 1, 1);
+      }
+    }
+    // the torch: iron sconce and a dark wooden handle
+    const cx = CW / 2;
+    g.fillStyle = '#5a5045'; g.fillRect(cx - 4, CH - 1, 8, 2);
+    g.fillStyle = '#3b332b'; g.fillRect(cx - 3, CH + 1, 6, 1);
+    g.fillStyle = '#4a3220'; g.fillRect(cx - 1, CH + 2, 2, TORCH - 2);
+    g.fillStyle = '#2b1c12'; g.fillRect(cx, CH + 2, 1, TORCH - 2);
+  }
+
+  if (REDUCED) {
+    fires.forEach(f => { for (let i = 0; i < 60; i++) step(f); draw(f); });
+    return;
+  }
+  let running = false, raf = 0, last = 0;
+  function loop(t) {
+    if (!running) { raf = 0; return; }
+    if (t - last > 42) { // ~24fps reads more like the original than 60
+      last = t;
+      fires.forEach(f => { step(f); draw(f); });
+    }
+    raf = requestAnimationFrame(loop);
+  }
+  const io = new IntersectionObserver(entries => {
+    const vis = entries.some(e => e.isIntersecting);
+    if (vis && !running) { running = true; if (!raf) raf = requestAnimationFrame(loop); }
+    else if (!vis) running = false;
+  }, { threshold: 0.1 });
+  io.observe(cvs[0]);
 })();
 
-/* ---------- cards: a spotlight that follows the cursor ---------- */
+/* ---------- click cross: yellow to walk, red to interact ---------- */
 
-(function initSpotlight() {
-  if (!window.matchMedia || !matchMedia('(hover: hover)').matches) return;
-  document.addEventListener('pointermove', e => {
-    const card = e.target.closest ? e.target.closest('.card') : null;
-    if (!card) return;
-    const r = card.getBoundingClientRect();
-    card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-    card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+(function initClickCross() {
+  if (REDUCED || !window.matchMedia || !matchMedia('(pointer: fine)').matches) return;
+  document.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    const interactive = e.target.closest('a, button, canvas, [data-xp], .slot, .quest-btn, input, label');
+    const el = document.createElement('span');
+    el.className = 'click-x ' + (interactive ? 'red' : 'yellow');
+    el.style.left = e.clientX + 'px';
+    el.style.top = e.clientY + 'px';
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+    setTimeout(() => el.remove(), 700);
   }, { passive: true });
 })();
 
-/* ---------- buttons lean toward the cursor ---------- */
+/* ---------- fireworks: the level-up burst ---------- */
 
-(function initMagnetic() {
-  if (REDUCED || !window.matchMedia || !matchMedia('(hover: hover)').matches) return;
-  document.querySelectorAll('.btn').forEach(el => {
-    el.addEventListener('pointermove', e => {
-      const r = el.getBoundingClientRect();
-      const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
-      const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
-      el.style.transform = 'translate(' + (dx * 8).toFixed(1) + 'px,' + (dy * 8).toFixed(1) + 'px)';
+const fxCanvas = document.getElementById('fx');
+const fxCtx = fxCanvas ? fxCanvas.getContext('2d') : null;
+let fxParts = [], fxRaf = 0;
+function fxSize() {
+  if (!fxCanvas) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  fxCanvas.width = innerWidth * dpr;
+  fxCanvas.height = innerHeight * dpr;
+  fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function fxLoop() {
+  fxCtx.clearRect(0, 0, innerWidth, innerHeight);
+  fxParts = fxParts.filter(p => p.life > 0);
+  for (const p of fxParts) {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.16; p.vx *= 0.985; p.life--;
+    fxCtx.globalAlpha = Math.min(1, p.life / 18);
+    fxCtx.fillStyle = p.c;
+    fxCtx.fillRect(Math.round(p.x), Math.round(p.y), p.s, p.s);
+  }
+  fxCtx.globalAlpha = 1;
+  if (fxParts.length) fxRaf = requestAnimationFrame(fxLoop); else { fxRaf = 0; fxCtx.clearRect(0, 0, innerWidth, innerHeight); }
+}
+function fireworks(x, y) {
+  if (!fxCtx || REDUCED) return;
+  if (!fxCanvas.width) fxSize();
+  const COLS = ['#ffff00', '#ff3c3c', '#3cff3c', '#5ab4ff', '#ffffff', '#ff9a3c'];
+  for (let b = 0; b < 3; b++) {
+    const bx = x + (b - 1) * 26, by = y - 10 - b * 14;
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 1.4 + Math.random() * 3.2;
+      fxParts.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.6, s: Math.random() < 0.3 ? 3 : 2, c: COLS[(Math.random() * COLS.length) | 0], life: 34 + Math.random() * 26 });
+    }
+  }
+  if (!fxRaf) fxRaf = requestAnimationFrame(fxLoop);
+}
+if (fxCanvas) { fxSize(); window.addEventListener('resize', fxSize); }
+
+/* ---------- chatbox: game messages ---------- */
+
+let chatReady = false;
+const chatQueue = [];
+function toast(text, kind) {
+  if (REDUCED) return;
+  const t = document.createElement('div');
+  t.className = 'toast ' + (kind || 'game');
+  t.textContent = text;
+  document.body.appendChild(t);
+  t.addEventListener('animationend', () => t.remove());
+  setTimeout(() => t.remove(), 4000);
+}
+function gameMessage(text, kind) {
+  if (!chatReady) { chatQueue.push([text, kind]); return; }
+  const log = document.getElementById('chat-log');
+  const box = document.getElementById('chat');
+  if (!log || !box) { toast(text, kind); return; }
+  const line = document.createElement('div');
+  line.className = 'chat-line ' + (kind || 'game') + (REDUCED ? '' : ' new');
+  line.textContent = text;
+  log.appendChild(line);
+  while (log.children.length > 60) log.removeChild(log.firstChild);
+  log.scrollTop = log.scrollHeight;
+  // the chatbox is hidden on small screens — fall back to a brief toast there
+  if (getComputedStyle(box).display === 'none') toast(text, kind);
+}
+
+(function initChat() {
+  const box = document.getElementById('chat');
+  const toggle = document.getElementById('chat-toggle');
+  const hint = document.getElementById('chat-hint');
+  chatReady = true;
+  if (!box) { chatQueue.splice(0).forEach(([t, k]) => toast(t, k)); return; }
+  const open = on => {
+    box.classList.toggle('open', on);
+    if (toggle) toggle.setAttribute('aria-expanded', String(on));
+    if (hint) hint.textContent = on ? 'click to collapse' : 'click to expand';
+    const log = document.getElementById('chat-log');
+    if (log) log.scrollTop = log.scrollHeight;
+  };
+  if (toggle) toggle.addEventListener('click', () => open(!box.classList.contains('open')));
+  box.addEventListener('click', e => { if (!e.target.closest('button')) open(!box.classList.contains('open')); });
+  gameMessage('Welcome to marcus.gg.');
+  chatQueue.splice(0).forEach(([t, k]) => gameMessage(t, k));
+  setTimeout(() => gameMessage('Marcus is currently building Umbra — a multi-session browser.'), 1400);
+  setTimeout(() => gameMessage('Right-click things to examine them.'), 4200);
+})();
+
+/* ---------- xp: the real Old School table, a tracker, and level-ups ---------- */
+
+const XP_TABLE = (() => {
+  const t = [0, 0];
+  let pts = 0;
+  for (let l = 1; l < 99; l++) {
+    pts += Math.floor(l + 300 * Math.pow(2, l / 7));
+    t.push(Math.floor(pts / 4)); // t[L] = xp needed to reach level L
+  }
+  return t;
+})();
+function levelFor(xp) { let L = 1; while (L < 99 && xp >= XP_TABLE[L + 1]) L++; return L; }
+
+(function drawLamp() {
+  const c = document.getElementById('xp-lamp');
+  if (!c) return;
+  const g = c.getContext('2d');
+  const MAP = ['.....y..', '....yy..', '..bbbb..', '.bBBBBbb', 'bBBBBBBb', '.bBBBBb.', '..bbbb..', '...bb...'];
+  const P = { y: '#ffe98a', b: '#8a6d1d', B: '#d9a821' };
+  MAP.forEach((row, ry) => { for (let rx = 0; rx < 8; rx++) { if (row[rx] === '.') continue; g.fillStyle = P[row[rx]]; g.fillRect(rx, ry, 1, 1); } });
+})();
+
+let xpLevel = null;
+function updateXpTracker(total, gained) {
+  const box = document.getElementById('xp-track');
+  if (!box) return;
+  const lvl = levelFor(total);
+  const lvlEl = document.getElementById('xp-lvl');
+  const totEl = document.getElementById('xp-total');
+  if (lvlEl) lvlEl.textContent = String(lvl);
+  if (totEl) totEl.textContent = total.toLocaleString('en-GB');
+  box.hidden = false;
+  if (xpLevel !== null && lvl > xpLevel && gained) {
+    const r = box.getBoundingClientRect();
+    fireworks(r.left + r.width / 2, r.top + r.height / 2);
+    gameMessage("Congratulations, you've just advanced a Clicking level. Your Clicking level is now " + lvl + '.', 'level');
+    const dlg = document.getElementById('lvl');
+    const txt = document.getElementById('lvl-text');
+    if (dlg && txt) {
+      txt.textContent = 'Your Clicking level is now ' + lvl + '.';
+      dlg.hidden = false;
+      clearTimeout(dlg._t);
+      dlg._t = setTimeout(() => { dlg.hidden = true; }, 6000);
+    }
+  }
+  xpLevel = lvl;
+}
+(function initLevelDialog() {
+  const close = document.getElementById('lvl-close');
+  const dlg = document.getElementById('lvl');
+  if (close && dlg) close.addEventListener('click', () => { dlg.hidden = true; });
+})();
+
+/* ---------- right-click: choose option ---------- */
+
+(function initContextMenu() {
+  if (!window.matchMedia || !matchMedia('(pointer: fine)').matches) return;
+  const menu = document.createElement('div');
+  menu.className = 'ctx';
+  menu.hidden = true;
+  menu.setAttribute('role', 'menu');
+  document.body.appendChild(menu);
+  const close = () => { menu.hidden = true; };
+
+  document.addEventListener('contextmenu', e => {
+    const el = e.target.closest('[data-ex]');
+    if (!el || e.target.closest('a, input, textarea, .npc-options')) { close(); return; }
+    e.preventDefault();
+    const name = el.dataset.name || (el.querySelector('h3') || {}).textContent || 'this';
+    const isNpc = /^(Marcus|Deacon|the duel)$/.test(name);
+    const items = [];
+    if (el.id === 'arena' || el.id === 'hero-canvas') {
+      const canvas = document.getElementById('hero-canvas');
+      const rect = canvas.getBoundingClientRect();
+      const who = (e.clientX - rect.left) < rect.width / 2 ? 'Marcus' : 'Deacon';
+      items.push({ act: 'Attack', obj: who, cls: 'obj-npc', run: () => {
+        canvas.dispatchEvent(new MouseEvent('click', { clientX: e.clientX, clientY: e.clientY, bubbles: true }));
+      } });
+    }
+    if (el.id === 'npc') items.push({ act: 'Talk-to', obj: 'Marcus', cls: 'obj-npc', run: () => {
+      const c = document.getElementById('npc-continue');
+      if (c && !c.hidden) c.click();
+      el.scrollIntoView({ block: 'center', behavior: REDUCED ? 'auto' : 'smooth' });
+    } });
+    if (el.tagName === 'A' || el.dataset.href) items.push({ act: 'Open', obj: name, cls: 'obj-object', run: () => {
+      const href = el.dataset.href || el.getAttribute('href');
+      if (el.target === '_blank') window.open(href, '_blank', 'noopener'); else location.href = href;
+    } });
+    if (el.id === 'theme-toggle') items.push({ act: 'Toggle', obj: 'the lights', cls: 'obj-object', run: () => el.click() });
+    items.push({ act: 'Examine', obj: name, cls: isNpc ? 'obj-npc' : 'obj-object', run: () => gameMessage(el.dataset.ex, 'examine') });
+    items.push({ act: 'Cancel', run: close });
+
+    menu.innerHTML = '<div class="ctx-title">Choose Option</div>';
+    items.forEach(it => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'menuitem');
+      b.innerHTML = it.act + (it.obj ? ' <span class="' + it.cls + '"></span>' : '');
+      if (it.obj) b.querySelector('span').textContent = it.obj;
+      b.addEventListener('click', ev => { ev.stopPropagation(); close(); it.run(); });
+      menu.appendChild(b);
     });
-    el.addEventListener('pointerleave', () => { el.style.transform = ''; });
+    menu.hidden = false;
+    // the game opens the menu with the title under the cursor, kept on-screen
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let x = e.clientX - mw / 2, y = e.clientY - 8;
+    x = Math.max(4, Math.min(innerWidth - mw - 4, x));
+    y = Math.max(4, Math.min(innerHeight - mh - 4, y));
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+  });
+  document.addEventListener('click', e => { if (!menu.contains(e.target)) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  window.addEventListener('scroll', close, { passive: true });
+  menu.addEventListener('mouseleave', close);
+})();
+
+/* ---------- quest journal: click a quest, the parchment unrolls ---------- */
+
+(function initJournals() {
+  document.querySelectorAll('.quest-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const li = btn.closest('.quest');
+      const open = !li.classList.contains('open');
+      document.querySelectorAll('.quest.open').forEach(q => { q.classList.remove('open'); q.querySelector('.quest-btn').setAttribute('aria-expanded', 'false'); });
+      li.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) gameMessage('You open the quest journal: ' + btn.querySelector('.qname').textContent + '.');
+    });
   });
 })();
 
-/* ---------- kickers decode themselves on the way in ---------- */
+/* ---------- logout: back to the login screen ---------- */
 
-(function initDecode() {
-  const els = Array.from(document.querySelectorAll('[data-decode]'));
-  if (!els.length || REDUCED || !('IntersectionObserver' in window)) return;
-  const CH = '0123456789ABCDEF#%&/<>[]{}=+*';
-  function run(el) {
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    let n;
-    while ((n = walker.nextNode())) nodes.push({ node: n, text: n.nodeValue });
-    const total = nodes.reduce((s, x) => s + x.text.length, 0) || 1;
-    const t0 = performance.now(), dur = 520 + total * 9;
-    const tick = now => {
-      const p = Math.min(1, (now - t0) / dur);
-      let seen = 0;
-      nodes.forEach(x => {
-        let out = '';
-        for (let i = 0; i < x.text.length; i++) {
-          const c = x.text[i];
-          const pos = (seen + i) / total;
-          out += (c === ' ' || pos < p) ? c : CH[Math.floor(Math.random() * CH.length)];
-        }
-        seen += x.text.length;
-        x.node.nodeValue = out;
-      });
-      if (p < 1) requestAnimationFrame(tick);
-      else nodes.forEach(x => { x.node.nodeValue = x.text; });
-    };
-    requestAnimationFrame(tick);
-  }
-  const io = new IntersectionObserver(entries => entries.forEach(en => {
-    if (en.isIntersecting) { io.unobserve(en.target); run(en.target); }
-  }), { threshold: 0.6 });
-  els.forEach(el => io.observe(el));
+(function initLogout() {
+  const btn = document.getElementById('logout');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    gameMessage('You have been logged out. See you soon, adventurer.');
+    window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' });
+    document.querySelectorAll('.quest.open').forEach(q => q.classList.remove('open'));
+  });
 })();
 
 /* ---------- global repaint on resize ---------- */

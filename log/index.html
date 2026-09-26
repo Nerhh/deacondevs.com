@@ -12,57 +12,50 @@
   <meta property="og:image" content="https://marcus.gg/assets/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
-  <meta name="theme-color" content="#0a0a0d">
+  <meta name="theme-color" content="#0c0a08">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15' shape-rendering='crispEdges'%3E%3Crect x='4' y='2' width='7' height='11' fill='%23c0281a'/%3E%3Crect x='2' y='4' width='11' height='7' fill='%23c0281a'/%3E%3Crect x='1' y='7' width='1' height='2' fill='%236f100a'/%3E%3Crect x='13' y='6' width='1' height='2' fill='%236f100a'/%3E%3Crect x='7' y='1' width='2' height='1' fill='%236f100a'/%3E%3Crect x='6' y='13' width='2' height='1' fill='%236f100a'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=VT323&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
-  <div class="progress" aria-hidden="true"></div>
+  <canvas class="fx" id="fx" aria-hidden="true"></canvas>
 
   <header class="site-head">
-    <a class="wordmark" href="/" data-xp="12" data-ex="The way home."><span class="dot" aria-hidden="true"></span>~/deacondevs</a>
+    <a class="wordmark" href="/" data-xp="12" data-ex="The way home." data-name="marcus.gg">marcus<span>.gg</span></a>
     <nav aria-label="Primary">
-      <span class="nav-ind" aria-hidden="true"></span>
-      <a href="/#projects" data-xp="15">projects</a>
-      <a href="/#quests" data-xp="15">quests</a>
-      <a href="/log/" class="is-active" data-xp="15">log</a>
-      <a href="/#about" data-xp="15">about</a>
-      <a href="/#contact" data-xp="15">contact</a>
-      <button id="theme-toggle" aria-label="Toggle colour theme" data-ex="Let there be light. Or not.">☀</button>
+      <a href="/#projects" data-xp="15">Projects</a>
+      <a href="/#quests" data-xp="15">Quests</a>
+      <a href="/log/" class="is-active" data-xp="15">Log</a>
+      <a href="/#about" data-xp="15">About</a>
+      <a href="/#contact" data-xp="15">Contact</a>
+      <button id="theme-toggle" class="stone stone-sm" aria-label="Toggle colour theme" data-ex="Let there be light. Or not." data-name="the lights">☀</button>
     </nav>
   </header>
 
   <main>
     <section class="section section-last">
-      <div class="section-head reveal">
-        <div>
-          <p class="kicker" data-decode><span class="slash">//</span> <span class="num">log</span> adventure log</p>
-          <h2 class="section-title">Build notes, <em>newest first.</em></h2>
-        </div>
-        <p class="total">everything here actually happened</p>
-      </div>
-      <p class="section-note reveal">What got built, what broke, and what's next — written from the workshop, not the marketing department.</p>
+      <div class="ui-head"><h2 class="ui-title">Adventure Log</h2><span class="ui-count">everything here actually happened</span></div>
+      <p class="section-note">Build notes from the workshop. Newest first.</p>
 
       <div class="log-list">
 
-        <article class="log-entry reveal" id="umbra" data-ex="Every tab, its own shadow.">
+        <article class="log-entry panel reveal" id="umbra" data-ex="Every tab, its own shadow." data-name="Entry II">
           <header>
-            <h3><span class="n">Entry II</span> — Umbra, and the refresh</h3>
-            <time datetime="2026-09-26">26th September 2026</time>
+            <h3><span class="n">Entry II</span> — Umbra, and the Old School coat</h3>
+            <time datetime="2026-09-26">26 September 2026</time>
           </header>
           <p>The newest thing on the front page is <strong class="u">Umbra</strong>: a multi-session desktop browser where <strong>every tab is its own isolated browser</strong>. Each tab gets its own cookies, storage and cache, its own proxy and exit IP, and its own fingerprint — the screen, GPU, fonts and clock set together so they agree with each other and with the network they appear on. It's for people who genuinely need many accounts, QA across regions, or want to see a page from somewhere they aren't.</p>
           <p>Under the hood it's an <strong>Electron + React + TypeScript</strong> desktop app, with a small <strong>Go</strong> network engine doing the wire-level work and a <strong>Next.js</strong> account platform behind it. It's in beta, and it's where most of my evenings currently go. The demo on the front page is a canvas re-enactment of the core idea: five tabs open, five identities, nothing shared between them.</p>
-          <p>Umbra also gave the site an excuse for a <strong>fresh coat</strong>. A serif display voice now sits over the terminal one, the projects moved into a bento grid with cursor-following spotlights, the theme toggle floods the page in a circle instead of flicking, and the section labels decode themselves on the way in. The duel, the XP drops, the quest log and the collection log all stayed — some things are load-bearing.</p>
+          <p>The site also got the coat it should have had from the start: the game's own interface. Pixel type for the chrome, bevelled stone panels, the login screen with its two fires, a quest list in red, yellow and green, a collection log with real item slots, a right-click <strong>Choose Option</strong> menu, a chatbox for game messages, and XP that levels up on the actual Old School experience table. Everything else — the duel, the charts, the NPC at the bottom — stayed exactly where it was.</p>
         </article>
 
-        <article class="log-entry reveal" id="building-this-place" data-ex="Where it all began.">
+        <article class="log-entry panel reveal" id="building-this-place" data-ex="Where it all began." data-name="Entry I">
           <header>
             <h3><span class="n">Entry I</span> — Building this place</h3>
-            <time datetime="2026-07-06">6th July 2026</time>
+            <time datetime="2026-07-06">6 July 2026</time>
           </header>
           <p>This site went from an empty folder to what you're looking at in a handful of build sessions: <strong>no frameworks, no build step</strong> — hand-written HTML, one stylesheet, and a single main.js doing everything you can see. The duel, the live charts, the quest log, the collection log: all hand-rolled canvas and vanilla JavaScript.</p>
           <p>Some things I learned shipping it. The <strong>.gg registry publishes its zone in batches</strong>, so marcus.gg spent its first afternoon registered but invisible to the entire internet — nothing was wrong, the Channel Islands just publish on their own schedule. GitHub Pages will quietly refuse to issue an HTTPS certificate if you attach a domain before its DNS exists; removing and re-adding the domain wakes it up. And Jekyll was processing this site on every deploy for no reason at all until a <strong>.nojekyll</strong> file put a stop to it.</p>
@@ -75,18 +68,29 @@
   </main>
 
   <footer>
-    <div class="foot-inner">
-      <a class="foot-mark" href="/" data-xp="12" data-ex="No frameworks were harmed in the making.">marcus.gg</a>
-      <div class="foot-row">
-        <span>© 2026 Marcus Deacon · built brick by brick — no frameworks harmed</span>
-        <div class="foot-links">
-          <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="20">source ↗</a>
-          <a href="/" data-xp="15">home</a>
-          <a class="to-top" href="#" data-xp="10">back to top <span class="arr">↑</span></a>
-        </div>
-      </div>
-    </div>
+    <p class="logout-q">Are you sure you want to logout?</p>
+    <a class="stone" href="/" data-xp="10" data-ex="Back to the login screen." data-name="the logout button">Click here to logout</a>
+    <p class="foot-meta">© 2026 Marcus Deacon · marcus.gg · built brick by brick — no frameworks harmed · <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="20">source ↗</a></p>
   </footer>
+
+  <aside class="chat panel" id="chat" aria-live="polite" aria-label="Game messages">
+    <div class="chat-tabs">
+      <button type="button" class="stone stone-sm chat-tab" id="chat-toggle" aria-expanded="false">Game</button>
+      <span class="chat-hint" id="chat-hint">click to expand</span>
+    </div>
+    <div class="chat-log" id="chat-log"></div>
+  </aside>
+
+  <div class="xp-track panel" id="xp-track" hidden aria-live="polite">
+    <canvas id="xp-lamp" width="8" height="8" aria-hidden="true"></canvas>
+    <span>Clicking <b id="xp-lvl">1</b> · <span id="xp-total">0</span> xp</span>
+  </div>
+
+  <div class="lvl" id="lvl" hidden role="dialog" aria-live="assertive" aria-label="Level up">
+    <h4>Congratulations, you've just advanced a Clicking level.</h4>
+    <p id="lvl-text">Your Clicking level is now 2.</p>
+    <button type="button" class="npc-continue" id="lvl-close">Click here to continue</button>
+  </div>
 
   <script src="/js/main.js"></script>
 </body>
