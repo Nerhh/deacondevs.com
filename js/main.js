@@ -3,8 +3,10 @@
 'use strict';
 
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FINE = window.matchMedia('(pointer: fine)').matches;
 const root = document.documentElement;
-const repaints = []; // canvases re-render through these on theme change / resize
+root.classList.add('js');
+const repaints = []; // canvases re-render through these on resize / font load
 
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 
@@ -15,401 +17,272 @@ function hexA(hex, a) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
-// each module initialises inside safe(): one broken module never blanks the page
+// each module initialises inside safe(): one broken module never takes the page with it
 function safe(name, fn) {
   try { fn(); } catch (e) { if (window.console && console.error) console.error('marcus.gg: ' + name + ' failed', e); }
 }
 
-/* ---------- fireworks: the level-up burst ---------- */
-
-const fxCanvas = document.getElementById('fx');
-const fxCtx = fxCanvas ? fxCanvas.getContext('2d') : null;
-let fxParts = [], fxRaf = 0;
-function fxSize() {
-  if (!fxCanvas) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
-  if (fxCanvas.width === w && fxCanvas.height === h) return;
-  fxCanvas.width = w;
-  fxCanvas.height = h;
-  fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-function fxLoop() {
-  fxCtx.clearRect(0, 0, innerWidth, innerHeight);
-  fxParts = fxParts.filter(p => p.life > 0);
-  for (const p of fxParts) {
-    p.x += p.vx; p.y += p.vy; p.vy += 0.16; p.vx *= 0.985; p.life--;
-    fxCtx.globalAlpha = Math.min(1, p.life / 18);
-    fxCtx.fillStyle = p.c;
-    fxCtx.fillRect(Math.round(p.x), Math.round(p.y), p.s, p.s);
-  }
-  fxCtx.globalAlpha = 1;
-  if (fxParts.length) fxRaf = requestAnimationFrame(fxLoop); else { fxRaf = 0; fxCanvas.width = fxCanvas.height = 0; }
-}
-function fireworks(x, y) {
-  if (!fxCtx || REDUCED) return;
-  fxSize();
-  const COLS = ['#ffff00', '#ff3c3c', '#3cff3c', '#5ab4ff', '#ffffff', '#ff9a3c'];
-  for (let b = 0; b < 3; b++) {
-    const bx = x + (b - 1) * 26, by = y - 10 - b * 14;
-    for (let i = 0; i < 26; i++) {
-      const a = Math.random() * Math.PI * 2, sp = 1.4 + Math.random() * 3.2;
-      fxParts.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.6, s: Math.random() < 0.3 ? 3 : 2, c: COLS[(Math.random() * COLS.length) | 0], life: 34 + Math.random() * 26 });
-    }
-  }
-  if (!fxRaf) fxRaf = requestAnimationFrame(fxLoop);
-}
-
-
-/* ---------- chatbox: game messages ---------- */
-
-let chatReady = false;
-const chatQueue = [];
-function toast(text, kind) {
-  const t = document.createElement('div');
-  t.className = 'toast ' + (kind || 'game');
-  t.setAttribute('role', 'status');
-  t.textContent = text;
-  document.body.appendChild(t);
-  t.addEventListener('animationend', () => t.remove());
-  setTimeout(() => t.remove(), 4000);
-}
-function gameMessage(text, kind) {
-  if (!chatReady) { chatQueue.push([text, kind]); return; }
-  const log = document.getElementById('chat-log');
-  const box = document.getElementById('chat');
-  if (!log || !box) { toast(text, kind); return; }
-  const line = document.createElement('div');
-  line.className = 'chat-line ' + (kind || 'game') + (REDUCED ? '' : ' new');
-  line.textContent = text;
-  log.appendChild(line);
-  while (log.children.length > 60) log.removeChild(log.firstChild);
-  log.scrollTop = log.scrollHeight;
-  // the chatbox is hidden on small screens — fall back to a brief toast there
-  if (getComputedStyle(box).display === 'none') toast(text, kind);
-}
-
-/* ---------- xp: the real Old School table, a tracker, and level-ups ---------- */
-
-const XP_TABLE = (() => {
-  const t = [0, 0];
-  let pts = 0;
-  for (let l = 1; l < 99; l++) {
-    pts += Math.floor(l + 300 * Math.pow(2, l / 7));
-    t.push(Math.floor(pts / 4)); // t[L] = xp needed to reach level L
-  }
-  return t;
-})();
-function levelFor(xp) { let L = 1; while (L < 99 && xp >= XP_TABLE[L + 1]) L++; return L; }
-
-safe('drawLamp', function drawLamp() {
-  const c = document.getElementById('xp-lamp');
-  if (!c) return;
-  const g = c.getContext('2d');
-  const MAP = ['.....y..', '....yy..', '..bbbb..', '.bBBBBbb', 'bBBBBBBb', '.bBBBBb.', '..bbbb..', '...bb...'];
-  const P = { y: '#ffe98a', b: '#8a6d1d', B: '#d9a821' };
-  MAP.forEach((row, ry) => { for (let rx = 0; rx < 8; rx++) { if (row[rx] === '.') continue; g.fillStyle = P[row[rx]]; g.fillRect(rx, ry, 1, 1); } });
-});
-
-let xpLevel = -1;
-function updateXpTracker(total, gained) {
-  const box = document.getElementById('xp-track');
-  if (!box) return;
-  const lvl = levelFor(total);
-  if (xpLevel < 0) xpLevel = gained ? levelFor(total - gained) : lvl;
-  const lvlEl = document.getElementById('xp-lvl');
-  const totEl = document.getElementById('xp-total');
-  if (lvlEl) lvlEl.textContent = String(lvl);
-  if (totEl) totEl.textContent = total.toLocaleString('en-GB');
-  box.hidden = false;
-  if (lvl > xpLevel && gained) {
-    const r = box.getBoundingClientRect();
-    fireworks(r.left + r.width / 2, r.top + r.height / 2);
-    gameMessage("Congratulations, you've just advanced a Clicking level. Your Clicking level is now " + lvl + '.', 'level');
-    const dlg = document.getElementById('lvl');
-    const txt = document.getElementById('lvl-text');
-    const chat = document.getElementById('chat');
-    if (dlg && txt) {
-      txt.textContent = 'Your Clicking level is now ' + lvl + '.';
-      dlg.hidden = false;
-      if (chat) chat.classList.add('lvl-on');
-      clearTimeout(dlg._t);
-      dlg._t = setTimeout(() => { dlg.hidden = true; if (chat) chat.classList.remove('lvl-on'); }, 6000);
-    }
-  }
-  xpLevel = lvl;
-}
-safe('initLevelDialog', function initLevelDialog() {
-  const close = document.getElementById('lvl-close');
-  const dlg = document.getElementById('lvl');
-  if (close && dlg) close.addEventListener('click', () => {
-    dlg.hidden = true;
-    clearTimeout(dlg._t);
-    const chat = document.getElementById('chat');
-    if (chat) chat.classList.remove('lvl-on');
-  });
-});
-
-
-/* ---------- OSRS hitsplat pixel art (shared by the duel and the favicon) ---------- */
-
-const SPLAT_MAP = [
-  '.......d.......',
-  '...d...dd......',
-  '...dd.drrd..d..',
-  '....drrrrd.dd..',
-  '..ddrrrrrrddd..',
-  '.d.rrrrrrrrrd..',
-  '..drrrrrrrrrdd.',
-  'ddrrrrrrrrrrrdd',
-  '..drrrrrrrrrd..',
-  '.ddrrrrrrrrrd.d',
-  '..drrrrrrrrdd..',
-  '...drrrrrrd....',
-  '..dd.drrd.dd...',
-  '.d....dd...d...',
-  '.......d.......',
-];
-const SPLAT_COLS = {
-  hit: { r: '#c0281a', d: '#6f100a' },
-  miss: { r: '#2951c4', d: '#0f2166' },
-};
-function drawSplatPixels(g, x, y, cell, kind) {
-  let cols = SPLAT_COLS[kind] || SPLAT_COLS.hit;
-  // gilded mode: hits land in gold, max-hit style
-  if (kind === 'hit' && root.classList.contains('gilded')) cols = { r: '#d9a821', d: '#8a6d1d' };
-  for (let ry = 0; ry < SPLAT_MAP.length; ry++) {
-    const row = SPLAT_MAP[ry];
-    for (let rx = 0; rx < row.length; rx++) {
-      const ch = row[rx];
-      if (ch === '.') continue;
-      g.fillStyle = ch === 'r' ? cols.r : cols.d;
-      g.fillRect(x + rx * cell, y + ry * cell, cell, cell);
-    }
-  }
-}
-
-/* ---------- favicon: the hitsplat, drawn live ---------- */
-
-safe('initFavicon', function initFavicon() {
-  try {
-    const c = document.createElement('canvas');
-    c.width = 30; c.height = 30;
-    const g = c.getContext('2d');
-    drawSplatPixels(g, 0, 0, 2, 'hit');
-    const D7 = ['111', '..1', '..1', '.1.', '.1.'];
-    const D3 = ['111', '..1', '.11', '..1', '111'];
-    g.fillStyle = '#fff';
-    const put = (D, cx) => D.forEach((row, ry) => {
-      for (let rx = 0; rx < 3; rx++) if (row[rx] === '1') g.fillRect((cx + rx) * 2, (5 + ry) * 2, 2, 2);
-    });
-    put(D7, 4);
-    put(D3, 8);
-    let link = document.querySelector('link[rel="icon"]');
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      document.head.appendChild(link);
-    }
-    link.href = c.toDataURL('image/png');
-  } catch (e) { /* static icon stays */ }
-});
-
-/* ---------- theme + palette ---------- */
-
 let PAL = {};
-function refreshPalette() {
+(function refreshPalette() {
   const cs = getComputedStyle(root);
   const v = name => cs.getPropertyValue(name).trim();
   PAL = {
-    fg: v('--fg'), muted: v('--muted'), line: v('--line'),
-    bg: v('--bg'), bg2: v('--bg2'), bg3: v('--bg3') || v('--bg2'), line2: v('--line2') || v('--line'),
+    fg: v('--fg'), muted: v('--muted'), line: v('--line'), line2: v('--line2'),
+    bg: v('--bg'), bg2: v('--bg2'), bg3: v('--bg3'),
     accent: v('--accent-bright'), green: v('--green'), red: v('--red'),
     chart: [v('--c1'), v('--c2'), v('--c3'), v('--c4')],
   };
-}
+})();
 
-const THEME_KEY = 'dd-theme';
-function applyTheme(t) {
-  root.setAttribute('data-theme', t);
-  const icon = document.getElementById('theme-icon');
-  if (icon) {
-    const g = icon.getContext('2d');
-    g.clearRect(0, 0, 8, 8);
-    const sun = ['...y..y.', '.y.yy.y.', '..yYYy..', 'yyYYYYyy', '..yYYy..', '.y.yy.y.', '...y..y.', '........'];
-    const moon = ['...mmm..', '..mm....', '.mm.....', '.mm.....', '.mm.....', '..mm....', '...mmmm.', '........'];
-    const map = t === 'dark' ? sun : moon;
-    const pal = { y: '#ffdf5e', Y: '#fff1a8', m: '#e9e0c8' };
-    map.forEach((row, ry) => { for (let rx = 0; rx < 8; rx++) { if (row[rx] === '.') continue; g.fillStyle = pal[row[rx]]; g.fillRect(rx, ry, 1, 1); } });
-  }
-  refreshPalette();
-  repaints.forEach(fn => fn());
-}
-{
-  let saved = null;
-  try { saved = localStorage.getItem(THEME_KEY); } catch (e) { /* private mode */ }
-  if (saved !== 'dark' && saved !== 'light') {
-    saved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  }
-  applyTheme(saved);
-  const btn = document.getElementById('theme-toggle');
-  if (btn) btn.addEventListener('click', () => {
-    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore */ }
-    const go = () => { applyTheme(next); clogUnlock('theme-flip'); checkMoon(); };
-    if (REDUCED || !document.startViewTransition) { go(); return; }
-    // the new theme floods out from the button in a circle
-    const r = btn.getBoundingClientRect();
-    const x = r.left + r.width / 2, y = r.top + r.height / 2;
-    const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-    let vt;
-    try { vt = document.startViewTransition(go); } catch (e) { go(); return; }
-    vt.ready.then(() => {
-      root.animate(
-        { clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + R + 'px at ' + x + 'px ' + y + 'px)'] },
-        { duration: 700, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' }
-      );
-    }).catch(() => { /* fell back to an instant swap */ });
-  });
-}
+/* ---------- ordered dither: the Bayer matrices every effect here is built on ---------- */
 
-/* ---------- collection log: what has this visitor discovered? ---------- */
-
-// 8x8 pixel icons for the collection log slots
-const CLOG_ICONS = {
-  'spec-marcus': { p: { y: '#ffb020', o: '#e07000' }, m: ['....yy..', '...yyo..', '..yyo...', '.yyyyyo.', '...yyo..', '..yyo...', '.yo.....', '.y......'] },
-  'spec-deacon': { p: { c: '#9cc7ff', C: '#ffffff' }, m: ['...c....', '.c.c.c..', '..ccc...', 'cccCccc.', '..ccc...', '.c.c.c..', '...c....', '........'] },
-  'duel-death':  { p: { g: '#6d6d6d', G: '#9a9a9a', d: '#4a4a4a' }, m: ['..gggg..', '.gGGGGg.', '.gGdGGg.', '.gdddGg.', '.gGdGGg.', '.gGdGGg.', '.gGGGGg.', 'gggggggg'] },
-  'watch-scan':  { p: { s: '#8a7c52', w: '#c9c9c9', b: '#12395a', h: '#e9e7e0' }, m: ['..ssss..', '..s..s..', '.wwwwww.', 'wwbbbbww', 'wwbhhbww', 'wwbbbbww', '.wwwwww.', '..s..s..'] },
-  'umbra-cycle': { p: { t: '#34d1c9', T: '#ffffff' }, m: ['..tttt..', '.t....t.', 't..tt..t', 't.t..t..', 't.t.T...', 't..tt..t', '.t....t.', '..tttt..'] },
-  'theme-flip':  { p: { y: '#f5c518', Y: '#fff1a8' }, m: ['...y..y.', '.y.yy.y.', '..yYYy..', 'yyYYYYyy', '..yYYy..', '.y.yy.y.', '...y..y.', '........'] },
-  'email-reveal':{ p: { p: '#8a7a58', P: '#e9dcb8' }, m: ['........', 'pppppppp', 'pPPPPPPp', 'pPpPPpPp', 'pPPppPPp', 'pPPPPPPp', 'pppppppp', '........'] },
-  'ge-ledger':   { p: { g: '#b8860b', G: '#f5c518' }, m: ['........', '..gggg..', '.gGGGGg.', '.gGGGGg.', '..gggg..', '.gGGGGg.', '.gGGGGg.', '..gggg..'] },
-  'xp-100':      { p: { y: '#ffe98a', b: '#8a6d1d', B: '#d9a821' }, m: ['.....y..', '....yy..', '..bbbb..', '.bBBBBbb', 'bBBBBBBb', '.bBBBBb.', '..bbbb..', '...bb...'] },
-  'moon':        { p: { m: '#d8d4c8' }, m: ['...mmm..', '..mm....', '.mm.....', '.mm.....', '.mm.....', '..mm....', '...mmmm.', '........'] },
-};
-function drawIcon(canvas, icon) {
-  const g = canvas.getContext('2d');
-  icon.m.forEach((row, ry) => {
-    for (let rx = 0; rx < 8; rx++) {
-      const k = row[rx];
-      if (k === '.') continue;
-      g.fillStyle = icon.p[k];
-      g.fillRect(rx, ry, 1, 1);
+function bayer(n) {
+  let m = [[0, 2], [3, 1]];
+  while (m.length < n) {
+    const s = m.length, o = [];
+    for (let y = 0; y < s * 2; y++) {
+      o.push([]);
+      for (let x = 0; x < s * 2; x++) o[y].push(4 * m[y % s][x % s] + [[0, 2], [3, 1]][(y / s) | 0][(x / s) | 0]);
     }
-  });
+    m = o;
+  }
+  return m.flat();
 }
+const B4 = bayer(4), B8 = bayer(8);
+const INK32 = (255 << 24 | 0x15 << 16 | 0x15 << 8 | 0x15) >>> 0; // #151515, little-endian RGBA
 
-const CLOG_ENTRIES = [
-  { id: 'spec-marcus', name: "Marcus's special attack", hint: 'unleash it in the duel' },
-  { id: 'spec-deacon', name: "Deacon's special attack", hint: 'the mage answers too' },
-  { id: 'duel-death', name: 'A fighter falls', hint: 'watch a duel to the end' },
-  { id: 'watch-scan', name: 'A full dial scan', hint: 'let the watch finish its reading' },
-  { id: 'umbra-cycle', name: 'Every shadow accounted for', hint: 'watch umbra open all of its sessions' },
-  { id: 'theme-flip', name: 'Flipped the lights', hint: 'try the other theme' },
-  { id: 'email-reveal', name: 'The secret email', hint: 'scrapers never find it' },
-  { id: 'ge-ledger', name: 'The full ledger', hint: 'inspect the grand exchange' },
-  { id: 'xp-100', name: '100 XP earned', hint: 'keep clicking things' },
-  { id: 'moon', name: 'The night sky', hint: 'after dark, lights off' },
-];
-let clogState = {};
-try { clogState = JSON.parse(localStorage.getItem('dd-clog') || '{}'); } catch (e) { /* ignore */ }
-if (!clogState || typeof clogState !== 'object' || Array.isArray(clogState)) clogState = {};
+/* ---------- the sphere: shaded per pixel, then reduced to one bit ---------- */
 
-function clogRender(justId) {
-  const grid = document.getElementById('clog-grid');
-  const count = document.getElementById('clog-count');
-  const total = document.getElementById('clog-total');
-  const box = document.getElementById('clog-box');
-  if (!grid) return;
-  grid.innerHTML = '';
-  CLOG_ENTRIES.forEach(en => {
-    const done = !!clogState[en.id];
-    const li = document.createElement('li');
-    li.className = 'slot' + (done ? ' done' : '') + (en.id === justId ? ' just' : '');
-    li.setAttribute('data-ex', done ? en.name : en.name + ' — ' + en.hint);
-    li.setAttribute('data-name', en.name);
-    li.setAttribute('title', done ? en.name : en.hint);
-    const c = document.createElement('canvas');
-    c.width = 8; c.height = 8;
-    drawIcon(c, CLOG_ICONS[en.id] || CLOG_ICONS.moon);
-    li.appendChild(c);
-    grid.appendChild(li);
-  });
-  const n = CLOG_ENTRIES.filter(en => clogState[en.id]).length;
-  if (count) count.textContent = String(n);
-  if (total) total.textContent = String(CLOG_ENTRIES.length);
-  if (box) box.classList.toggle('complete', n === CLOG_ENTRIES.length);
-  const obtained = document.getElementById('clog-obtained');
-  if (obtained) obtained.className = n === 0 ? 'is-locked' : n === CLOG_ENTRIES.length ? 'is-done' : 'is-progress';
-}
-
-function clogComplete() {
-  return CLOG_ENTRIES.every(en => clogState[en.id]);
-}
-
-function clogUnlock(id) {
-  if (clogState[id] || !CLOG_ENTRIES.some(en => en.id === id)) return;
-  clogState[id] = Date.now();
-  try { localStorage.setItem('dd-clog', JSON.stringify(clogState)); } catch (e) { /* ignore */ }
-  clogRender(id);
-  const finished = clogComplete() && !root.classList.contains('gilded');
-  if (finished) root.classList.add('gilded');
-  const entry = CLOG_ENTRIES.find(en => en.id === id);
-  gameMessage('New item added to your collection log: ' + entry.name + '.', 'clog');
-  if (finished) {
-    setTimeout(() => {
-      gameMessage('Collection log complete — gilded mode unlocked.', 'clog');
-      fireworks(innerWidth / 2, innerHeight * 0.4);
-    }, 1200);
+function shadeOrb(buf, N, s) {
+  const ln = Math.hypot(s.lx, s.ly, s.lz) || 1;
+  const lx = s.lx / ln, ly = s.ly / ln, lz = s.lz / ln;
+  let hx = lx, hy = ly, hz = lz + 1;
+  const hn = Math.hypot(hx, hy, hz) || 1; hx /= hn; hy /= hn; hz /= hn;
+  const cx = N * 0.5, cy = N * (s.cy || 0.44), R = N * (s.r || 0.33);
+  const T = 0.38, cT = Math.cos(T), sT = Math.sin(T), TAU = Math.PI * 2;
+  const floor = s.floor !== false;
+  const shx = cx - lx * R * 0.55, shy = cy + R * 1.16, srx = R * 0.95, sry = R * 0.2;
+  for (let y = 0, i = 0; y < N; y++) {
+    const row = (y & 7) << 3;
+    const dy = (y + 0.5 - cy) / R;
+    for (let x = 0; x < N; x++, i++) {
+      const dx = (x + 0.5 - cx) / R;
+      const r2 = dx * dx + dy * dy;
+      let I = 1;
+      if (r2 <= 1) {
+        const nz = Math.sqrt(1 - r2);
+        const diff = Math.max(0, dx * lx + dy * ly + nz * lz);
+        const sp = Math.max(0, dx * hx + dy * hy + nz * hz);
+        I = 0.1 + 0.82 * diff + 0.6 * Math.pow(sp, 36);
+        if (s.grid) {
+          // a tilted globe: twelve meridians and five parallels turning with the sphere
+          const yy = dy * cT - nz * sT, zz = dy * sT + nz * cT;
+          const lat = Math.asin(Math.max(-1, Math.min(1, -yy)));
+          let fm = ((Math.atan2(dx, zz) + s.rot) / TAU) * 12; fm -= Math.floor(fm);
+          let fp = (lat / Math.PI + 0.5) * 6; fp -= Math.floor(fp);
+          const on = ((fm < 0.018 || fm > 0.982) && Math.abs(lat) < 1.3) || ((fp < 0.024 || fp > 0.976) && Math.abs(lat) < 1.4);
+          if (on) I = diff > 0.18 ? I * 0.38 : 0.36;
+        }
+        // a faint rim on the unlit side keeps the limb against the paper
+        if (diff < 0.2) I += Math.pow(1 - nz, 4) * 0.35;
+      } else if (floor) {
+        const ex = (x + 0.5 - shx) / srx, ey = (y + 0.5 - shy) / sry, e2 = ex * ex + ey * ey;
+        if (e2 < 1) I = 0.52 + 0.48 * e2;
+      }
+      buf[i] = I < (B8[row + (x & 7)] + 0.5) / 64 ? INK32 : 0;
+    }
   }
 }
 
-function checkMoon() {
-  const h = new Date().getHours();
-  if ((h >= 19 || h < 5) && root.getAttribute('data-theme') === 'dark') clogUnlock('moon');
+function orbIcon(N, bg) {
+  const c = document.createElement('canvas');
+  c.width = N; c.height = N;
+  const g = c.getContext('2d');
+  const img = g.createImageData(N, N);
+  shadeOrb(new Uint32Array(img.data.buffer), N, { rot: 0.5, lx: -0.6, ly: -0.55, lz: 0.7, grid: N >= 32, cy: 0.5, r: 0.46, floor: false });
+  if (!bg) { g.putImageData(img, 0, 0); return c; }
+  const t = document.createElement('canvas');
+  t.width = N; t.height = N;
+  t.getContext('2d').putImageData(img, 0, 0);
+  g.fillStyle = bg; g.fillRect(0, 0, N, N);
+  g.drawImage(t, 0, 0);
+  return c;
 }
 
-clogRender();
-if (clogComplete()) root.classList.add('gilded');
-checkMoon();
+safe('initIcons', function initIcons() {
+  const mb = document.getElementById('mb-orb');
+  if (mb) mb.getContext('2d').drawImage(orbIcon(16), 0, 0);
+  const link = document.querySelector('link[rel="icon"]');
+  if (link) { link.type = 'image/png'; link.href = orbIcon(32, '#fbfbf9').toDataURL('image/png'); }
+});
 
-/* ---------- hero: Marcus (range, Masori) vs Deacon (mage, Ancestral) ---------- */
+safe('initOrb', function initOrb() {
+  const canvas = document.getElementById('orb');
+  if (!canvas) return;
+  const cap = document.getElementById('orb-rot');
+  const g = canvas.getContext('2d');
+  const off = document.createElement('canvas');
+  const og = off.getContext('2d');
+  const BASE = -0.00022; // a slow turn: one revolution in about half a minute
+  let S = 0, dpr = 0, cell = 2, N = 0, img = null, buf = null;
+  // the light starts behind the sphere and swings round to the front as it boots
+  const st = { rot: 0.9, lx: 0.9, ly: -0.2, lz: -0.55, grid: true };
+  const tgt = { lx: -0.55, ly: -0.45, lz: 0.8 };
+  let vel = BASE, dragging = false, lastX = 0, lastMoveT = 0, pointerT = 0, px = 0, py = 0;
 
-safe('initDuel', function initDuel() {
-  const canvas = document.getElementById('hero-canvas');
+  function setCell(c) {
+    cell = c;
+    if (!S) return;
+    N = Math.max(8, Math.floor(S / c));
+    off.width = N; off.height = N;
+    img = og.createImageData(N, N);
+    buf = new Uint32Array(img.data.buffer);
+  }
+  function size() {
+    const w = canvas.clientWidth, d = Math.min(window.devicePixelRatio || 1, 2);
+    if (w === S && d === dpr && N) return;
+    S = w; dpr = d;
+    if (!S) return;
+    canvas.width = Math.round(S * dpr);
+    canvas.height = Math.round(S * dpr);
+    setCell(cell);
+  }
+  function draw() {
+    if (!N) return;
+    shadeOrb(buf, N, st);
+    og.putImageData(img, 0, 0);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    g.imageSmoothingEnabled = false;
+    const side = Math.round(N * cell * dpr), o = Math.round((canvas.width - side) / 2);
+    g.drawImage(off, o, o, side, side);
+  }
+  function caption() {
+    if (!cap) return;
+    const deg = Math.round((((-st.rot * 180) / Math.PI) % 360 + 360) % 360);
+    cap.textContent = 'rot ' + String(deg).padStart(3, '0') + '°';
+  }
+
+  let running = false, raf = 0, last = 0, lastCap = 0;
+  function frame(t) {
+    if (!running) { raf = 0; return; }
+    const dt = last ? Math.min(64, t - last) : 16;
+    last = t;
+    if (pointerT && t - pointerT < 4000) {
+      // light comes from wherever the cursor is
+      const r = canvas.getBoundingClientRect();
+      tgt.lx = Math.max(-1.4, Math.min(1.4, (px - (r.left + r.width / 2)) / 360));
+      tgt.ly = Math.max(-1.4, Math.min(1.4, (py - (r.top + r.height * 0.44)) / 360));
+      tgt.lz = 0.75;
+    } else {
+      // left alone, the light wanders
+      tgt.lx = -0.55 + 0.35 * Math.sin(t / 2600);
+      tgt.ly = -0.42 + 0.22 * Math.cos(t / 3300);
+      tgt.lz = 0.8;
+    }
+    const k = 1 - Math.exp(-dt / 260);
+    st.lx += (tgt.lx - st.lx) * k;
+    st.ly += (tgt.ly - st.ly) * k;
+    st.lz += (tgt.lz - st.lz) * k;
+    if (!dragging) {
+      vel = BASE + (vel - BASE) * Math.exp(-dt / 700);
+      st.rot += vel * dt;
+    }
+    draw();
+    if (t - lastCap > 120) { lastCap = t; caption(); }
+    raf = requestAnimationFrame(frame);
+  }
+
+  document.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return;
+    px = e.clientX; py = e.clientY; pointerT = performance.now();
+  }, { passive: true });
+  canvas.addEventListener('pointerdown', e => {
+    dragging = true; lastX = e.clientX; lastMoveT = performance.now();
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const now = performance.now(), dx = e.clientX - lastX;
+    lastX = e.clientX;
+    st.rot -= dx * 0.012;
+    vel = (-dx * 0.012) / Math.max(8, now - lastMoveT);
+    lastMoveT = now;
+    if (REDUCED) { draw(); caption(); }
+  });
+  const end = () => { dragging = false; };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+
+  size();
+  repaints.push(() => { size(); draw(); });
+  if (REDUCED) {
+    Object.assign(st, { lx: -0.55, ly: -0.45, lz: 0.8 });
+    setCell(2);
+    draw();
+    return;
+  }
+  // boot: the sphere resolves from coarse blocks to fine dither
+  const seq = [16, 11, 8, 6, 4, 3, 2];
+  setCell(seq[0]);
+  seq.slice(1).forEach((c, i) => setTimeout(() => setCell(c), 380 + i * 130));
+  const io = new IntersectionObserver(entries => {
+    const vis = entries.some(e => e.isIntersecting);
+    if (vis && !running) { running = true; last = 0; if (!raf) raf = requestAnimationFrame(frame); }
+    else if (!vis) running = false;
+  });
+  io.observe(canvas);
+});
+
+/* ---------- umbra: every tab is its own browser ---------- */
+
+safe('initUmbra', function initUmbra() {
+  const canvas = document.getElementById('umbra-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  let W = 0, H = 0, SC = 1, raf = 0, running = false, last = 0;
-  let tufts = [], stars = [];
-
-  const dark = () => root.getAttribute('data-theme') === 'dark';
-  const gy = () => H - Math.max(22, H * 0.09);
-
-  const COL = {
-    skin: '#c8956c',
-    masori: { base: '#332a24', trim: '#d2a13c', dark: '#211b17', quiver: '#4a3220', bow: '#6d4f28', string: '#cfc4a6', arrow: '#d9c284' },
-    ancest: { base: '#232f5c', trim: '#7fb4d9', gold: '#d2a13c', dark: '#17203f', staff: '#453a66', orb: '#8f7fd9', ice: '#9cc7ff' },
-    hpGreen: '#39c04a', hpRed: '#b0271f',
+  // documentation-range IPs only (RFC 5737) — nothing here points at a real machine
+  const IDS = [
+    { host: 'bank.example', hue: '#151515', ip: '198.51.100.9',  cc: 'GB', tz: 'Europe/London',     dev: 'Chrome 129 · macOS',   jar: 14, seed: 3 },
+    { host: 'shop.example',     hue: '#3a3a37', ip: '203.0.113.42',  cc: 'US', tz: 'America/New_York',  dev: 'Chrome 128 · Windows', jar: 9,  seed: 7 },
+    { host: 'mail.example',     hue: '#5c5c58', ip: '192.0.2.131',   cc: 'DE', tz: 'Europe/Berlin',     dev: 'Chrome 129 · Windows', jar: 21, seed: 11 },
+    { host: 'work.example',   hue: '#7e7e79', ip: '198.51.100.77', cc: 'AU', tz: 'Australia/Sydney',  dev: 'Chrome 127 · macOS',   jar: 6,  seed: 5 },
+    { host: 'ads.example',      hue: '#9a9a95', ip: '192.0.2.44',    cc: 'CA', tz: 'America/Toronto',   dev: 'Chrome 129 · Linux',   jar: 12, seed: 13 },
+  ];
+  const rnd = (seed, i) => { const x = Math.sin(seed * 127.1 + i * 311.7) * 43758.5453; return x - Math.floor(x); };
+  const HEX = '0123456789abcdef';
+  // each identity gets a deterministic fingerprint: three arcs (a nod to the Umbra mark) + a hash
+  IDS.forEach(id => {
+    id.arcs = [0, 1, 2].map(k => ({
+      a0: rnd(id.seed, k) * Math.PI * 2,
+      gap: 0.8 + rnd(id.seed, k + 10) * 1.6,
+      r: 0.42 + k * 0.24,
+      w: 1.6 + rnd(id.seed, k + 20) * 1.6,
+    }));
+    let h = '';
+    for (let i = 0; i < 8; i++) h += HEX[Math.floor(rnd(id.seed, 40 + i) * 16)];
+    id.hash = 'fp:' + h.slice(0, 4) + '·' + h.slice(4);
+  });
+  const rgb = hex => { let h = hex.replace('#', ''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const mixHex = (a, b, p) => { const A = rgb(a), B = rgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * p)).join(',')})`; };
+  const lerpAng = (a, b, p) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * p; };
+  const easeIO = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const SCR = 'abcdefghijklmnopqrstuvwxyz0123456789./:-';
+  const scramble = (s, p, hex) => {
+    let out = '';
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      const pos = i / s.length;
+      if (c === ' ' || c === '·' || pos < p) out += c;
+      else out += hex ? HEX[Math.floor(Math.random() * 16)] : SCR[Math.floor(Math.random() * SCR.length)];
+    }
+    return out;
   };
 
-  function mkFighter(name, kind, dir) {
-    return {
-      name, kind, dir, x: 0,
-      hp: 30, maxHp: 30,
-      phase: 'idle', phaseT: 0, spec: false,
-      bob: Math.random() * 6,
-      dead: false, deathT: 0,
-      flash: 0, freeze: 0,
-      hopY: 0, hopV: 0,
-    };
-  }
-  const ranger = mkFighter('Marcus', 'range', 1);
-  const mage = mkFighter('Deacon', 'mage', -1);
-  const fighters = [ranger, mage];
-
-  let projectiles = [], particles = [], splats = [], xpFloats = [], aoes = [];
-  let shake = 0, nextAttack = 0, turn = 0, specReady = 0, respawnAt = 0;
+  let W = 0, H = 0, running = false, raf = 0;
+  let order = [0, 1, 2, 3, 4];
+  let open = []; // { id, t0 (spawn time), closing }
+  let active = -1, phase = 'spawn', phaseT0 = 0, stepT0 = 0, step = 0;
+  let from = null, to = null, morphT0 = 0;
 
   let lastDpr = 0;
   function size() {
@@ -421,658 +294,305 @@ safe('initDuel', function initDuel() {
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    SC = Math.max(0.5, Math.min(1.6, Math.min(H / 210, W / 420)));
-    ranger.x = Math.max(W * 0.24, 76);
-    mage.x = Math.min(W * 0.76, W - 76);
-    tufts = [];
-    for (let i = 0; i < Math.floor(W / 60); i++) tufts.push(Math.random() * W);
-    stars = [];
-    for (let i = 0; i < 26; i++) {
-      stars.push({ x: Math.random() * W, y: Math.random() * H * 0.45, s: Math.random() < 0.3 ? 2 : 1.4, p: Math.random() * 6.28 });
-    }
   }
 
-  // the scene follows the visitor's actual time of day — dark theme only,
-  // celestial bodies look out of place on the paper theme
-  function drawSky(t) {
-    if (!dark()) return;
-    const now = new Date();
-    const tod = now.getHours() + now.getMinutes() / 60;
-    const night = tod >= 19 || tod < 5;
-    const golden = (tod >= 5 && tod < 7.5) || (tod >= 16.5 && tod < 19);
-    if (night) {
-      for (const st of stars) {
-        const tw = REDUCED ? 0.75 : 0.55 + 0.45 * Math.sin(t / 900 + st.p);
-        ctx.globalAlpha = 0.22 * tw;
-        ctx.fillStyle = PAL.fg;
-        ctx.fillRect(st.x, st.y, st.s, st.s);
-      }
-      ctx.globalAlpha = 1;
-      const frac = Math.min(1, ((tod - 19 + 24) % 24) / 10);
-      const mx = W * (0.12 + 0.76 * frac);
-      const my = 34 + (1 - Math.sin(Math.PI * frac)) * 40;
-      const mr = 11 * SC;
-      ctx.fillStyle = hexA('#d8d4c8', 0.5);
-      ctx.beginPath(); ctx.arc(mx, my, mr, 0, 6.2832); ctx.fill();
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath(); ctx.arc(mx + mr * 0.45, my - mr * 0.2, mr * 0.85, 0, 6.2832); ctx.fill();
-      ctx.restore();
-    } else {
-      const frac = Math.max(0, Math.min(1, (tod - 5) / 14));
-      const sr = 13 * SC;
-      const sx = W * (0.12 + 0.76 * frac);
-      // keep the full halo inside the canvas at the top of its arc
-      const sy = sr * 2.2 + 8 + (1 - Math.sin(Math.PI * frac)) * 42;
-      ctx.fillStyle = hexA('#e8c25a', 0.1);
-      ctx.beginPath(); ctx.arc(sx, sy, sr * 2.1, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = hexA('#e8c25a', dark() ? 0.55 : 0.75);
-      ctx.beginPath(); ctx.arc(sx, sy, sr, 0, 6.2832); ctx.fill();
-    }
-    if (golden) {
-      const grad = ctx.createLinearGradient(0, gy() - 70, 0, gy());
-      grad.addColorStop(0, hexA('#e8955a', 0));
-      grad.addColorStop(1, hexA('#e8955a', 0.08));
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, gy() - 70, W, 70);
-    }
+  function focus(idx, t) {
+    from = to || IDS[idx];
+    to = IDS[idx];
+    morphT0 = t;
+    active = idx;
   }
 
-  /* ----- combat direction ----- */
+  // square corners throughout: this is a window from an older machine
+  function rr(x, y, w, h) { ctx.beginPath(); ctx.rect(x, y, w, h); }
 
-  function scheduleNext(t) { nextAttack = t + 1200 + Math.random() * 900; }
-
-  function startAttack(f, t, spec) {
-    if (f.dead || f.phase !== 'idle' || respawnAt) return;
-    f.phase = 'windup';
-    f.phaseT = t;
-    f.spec = spec;
-  }
-
-  function rollDamage(spec) {
-    if (spec) return 12 + Math.floor(Math.random() * 7);
-    if (Math.random() < 0.18) return 0;
-    return 1 + Math.floor(Math.random() * 8);
-  }
-
-  function fire(f, t) {
-    const target = f === ranger ? mage : ranger;
-    const u = 4 * SC;
-    const sx = f.x + f.dir * 3.4 * u;
-    const sy = gy() - 9 * u;
-    const tx = target.x;
-    const ty = gy() - 8 * u;
-    if (f.kind === 'range') {
-      if (f.spec) {
-        projectiles.push({
-          kind: 'dragon', from: f, to: target, spec: true,
-          sx, sy: sy - 2 * u, tx, ty, t0: t, dur: 780,
-          dmg: rollDamage(true),
-        });
-      } else {
-        projectiles.push({
-          kind: 'arrow', from: f, to: target, spec: false,
-          sx, sy, tx, ty, t0: t, dur: 400,
-          dmg: rollDamage(false),
-        });
-      }
-    } else {
-      projectiles.push({
-        kind: 'orb', from: f, to: target, spec: f.spec,
-        sx, sy: sy - 1.5 * u, tx, ty, t0: t, dur: 640,
-        dmg: rollDamage(f.spec),
-      });
-    }
-    f.phase = 'idle';
-    f.spec = false;
-  }
-
-  function projPos(pr, t) {
-    const p = Math.max(0, Math.min(1, (t - pr.t0) / pr.dur));
-    const arc = (pr.kind === 'orb' ? 24 : pr.kind === 'dragon' ? 16 : 12) * SC;
-    return {
-      p,
-      x: pr.sx + (pr.tx - pr.sx) * p,
-      y: pr.sy + (pr.ty - pr.sy) * p - Math.sin(p * Math.PI) * arc,
-    };
-  }
-
-  function burst(x, y, color, n, up) {
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const sp = (0.6 + Math.random() * 2) * SC;
-      particles.push({
-        x, y,
-        vx: Math.cos(a) * sp,
-        vy: Math.sin(a) * sp - (up ? 1.2 * SC : 0),
-        g: 0.05 * SC,
-        life: 350 + Math.random() * 350, max: 700,
-        size: (1.5 + Math.random() * 2) * SC,
-        color,
-      });
-    }
-  }
-
-  function impact(pr, t) {
-    const tgt = pr.to;
-    if (tgt.dead) return;
-    tgt.hp = Math.max(0, tgt.hp - pr.dmg);
-    splats.push({ x: tgt.x + (Math.random() - 0.5) * 8 * SC, y: gy() - 8.5 * 4 * SC, t0: t, dmg: pr.dmg, miss: pr.dmg === 0 });
-    if (pr.dmg > 0) {
-      tgt.flash = 1;
-      burst(tgt.x, gy() - 8 * 4 * SC, pr.kind === 'orb' ? COL.ancest.orb : COL.masori.trim, pr.spec ? 16 : 9);
-      xpFloats.push({ x: pr.from.x, y: gy() - 25 * 4 * SC, t0: t, txt: '+' + pr.dmg * 4 + 'xp' });
-      if (pr.spec || pr.dmg >= 7) shake = Math.min(1, shake + 0.7);
-      if (pr.kind === 'dragon') {
-        // dragonfire detonation
-        burst(tgt.x, gy() - 8 * 4 * SC, '#e67e22', 22);
-        burst(tgt.x, gy() - 6 * 4 * SC, '#c0392b', 12, true);
-        shake = Math.min(1.3, shake + 1.1);
-      }
-      if (pr.kind === 'orb' && pr.spec) {
-        // barrage: freeze plus an expanding icy blast
-        tgt.freeze = 1;
-        aoes.push({ x: tgt.x, t0: t });
-        burst(tgt.x, gy() - 4 * 4 * SC, COL.ancest.ice, 18, true);
-        shake = Math.min(1.3, shake + 0.9);
-      }
-    }
-    if (tgt.hp <= 0 && !tgt.dead) {
-      tgt.dead = true;
-      tgt.deathT = t;
-      respawnAt = t + 1700;
-      pr.from.hopV = -3.4 * SC;
-      pr.from.hopY = -0.1;
-      burst(tgt.x, gy() - 5 * 4 * SC, dark() ? '#d8d4c8' : '#6a6456', 14, true);
-      gameMessage(pr.from.name + ' has defeated ' + tgt.name + '.');
-      clogUnlock('duel-death');
-    }
-  }
-
-  /* ----- update ----- */
-
-  function update(t, dt) {
-    if (t > nextAttack && !ranger.dead && !mage.dead && !respawnAt) {
-      startAttack(turn === 0 ? ranger : mage, t, false);
-      turn ^= 1;
-      scheduleNext(t);
-    }
-    for (const f of fighters) {
-      if (f.phase === 'windup') {
-        if (f.kind === 'mage') {
-          // particles converge into the wand orb while casting
-          const u = 4 * SC;
-          const ox = f.x + f.dir * 3 * u, oy = gy() - 16 * u;
-          const a = Math.random() * Math.PI * 2, r = 14 * SC;
-          particles.push({
-            x: ox + Math.cos(a) * r, y: oy + Math.sin(a) * r,
-            vx: -Math.cos(a) * 1.4 * SC, vy: -Math.sin(a) * 1.4 * SC,
-            g: 0, life: 220, max: 220, size: 1.6 * SC,
-            color: f.spec ? COL.ancest.ice : COL.ancest.orb,
-          });
-        }
-        if (t - f.phaseT > (f.kind === 'mage' ? 380 : 300)) fire(f, t);
-      }
-      f.flash *= 0.86;
-      if (f.freeze > 0) f.freeze -= dt / 900;
-      if (f.hopY < 0 || f.hopV !== 0) {
-        f.hopY += f.hopV;
-        f.hopV += 0.35 * SC;
-        if (f.hopY >= 0) { f.hopY = 0; f.hopV = 0; }
-      }
-    }
-    for (let i = projectiles.length - 1; i >= 0; i--) {
-      const pr = projectiles[i];
-      const pos = projPos(pr, t);
-      if (pr.kind === 'orb' && pos.p > 0 && pos.p < 1) {
-        particles.push({
-          x: pos.x, y: pos.y,
-          vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
-          g: 0, life: 300, max: 300, size: (1.2 + Math.random() * 1.6) * SC,
-          color: pr.spec ? COL.ancest.ice : COL.ancest.orb,
-        });
-      }
-      if (pr.kind === 'dragon' && pos.p > 0 && pos.p < 1) {
-        // fire streaming off the dragon
-        particles.push({
-          x: pos.x - pr.from.dir * 10 * SC, y: pos.y + (Math.random() - 0.5) * 8 * SC,
-          vx: -pr.from.dir * (0.5 + Math.random()), vy: (Math.random() - 0.5) * 0.6,
-          g: -0.01, life: 340, max: 340, size: (1.6 + Math.random() * 2) * SC,
-          color: Math.random() < 0.5 ? '#e67e22' : '#c0392b',
-        });
-      }
-      if (pos.p >= 1) { impact(pr, t); projectiles.splice(i, 1); }
-    }
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx; p.y += p.vy; p.vy += p.g;
-      if (p.g && p.y > gy() + 2 * SC) { p.y = gy() + 2 * SC; p.vy *= -0.35; p.vx *= 0.7; }
-      p.life -= dt;
-      if (p.life <= 0) particles.splice(i, 1);
-    }
-    splats = splats.filter(s => t - s.t0 < 800);
-    xpFloats = xpFloats.filter(s => t - s.t0 < 750);
-    aoes = aoes.filter(a => t - a.t0 < 700);
-    if (respawnAt && t > respawnAt) {
-      for (const f of fighters) {
-        if (f.dead) burst(f.x, gy() - 6 * 4 * SC, '#ffffff', 16, true);
-        f.dead = false; f.hp = f.maxHp; f.flash = 0; f.freeze = 0; f.phase = 'idle';
-      }
-      respawnAt = 0;
-      scheduleNext(t + 400);
-    }
-    shake *= 0.88;
-  }
-
-  /* ----- drawing ----- */
-
-  function rr(x, y, w, h, r) {
-    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); }
-    else ctx.fillRect(x, y, w, h);
-  }
-
-  function drawShadow(f) {
-    const u = 4 * SC;
-    ctx.fillStyle = dark() ? 'rgba(0,0,0,.35)' : 'rgba(0,0,0,.14)';
-    ctx.beginPath();
-    ctx.ellipse(f.x, gy() + 0.5 * u, 4.2 * u, u, 0, 0, 6.2832);
-    ctx.fill();
-  }
-
-  function deathTransform(f, t) {
-    if (!f.dead) return 1;
-    const dp = easeOut(Math.min(1, (t - f.deathT) / 420));
-    ctx.translate(f.x, gy());
-    ctx.rotate(-f.dir * dp * Math.PI / 2);
-    ctx.translate(-f.x, -gy());
-    const age = t - f.deathT;
-    return age > 800 ? Math.max(0, 1 - (age - 800) / 300) : 1;
-  }
-
-  // side-profile pixel sprites modelled on Marcus's actual in-game characters:
-  // slim silhouettes, twisted bow and arcane spirit shield front and centre
-  const RANGER_MAP = [
-    '....HHHH........',
-    '....HHHGG.......',
-    '....HHHGG.......',
-    '....HBBE..WW....',
-    '....HBMMM.sWw...',
-    '....RRRR..s.W...',
-    '..CCGGGG..s.WW..',
-    '..CCGgGGSSs..W..',
-    '..CCGgGGSVV.WW..',
-    '..CCGgGG.VV.WW..',
-    '..CCGGGG..s.WW..',
-    '..CCBBBB..s..W..',
-    '..CCBBBB..s.wW..',
-    '..CCBRBB..s.W...',
-    '....BBBB..sWW...',
-    '....BB.BB.WW....',
-    '....BB.BB.......',
-    '...VVV.VVV......',
-    '...VVV.VVVV.....',
-  ];
-  const RANGER_PAL = {
-    H: '#1d1a19', G: '#d9a821', g: '#a87e18', B: '#26221f', E: '#d93025',
-    M: '#5f7370', R: '#8a2c22', S: '#c8956c', C: '#15131a', V: '#6fae3d',
-    W: '#2f2b26', w: '#574a38', s: '#cfc4a6',
-  };
-  const MAGE_MAP = [
-    '.WW.............',
-    '..WWW...........',
-    '...WWWW.........',
-    '....WWWWW.......',
-    '....GGGGG..D....',
-    '...WWSSSS..D....',
-    '....WSbSS.aAa...',
-    '...W.LLLL.aAAAa.',
-    '...WLLLLLaAXAAa.',
-    '...WLlLLLaXXXAa.',
-    '...WLlLLLaAXAAa.',
-    '...WLlLLLaAAAAa.',
-    '...WLLLLL.aAAa..',
-    '....LLLLL.aAa...',
-    '....lLLLl..aa...',
-    '....lLLLl.......',
-    '....lllll.......',
-    '.....BB.BB......',
-    '.....BB.BB......',
-  ];
-  const MAGE_PAL = {
-    W: '#e8e6df', G: '#d9a821', S: '#c8956c', b: '#2a1d12',
-    L: '#8b96d6', l: '#6a76b8', B: '#5a5db0', D: '#4a5fd0',
-    A: '#b9c4d2', a: '#4a5f96', X: '#7b5fd0',
-  };
-
-  // the ranger's special: arrows become dragons (two wing frames)
-  const DRAGON_A = [
-    '..d......d..',
-    '..dd....dd..',
-    '..dDDDDDDd..',
-    'ddDDDDDDDDDe',
-    '..dDDDDDDdO.',
-  ];
-  const DRAGON_B = [
-    '............',
-    '..dDDDDDDd..',
-    'ddDDDDDDDDDe',
-    '..dDDDDDDdO.',
-    '..dd....dd..',
-  ];
-  const DRAGON_PAL = { D: '#c0392b', d: '#8e2418', e: '#ffd23f', O: '#e67e22' };
-
-  function drawSprite(map, pal, cx, feetY, cell, d) {
-    const rows = map.length, cols = map[0].length;
-    const top = feetY - rows * cell;
-    const cw = Math.ceil(cell);
-    for (let ry = 0; ry < rows; ry++) {
-      const row = map[ry];
-      for (let rx = 0; rx < cols; rx++) {
-        const k = row[rx];
-        if (k === '.') continue;
-        ctx.fillStyle = pal[k];
-        const left = d === 1 ? cx + (rx - cols / 2) * cell : cx + (cols / 2 - rx - 1) * cell;
-        ctx.fillRect(Math.round(left), Math.round(top + ry * cell), cw, cw);
-      }
-    }
-  }
-
-  function drawRanger(f, t) {
-    const c = 4 * SC, u = 4 * SC, d = f.dir;
-    const bob = (f.dead || f.freeze > 0 || REDUCED) ? 0 : Math.sin(t / 480 + f.bob) * 1.4 * SC;
-    const wp = f.phase === 'windup' ? Math.min(1, (t - f.phaseT) / 300) : 0;
-    const x = f.x + (f.flash > 0.05 ? (Math.random() - 0.5) * 3 : 0) + d * wp * 2;
-    const y = gy() + f.hopY + bob;
-
-    ctx.save();
-    ctx.globalAlpha = deathTransform(f, t);
-    drawSprite(RANGER_MAP, RANGER_PAL, x, y, c, d);
-    if (wp > 0.15) {
-      // pixel arrow nocked on the string, drawn back as he winds up
-      const ay = Math.round(y - 10 * c);
-      const tail = x + d * (2 - wp * 3.5) * c;
-      const ah = Math.ceil(c * 0.7);
-      ctx.fillStyle = COL.masori.arrow;
-      for (let i = 0; i < 4; i++) ctx.fillRect(Math.round(tail + d * i * c - (d === -1 ? c : 0)), ay, Math.ceil(c), ah);
-      ctx.fillStyle = COL.masori.trim;
-      ctx.fillRect(Math.round(tail + d * 4 * c - (d === -1 ? c : 0)), ay, Math.ceil(c), ah);
-    }
-    if (f.flash > 0.05) {
-      ctx.fillStyle = hexA('#ff3b30', f.flash * 0.22);
-      ctx.beginPath(); ctx.ellipse(x, y - 8 * u, 3.6 * u, 7 * u, 0, 0, 6.2832); ctx.fill();
-    }
-    if (f.freeze > 0) drawFreeze(x, y, u, f.freeze);
-    ctx.restore();
-  }
-
-  function drawMage(f, t) {
-    const c = 4 * SC, u = 4 * SC, d = f.dir;
-    const bob = (f.dead || REDUCED) ? 0 : Math.sin(t / 520 + f.bob) * 1.4 * SC;
-    const wp = f.phase === 'windup' ? Math.min(1, (t - f.phaseT) / 380) : 0;
-    const x = f.x + (f.flash > 0.05 ? (Math.random() - 0.5) * 3 : 0) + d * wp * 2;
-    const y = gy() + f.hopY + bob;
-
-    ctx.save();
-    ctx.globalAlpha = deathTransform(f, t);
-    drawSprite(MAGE_MAP, MAGE_PAL, x, y, c, d);
-    // orb at the wand tip above the shield; grows while casting
-    const ox = x + d * 3 * c, oy = y - 16 * c;
-    const orbR = (1.1 + wp * 1.1 + (REDUCED ? 0 : Math.sin(t / 260) * 0.15)) * u;
-    const oc = f.spec ? COL.ancest.ice : COL.ancest.orb;
-    ctx.fillStyle = hexA(oc, 0.14);
-    ctx.beginPath(); ctx.arc(ox, oy, orbR * 2.2, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = hexA(oc, 0.35);
-    ctx.beginPath(); ctx.arc(ox, oy, orbR * 1.4, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = oc;
-    ctx.beginPath(); ctx.arc(ox, oy, orbR, 0, 6.2832); ctx.fill();
-
-    if (f.flash > 0.05) {
-      ctx.fillStyle = hexA('#ff3b30', f.flash * 0.22);
-      ctx.beginPath(); ctx.ellipse(x, y - 8 * u, 3.8 * u, 7 * u, 0, 0, 6.2832); ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function drawFreeze(x, y, u, strength) {
-    const a = Math.min(0.5, strength * 0.55);
-    ctx.fillStyle = hexA(COL.ancest.ice, a * 0.5);
-    rr(x - 3 * u, y - 9 * u, 6 * u, 9 * u, u);
-    ctx.fillStyle = hexA(COL.ancest.ice, a);
-    for (let i = -1; i <= 1; i++) {
+  function drawFingerprint(cx, cy, R, p, t) {
+    const a = from, b = to;
+    const col = mixHex(a.hue, b.hue, p);
+    const spin = REDUCED ? 0 : t / 9000;
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 3; k++) {
+      const A = a.arcs[k], B = b.arcs[k];
+      const a0 = lerpAng(A.a0, B.a0, p) + spin * (k % 2 ? -1 : 1);
+      const gap = A.gap + (B.gap - A.gap) * p;
+      const r = R * (A.r + (B.r - A.r) * p);
+      const w = A.w + (B.w - A.w) * p;
+      ctx.strokeStyle = col;
+      ctx.globalAlpha = 0.95 - k * 0.18;
+      ctx.lineWidth = w;
       ctx.beginPath();
-      ctx.moveTo(x + i * 1.8 * u - 0.5 * u, y);
-      ctx.lineTo(x + i * 1.8 * u, y - (1.8 + Math.abs(i)) * u);
-      ctx.lineTo(x + i * 1.8 * u + 0.5 * u, y);
-      ctx.closePath();
-      ctx.fill();
+      ctx.arc(cx, cy, r, a0 + gap, a0 + Math.PI * 2);
+      ctx.stroke();
     }
-  }
-
-  function drawProjectile(pr, t) {
-    const pos = projPos(pr, t);
-    if (pos.p <= 0 || pos.p >= 1) return;
-    if (pr.kind === 'dragon') {
-      const frame = Math.floor(t / 110) % 2 === 0 ? DRAGON_A : DRAGON_B;
-      const cell = 3 * SC;
-      drawSprite(frame, DRAGON_PAL, pos.x, pos.y + 2.5 * cell, cell, pr.from.dir);
-      return;
-    }
-    if (pr.kind === 'arrow') {
-      const prev = projPos(pr, t - 40);
-      const a = Math.atan2(pos.y - prev.y, pos.x - prev.x);
-      const L = 13 * SC;
+    ctx.globalAlpha = 1;
+    // outer halo + centre dot
+    const halo = ctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * 1.25);
+    halo.addColorStop(0, hexA(b.hue, 0.16 * (1 - Math.abs(0.5 - p) * 2)));
+    halo.addColorStop(1, hexA(b.hue, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.25, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(cx, cy, Math.max(2.2, R * 0.06), 0, 6.2832); ctx.fill();
+    // a scanning sweep passes over the print while it re-forms
+    if (p < 1) {
+      const sy = cy - R * 1.1 + R * 2.2 * p;
+      const g = ctx.createLinearGradient(0, sy - R * 0.5, 0, sy);
+      g.addColorStop(0, hexA(b.hue, 0));
+      g.addColorStop(1, hexA(b.hue, 0.35));
       ctx.save();
-      ctx.translate(pos.x, pos.y);
-      ctx.rotate(a);
-      ctx.strokeStyle = COL.masori.arrow;
-      ctx.lineWidth = 1.4 * SC;
-      ctx.beginPath(); ctx.moveTo(-L / 2, 0); ctx.lineTo(L / 2, 0); ctx.stroke();
-      ctx.fillStyle = COL.masori.trim;
-      ctx.beginPath();
-      ctx.moveTo(L / 2 + 4 * SC, 0);
-      ctx.lineTo(L / 2 - 1.5 * SC, -2.2 * SC);
-      ctx.lineTo(L / 2 - 1.5 * SC, 2.2 * SC);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = COL.masori.string;
-      ctx.lineWidth = SC;
-      ctx.beginPath(); ctx.moveTo(-L / 2, -1.8 * SC); ctx.lineTo(-L / 2 + 3.5 * SC, 0); ctx.lineTo(-L / 2, 1.8 * SC); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, 6.2832); ctx.clip();
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - R * 1.1, sy - R * 0.5, R * 2.2, R * 0.5);
+      ctx.fillStyle = hexA(b.hue, 0.9);
+      ctx.fillRect(cx - R * 1.1, sy, R * 2.2, 1.2);
       ctx.restore();
-    } else {
-      const oc = pr.spec ? COL.ancest.ice : COL.ancest.orb;
-      const r = (pr.spec ? 4.4 : 3.2) * SC;
-      ctx.fillStyle = hexA(oc, 0.15);
-      ctx.beginPath(); ctx.arc(pos.x, pos.y, r * 2.4, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = hexA(oc, 0.4);
-      ctx.beginPath(); ctx.arc(pos.x, pos.y, r * 1.5, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = oc;
-      ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, 6.2832); ctx.fill();
     }
-  }
-
-  function drawSplat(s, t) {
-    const age = t - s.t0;
-    // OSRS splats snap in, hold, then vanish — just a tiny pop for juice
-    const pop = 0.72 + 0.28 * Math.min(1, age / 80);
-    const alpha = age > 620 ? Math.max(0, 1 - (age - 620) / 180) : 1;
-    const cell = 1.7 * SC * pop;
-    const w = 15 * cell;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    drawSplatPixels(ctx, s.x - w / 2, s.y - w / 2, cell, s.miss ? 'miss' : 'hit');
-    ctx.font = `${Math.max(12, 16 * SC)}px VT323, "IBM Plex Mono", monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#000';
-    ctx.fillText(String(s.dmg), s.x + 1.2, s.y + 2.2);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(String(s.dmg), s.x, s.y + 1);
-    ctx.restore();
-  }
-
-  function drawUI(t) {
-    const u = 4 * SC;
-    const nameC = dark() ? '#ffe066' : '#7d6407';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    for (const f of fighters) {
-      if (f.dead && t - f.deathT > 800) continue;
-      // overhead name, OSRS style
-      ctx.font = `${Math.max(15, 19 * SC)}px VT323, "IBM Plex Mono", monospace`;
-      ctx.fillStyle = nameC;
-      ctx.fillText(f.name, f.x, gy() - 22.6 * u);
-      // hp bar
-      const bw = 10 * u, bh = u, bx = f.x - bw / 2, by = gy() - 21.8 * u;
-      ctx.fillStyle = COL.hpRed;
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = COL.hpGreen;
-      ctx.fillRect(bx, by, bw * (f.hp / f.maxHp), bh);
-      ctx.strokeStyle = 'rgba(0,0,0,.5)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
-    }
-    ctx.font = `${Math.max(12, 14 * SC)}px VT323, "IBM Plex Mono", monospace`;
-    ctx.fillStyle = hexA(PAL.muted, 0.85);
-    ctx.fillText('vs', W / 2, gy() - 22 * u);
+    return col;
   }
 
   function render(t) {
+    if (!W || !H) return;
     ctx.clearRect(0, 0, W, H);
-    ctx.save();
-    if (shake > 0.02) ctx.translate((Math.random() - 0.5) * shake * 7, (Math.random() - 0.5) * shake * 5);
+    const narrow = W < 460;
+    const pad = narrow ? 10 : 16;
+    const x0 = pad, y0 = pad, w = W - pad * 2, h = H - pad * 2;
 
-    drawSky(t);
+    // ---- window chrome
+    ctx.fillStyle = PAL.bg2;
+    rr(x0, y0, w, h, 10); ctx.fill();
+    ctx.strokeStyle = PAL.line; ctx.lineWidth = 1;
+    rr(x0 + 0.5, y0 + 0.5, w - 1, h - 1, 10); ctx.stroke();
 
-    // ground
+    // ---- tab strip
+    const stripY = y0 + 8, tabH = 26;
+    const tw = Math.min(124, Math.max(narrow ? 54 : 74, (w - 24) / 5 - 4));
+    let tx = x0 + 10;
+    const tabRects = [];
+    ctx.font = '500 10px "IBM Plex Mono", monospace';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    open.forEach(tab => {
+      const id = IDS[tab.id];
+      let ap = REDUCED ? 1 : Math.min(1, (t - tab.t0) / 320);
+      ap = easeOut(ap);
+      if (tab.closing) ap *= Math.max(0, 1 - (t - tab.closing) / 220);
+      const cw = tw * ap;
+      if (cw < 1) { tabRects.push(null); return; }
+      const isA = tab.id === active;
+      ctx.globalAlpha = ap;
+      ctx.fillStyle = isA ? PAL.bg3 : 'transparent';
+      if (isA) { rr(tx, stripY, cw, tabH, 6); ctx.fill(); }
+      // colour tag along the top edge — the tab's identity at a glance
+      ctx.fillStyle = id.hue;
+      ctx.fillRect(tx + 6, stripY, Math.max(0, cw - 12), 2);
+      // favicon dot + host
+      ctx.beginPath(); ctx.arc(tx + 11, stripY + tabH / 2, 3, 0, 6.2832); ctx.fill();
+      ctx.save();
+      ctx.beginPath(); ctx.rect(tx, stripY, Math.max(0, cw - 6), tabH); ctx.clip();
+      ctx.fillStyle = isA ? PAL.fg : PAL.muted;
+      ctx.fillText(narrow ? id.host.split('.')[0] : id.host, tx + 19, stripY + tabH / 2 + 0.5);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      tabRects.push({ x: tx, w: cw });
+      tx += cw + 4;
+    });
+    // "+" ghost tab
+    ctx.fillStyle = PAL.muted;
+    ctx.globalAlpha = 0.6;
+    ctx.fillText('+', tx + 6, stripY + tabH / 2 + 0.5);
+    ctx.globalAlpha = 1;
+
+    // ---- address bar
+    const ay = stripY + tabH + 6, ah = 24;
+    ctx.fillStyle = PAL.bg;
+    rr(x0 + 10, ay, w - 20, ah, 7); ctx.fill();
     ctx.strokeStyle = PAL.line;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0, gy() + 3 * SC);
-    ctx.lineTo(W, gy() + 3 * SC);
-    ctx.stroke();
-    ctx.lineWidth = 1;
-    for (const tx of tufts) {
-      ctx.beginPath();
-      ctx.moveTo(tx, gy() + 3 * SC);
-      ctx.lineTo(tx - 1.5, gy() - 3 * SC);
-      ctx.moveTo(tx + 2.5, gy() + 3 * SC);
-      ctx.lineTo(tx + 3.5, gy() - 2 * SC);
-      ctx.stroke();
+    rr(x0 + 10.5, ay + 0.5, w - 21, ah - 1, 7); ctx.stroke();
+    const p = to ? (REDUCED ? 1 : easeIO(Math.min(1, (t - morphT0) / 620))) : 0;
+    if (to) {
+      // padlock
+      ctx.fillStyle = mixHex(from.hue, to.hue, p);
+      ctx.fillRect(x0 + 22, ay + 10, 7, 6);
+      ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(x0 + 25.5, ay + 10, 2.6, Math.PI, 0); ctx.stroke();
+      ctx.fillStyle = PAL.muted;
+      ctx.fillText('https://', x0 + 36, ay + ah / 2 + 0.5);
+      ctx.fillStyle = PAL.fg;
+      ctx.fillText(scramble(to.host, p), x0 + 36 + ctx.measureText('https://').width, ay + ah / 2 + 0.5);
+      // isolation pill, pops in as the identity settles
+      const pillT = Math.max(0, (p - 0.7) / 0.3);
+      if (pillT > 0 && !narrow) {
+        const s = 0.7 + 0.3 * easeOut(pillT);
+        const label = 'isolated ✓';
+        ctx.font = '600 9px "IBM Plex Mono", monospace';
+        const lw = ctx.measureText(label).width + 16;
+        const px = x0 + w - 16 - lw, py = ay + 4;
+        ctx.save();
+        ctx.translate(px + lw / 2, py + 8); ctx.scale(s, s); ctx.translate(-(px + lw / 2), -(py + 8));
+        ctx.globalAlpha = pillT;
+        ctx.fillStyle = hexA(to.hue, 0.14);
+        rr(px, py, lw, 16, 8); ctx.fill();
+        ctx.strokeStyle = hexA(to.hue, 0.6); ctx.lineWidth = 1;
+        rr(px + 0.5, py + 0.5, lw - 1, 15, 8); ctx.stroke();
+        ctx.fillStyle = to.hue;
+        ctx.textAlign = 'center';
+        ctx.fillText(label, px + lw / 2, py + 8.5);
+        ctx.restore();
+        ctx.textAlign = 'left';
+        ctx.font = '500 10px "IBM Plex Mono", monospace';
+      }
     }
 
-    drawShadow(ranger);
-    drawShadow(mage);
-    drawRanger(ranger, t);
-    drawMage(mage, t);
+    // ---- page body: fingerprint left, identity readout right
+    const by = ay + ah + 10, bh = y0 + h - by - 10;
+    if (!to || bh < 40) return;
+    const R = Math.min(bh * 0.38, w * 0.13, 66);
+    const fx = x0 + (narrow ? 14 + R : w * 0.2), fy = by + bh / 2;
+    const col = drawFingerprint(fx, fy, R, p, t);
 
-    for (const pr of projectiles) drawProjectile(pr, t);
-
-    // ice barrage AoE rings
-    const ua = 4 * SC;
-    for (const a of aoes) {
-      const p = Math.min(1, (t - a.t0) / 700);
-      const e = easeOut(p);
-      ctx.strokeStyle = hexA(COL.ancest.ice, (1 - p) * 0.8);
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.ellipse(a.x, gy() - 2 * ua, e * 13 * ua, e * 5 * ua, 0, 0, 6.2832);
-      ctx.stroke();
-      ctx.strokeStyle = hexA('#e8f4ff', (1 - p) * 0.5);
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.ellipse(a.x, gy() - 2 * ua, e * 9 * ua, e * 3.4 * ua, 0, 0, 6.2832);
-      ctx.stroke();
-      ctx.fillStyle = hexA(COL.ancest.ice, (1 - p) * 0.15);
-      ctx.beginPath();
-      ctx.ellipse(a.x, gy(), e * 11 * ua, e * 2.4 * ua, 0, 0, 6.2832);
-      ctx.fill();
-    }
-
-    for (const p of particles) {
-      ctx.globalAlpha = Math.max(0, p.life / p.max);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-    }
-    ctx.globalAlpha = 1;
-    for (const s of splats) drawSplat(s, t);
-    drawUI(t);
-    for (const s of xpFloats) {
-      const age = t - s.t0;
-      ctx.globalAlpha = Math.max(0, 1 - age / 750);
-      ctx.fillStyle = PAL.accent;
-      ctx.font = `${Math.max(11, 13 * SC)}px VT323, "IBM Plex Mono", monospace`;
-      ctx.textAlign = 'center';
-      ctx.fillText(s.txt, s.x, s.y - age * 0.025);
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  function loop(t) {
-    if (!running) { raf = 0; return; }
-    const dt = Math.min(50, last ? t - last : 16);
-    last = t;
-    try {
-      update(t, dt);
-      render(t);
-    } catch (err) {
-      // never let one bad frame kill the duel — log it and carry on
-      if (window.console && console.error) console.error('duel frame error:', err);
-    }
-    raf = requestAnimationFrame(loop);
-  }
-
-  canvas.addEventListener('click', e => {
-    if (REDUCED) return;
-    const now = performance.now();
-    if (now < specReady) return;
-    const rect = canvas.getBoundingClientRect();
-    const f = (e.clientX - rect.left) < W / 2 ? ranger : mage;
-    if (f.dead || respawnAt) return;
-    specReady = now + 1800;
-    startAttack(f, now, true);
-    clogUnlock(f === ranger ? 'spec-marcus' : 'spec-deacon');
-  });
-
-  let rt;
-  window.addEventListener('resize', () => {
-    clearTimeout(rt);
-    rt = setTimeout(() => { size(); if (REDUCED) render(0); }, 180);
-  });
-  repaints.push(() => { if (REDUCED) { size(); render(0); } });
-
-  function start() {
-    size();
-    if (REDUCED) {
-      if (!W || !H) window.addEventListener('load', () => { size(); render(0); }, { once: true });
-      else render(0);
-      return;
-    }
-    const io = new IntersectionObserver(entries => {
-      const vis = entries.some(en => en.isIntersecting);
-      if (vis) {
-        if (!W || !H) size(); // fonts can resolve before first layout
-        running = true;
-        last = 0;
-        if (!nextAttack) scheduleNext(performance.now() + 400);
-        // cancel-then-request makes restarts idempotent even after a bad frame
-        if (raf) cancelAnimationFrame(raf);
-        raf = requestAnimationFrame(loop);
+    const rx = narrow ? fx + R + 18 : x0 + w * 0.42;
+    const rows = [
+      ['exit ip', to.ip + '  ' + to.cc, from.ip + '  ' + from.cc, true],
+      ['timezone', to.tz, from.tz, false],
+      ['device', to.dev, from.dev, false],
+      ['cookies', null],
+      ['fingerprint', to.hash, from.hash, true],
+    ].filter(r => !(narrow && r[0] === 'device'));
+    const lineH = Math.min(24, (bh - 8) / rows.length);
+    let ry = by + (bh - lineH * rows.length) / 2 + lineH / 2;
+    const labelW = narrow ? 70 : 82;
+    rows.forEach(r => {
+      ctx.font = '500 9px "IBM Plex Mono", monospace';
+      ctx.fillStyle = PAL.muted;
+      ctx.fillText(r[0], rx, ry);
+      if (r[0] === 'cookies') {
+        // the jar: one square per cookie, in the tab's colour — a different count every tab
+        const n = Math.round(from.jar + (to.jar - from.jar) * p);
+        const cell = 5, gapC = 2, per = Math.max(6, Math.floor((x0 + w - 14 - (rx + labelW)) / (cell + gapC)));
+        for (let i = 0; i < n; i++) {
+          const cxq = rx + labelW + (i % per) * (cell + gapC);
+          const cyq = ry - cell / 2 + Math.floor(i / per) * (cell + gapC) - (n > per ? 3 : 0);
+          ctx.fillStyle = hexA(col, i < n - 1 || p >= 1 ? 0.9 : 0.5);
+          ctx.fillRect(cxq, cyq, cell, cell);
+        }
+        ctx.fillStyle = PAL.fg;
+        ctx.font = '600 10px "IBM Plex Mono", monospace';
+        const nx = rx + labelW + Math.min(n, per) * (cell + gapC) + 6;
+        if (nx < x0 + w - 24) ctx.fillText(String(n), nx, ry);
       } else {
+        ctx.font = '600 10.5px "IBM Plex Mono", monospace';
+        ctx.fillStyle = PAL.fg;
+        const txt = p >= 1 ? r[1] : scramble(r[1], p, r[3]);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(rx + labelW, ry - 8, x0 + w - 12 - (rx + labelW), 16); ctx.clip();
+        ctx.fillText(txt, rx + labelW, ry);
+        ctx.restore();
+      }
+      ry += lineH;
+    });
+
+    // ---- partition label under the print
+    ctx.font = '500 8.5px "IBM Plex Mono", monospace';
+    ctx.fillStyle = PAL.muted;
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.85;
+    const cap = 'partition · persist:tab-' + (active + 1);
+    const capW = ctx.measureText(cap).width;
+    // keep the caption inside the window on narrow cards
+    const capX = Math.min(Math.max(fx, x0 + 12 + capW / 2), x0 + w - 12 - capW / 2);
+    ctx.fillText(cap, capX, fy + R + 14);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+
+    // ---- seal: the verdict, plus a sweep across the tab strip
+    if (phase === 'seal') {
+      const el = t - phaseT0;
+      const a = Math.min(1, el / 300) * (el > 1400 ? Math.max(0, 1 - (el - 1400) / 300) : 1);
+      const sweep = Math.min(1, el / 900);
+      ctx.fillStyle = hexA(PAL.accent, 0.9 * (1 - sweep));
+      ctx.fillRect(x0 + 10 + (w - 20) * sweep, stripY - 2, 1.5, tabH + 4);
+      ctx.globalAlpha = a;
+      const msg = open.length + ' sessions · 0 shared state · ' + open.length + ' exit IPs';
+      ctx.font = '600 10px "IBM Plex Mono", monospace';
+      const mw = ctx.measureText(msg).width + 22;
+      const mx = x0 + w / 2 - mw / 2, my = y0 + h - 30;
+      ctx.fillStyle = PAL.bg3;
+      rr(mx, my, mw, 20, 10); ctx.fill();
+      ctx.strokeStyle = hexA(PAL.accent, 0.6);
+      rr(mx + 0.5, my + 0.5, mw - 1, 19, 10); ctx.stroke();
+      ctx.fillStyle = PAL.accent;
+      ctx.textAlign = 'center';
+      ctx.fillText(msg, x0 + w / 2, my + 10.5);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function tick(t) {
+    const el = t - phaseT0;
+    if (phase === 'spawn') {
+      if (open.length < IDS.length && t - stepT0 > (open.length ? 380 : 200)) {
+        const idx = order[open.length];
+        open.push({ id: idx, t0: t, closing: 0 });
+        focus(idx, t);
+        stepT0 = t;
+      } else if (open.length === IDS.length && t - stepT0 > 1100) {
+        phase = 'tour'; phaseT0 = t; stepT0 = t; step = 0;
+        focus(order[0], t);
+      }
+    } else if (phase === 'tour') {
+      if (t - stepT0 > 1500) {
+        step++;
+        if (step >= IDS.length) { phase = 'seal'; phaseT0 = t; }
+        else { focus(order[step], t); stepT0 = t; }
+      }
+    } else if (phase === 'seal') {
+      if (el > 1800) { phase = 'close'; phaseT0 = t; stepT0 = 0; }
+    } else if (phase === 'close') {
+      const live = open.filter(tab => !tab.closing);
+      if (live.length && t - stepT0 > 140) {
+        const last = live[live.length - 1];
+        last.closing = t;
+        stepT0 = t;
+        const nxt = live[live.length - 2];
+        if (nxt) focus(nxt.id, t);
+      }
+      open = open.filter(tab => !tab.closing || t - tab.closing < 240);
+      if (!open.length) {
+        order.push(order.shift());
+        phase = 'spawn'; phaseT0 = t; stepT0 = t;
+      }
+    }
+  }
+
+  function frame(t) {
+    if (!running) { raf = 0; return; }
+    if (!phaseT0) { phaseT0 = t; stepT0 = t; }
+    tick(t);
+    render(t);
+    raf = requestAnimationFrame(frame);
+  }
+
+  size();
+  if (REDUCED) {
+    // a still: every tab open, the first one in focus
+    open = order.map(i => ({ id: i, t0: 0, closing: 0 }));
+    from = to = IDS[order[0]]; active = order[0]; phase = 'still';
+    render(1);
+  } else {
+    const io = new IntersectionObserver(entries => {
+      const vis = entries.some(e => e.isIntersecting);
+      if (vis && !running) {
+        if (canvas.width !== Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) size();
+        running = true;
+        if (!raf) raf = requestAnimationFrame(frame);
+      } else if (!vis) {
         running = false;
       }
-    }, { threshold: 0.15 });
+    }, { threshold: 0.2 });
     io.observe(canvas);
   }
-
-  if (document.fonts && document.fonts.load) {
-    Promise.race([
-      Promise.all([document.fonts.load('19px VT323'), document.fonts.load('700 100px "IBM Plex Mono"')]),
-      new Promise(resolve => setTimeout(resolve, 1500)),
-    ]).then(start, start);
-  } else {
-    start();
-  }
+  repaints.push(() => { size(); render(performance.now()); });
 });
 
 /* ---------- stubhub lens: live price sparkline ---------- */
@@ -1286,10 +806,10 @@ safe('initWatch', function initWatch() {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const WATCHES = [
-    { name: 'diver',  dial: '#12395a', hand: '#e9e7e0', mark: '#7fd4c1', low: 2850, est: 3120, high: 3480 },
-    { name: 'chrono', dial: '#17171a', hand: '#e9e7e0', mark: '#d2a13c', low: 4200, est: 4680, high: 5150 },
-    { name: 'field',  dial: '#2b2620', hand: '#e9e7e0', mark: '#c8b98a', low: 640,  est: 730,  high: 815 },
-    { name: 'dress',  dial: '#e9e4d6', hand: '#2a2723', mark: '#8a7c52', low: 1150, est: 1280, high: 1420 },
+    { name: 'diver',  dial: '#1c1c1a', hand: '#fbfbf9', mark: '#b5b5b0', low: 2850, est: 3120, high: 3480 },
+    { name: 'chrono', dial: '#3a3a37', hand: '#fbfbf9', mark: '#cfcfca', low: 4200, est: 4680, high: 5150 },
+    { name: 'field',  dial: '#5e5e59', hand: '#fbfbf9', mark: '#e0e0db', low: 640,  est: 730,  high: 815 },
+    { name: 'dress',  dial: '#fbfbf9', hand: '#151515', mark: '#7a7a75', low: 1150, est: 1280, high: 1420 },
   ];
   let W = 0, H = 0, running = false, raf = 0;
   let wi = 0, cur = WATCHES[0], phase = 'idle', phaseT0 = 0;
@@ -1441,7 +961,6 @@ safe('initWatch', function initWatch() {
     } else if (phase === 'reveal' && el > 800) {
       phase = 'idle';
       phaseT0 = t;
-      clogUnlock('watch-scan');
     }
     render(t);
     raf = requestAnimationFrame(frame);
@@ -1467,808 +986,299 @@ safe('initWatch', function initWatch() {
   repaints.push(() => { size(); render(phaseT0 || 1); });
 });
 
-/* ---------- umbra: every tab is its own browser ---------- */
+/* ---------- reveal: typing, dither dissolve, zoom rectangles ---------- */
 
-safe('initUmbra', function initUmbra() {
-  const canvas = document.getElementById('umbra-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  // documentation-range IPs only (RFC 5737) — nothing here points at a real machine
-  const IDS = [
-    { host: 'bank.example', hue: '#34d1c9', ip: '198.51.100.9',  cc: 'GB', tz: 'Europe/London',     dev: 'Chrome 129 · macOS',   jar: 14, seed: 3 },
-    { host: 'shop.example',     hue: '#f5c518', ip: '203.0.113.42',  cc: 'US', tz: 'America/New_York',  dev: 'Chrome 128 · Windows', jar: 9,  seed: 7 },
-    { host: 'mail.example',     hue: '#a78bfa', ip: '192.0.2.131',   cc: 'DE', tz: 'Europe/Berlin',     dev: 'Chrome 129 · Windows', jar: 21, seed: 11 },
-    { host: 'work.example',   hue: '#7dd3fc', ip: '198.51.100.77', cc: 'AU', tz: 'Australia/Sydney',  dev: 'Chrome 127 · macOS',   jar: 6,  seed: 5 },
-    { host: 'ads.example',      hue: '#fb7185', ip: '192.0.2.44',    cc: 'CA', tz: 'America/Toronto',   dev: 'Chrome 129 · Linux',   jar: 12, seed: 13 },
-  ];
-  const rnd = (seed, i) => { const x = Math.sin(seed * 127.1 + i * 311.7) * 43758.5453; return x - Math.floor(x); };
-  const HEX = '0123456789abcdef';
-  // each identity gets a deterministic fingerprint: three arcs (a nod to the Umbra mark) + a hash
-  IDS.forEach(id => {
-    id.arcs = [0, 1, 2].map(k => ({
-      a0: rnd(id.seed, k) * Math.PI * 2,
-      gap: 0.8 + rnd(id.seed, k + 10) * 1.6,
-      r: 0.42 + k * 0.24,
-      w: 1.6 + rnd(id.seed, k + 20) * 1.6,
-    }));
-    let h = '';
-    for (let i = 0; i < 8; i++) h += HEX[Math.floor(rnd(id.seed, 40 + i) * 16)];
-    id.hash = 'fp:' + h.slice(0, 4) + '·' + h.slice(4);
+// seventeen 4x4 dither masks, 2px cells, from nothing to everything
+const TILES = Array.from({ length: 17 }, (_, k) => {
+  let r = '';
+  for (let i = 0; i < 16; i++) if (B4[i] < k) r += `<rect x='${(i & 3) * 2}' y='${(i >> 2) * 2}' width='2' height='2'/>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'>${r}</svg>`)}")`;
+});
+function setMask(el, k) {
+  el.style.webkitMaskImage = el.style.maskImage = TILES[k];
+  el.style.webkitMaskSize = el.style.maskSize = '8px 8px';
+}
+function clearMask(el) {
+  ['mask-image', '-webkit-mask-image', 'mask-size', '-webkit-mask-size'].forEach(p => el.style.removeProperty(p));
+}
+function hide(el) { if (!REDUCED) setMask(el, 0); }
+function dissolve(el, delay, dur) {
+  if (REDUCED) { clearMask(el); return; }
+  dur = dur || 440;
+  setTimeout(() => {
+    const t0 = performance.now();
+    const step = t => {
+      const p = Math.min(1, (t - t0) / dur);
+      if (p < 1) { setMask(el, Math.max(1, Math.ceil(p * 16))); requestAnimationFrame(step); }
+      else clearMask(el);
+    };
+    requestAnimationFrame(step);
+  }, delay || 0);
+}
+
+function prepType(el) {
+  if (REDUCED || el.classList.contains('tw')) return;
+  const text = el.textContent;
+  el.style.setProperty('--n', String(Math.max(1, text.length)));
+  if (el.dataset.cps) el.style.setProperty('--cps', el.dataset.cps + 'ms');
+  el.textContent = '';
+  const t = document.createElement('span');
+  t.className = 'tw-text';
+  t.textContent = text;
+  const c = document.createElement('span');
+  c.className = 'tw-caret';
+  c.setAttribute('aria-hidden', 'true');
+  el.append(t, c);
+  el.classList.add('tw');
+  t.addEventListener('animationend', () => el.classList.add('done'), { once: true });
+}
+function typeIn(el, delay) {
+  if (REDUCED || !el.classList.contains('tw')) return;
+  el.style.setProperty('--d', (delay || 0) + 'ms');
+  el.classList.add('on');
+}
+
+// ZoomRects: dotted outlines grow from the centre of a window to its frame, then the window dissolves in
+const zoomCanvas = document.createElement('canvas');
+zoomCanvas.className = 'zoom';
+zoomCanvas.setAttribute('aria-hidden', 'true');
+zoomCanvas.width = zoomCanvas.height = 0;
+document.body.appendChild(zoomCanvas);
+const zg = zoomCanvas.getContext('2d');
+const zooms = [];
+let zraf = 0;
+function zoomLoop(t) {
+  const d = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(innerWidth * d), h = Math.round(innerHeight * d);
+  if (zoomCanvas.width !== w || zoomCanvas.height !== h) { zoomCanvas.width = w; zoomCanvas.height = h; }
+  zg.setTransform(d, 0, 0, d, 0, 0);
+  zg.clearRect(0, 0, innerWidth, innerHeight);
+  zg.strokeStyle = '#151515';
+  zg.lineWidth = 1;
+  zg.setLineDash([2, 2]);
+  const STEPS = 10, TRAIL = 3;
+  for (let i = zooms.length - 1; i >= 0; i--) {
+    const z = zooms[i];
+    if (!z.t0) z.t0 = t;
+    const p = Math.min(1, (t - z.t0) / z.dur);
+    const step = Math.floor(p * STEPS);
+    const r = z.el.getBoundingClientRect(); // follows the window if the page scrolls mid-zoom
+    for (let k = Math.max(0, step - TRAIL + 1); k <= step; k++) {
+      const q = easeOut(k / STEPS);
+      const zw = r.width * (0.08 + 0.92 * q), zh = r.height * (0.08 + 0.92 * q);
+      zg.strokeRect(Math.round(r.left + (r.width - zw) / 2) + 0.5, Math.round(r.top + (r.height - zh) / 2) + 0.5, Math.round(zw) - 1, Math.round(zh) - 1);
+    }
+    if (p >= 1) { zooms.splice(i, 1); z.done(); }
+  }
+  if (zooms.length) zraf = requestAnimationFrame(zoomLoop);
+  else { zraf = 0; zoomCanvas.width = zoomCanvas.height = 0; }
+}
+function zoomOpen(el, done) {
+  if (REDUCED) { done(); return; }
+  zooms.push({ el, dur: 380, done, t0: 0 });
+  if (!zraf) zraf = requestAnimationFrame(zoomLoop);
+}
+
+safe('initReveal', function initReveal() {
+  const typed = Array.from(document.querySelectorAll('[data-type]'));
+  typed.forEach(prepType);
+  if (REDUCED || !('IntersectionObserver' in window)) return;
+
+  // the index plays in sequence on load
+  document.querySelectorAll('[data-at]').forEach(el => {
+    const at = parseInt(el.dataset.at, 10) || 0;
+    if (el.hasAttribute('data-type')) typeIn(el, at);
+    else { hide(el); dissolve(el, at, 520); }
   });
-  const rgb = hex => { let h = hex.replace('#', ''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
-  const mixHex = (a, b, p) => { const A = rgb(a), B = rgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * p)).join(',')})`; };
-  const lerpAng = (a, b, p) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * p; };
-  const easeIO = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-  const SCR = 'abcdefghijklmnopqrstuvwxyz0123456789./:-';
-  const scramble = (s, p, hex) => {
-    let out = '';
-    for (let i = 0; i < s.length; i++) {
-      const c = s[i];
-      const pos = i / s.length;
-      if (c === ' ' || c === '·' || pos < p) out += c;
-      else out += hex ? HEX[Math.floor(Math.random() * 16)] : SCR[Math.floor(Math.random() * SCR.length)];
-    }
-    return out;
-  };
 
-  let W = 0, H = 0, running = false, raf = 0;
-  let order = [0, 1, 2, 3, 4];
-  let open = []; // { id, t0 (spawn time), closing }
-  let active = -1, phase = 'spawn', phaseT0 = 0, stepT0 = 0, step = 0;
-  let from = null, to = null, morphT0 = 0;
-
-  let lastDpr = 0;
-  function size() {
-    const w = canvas.clientWidth, h = canvas.clientHeight, d = Math.min(window.devicePixelRatio || 1, 2);
-    if (w === W && h === H && d === lastDpr) return;
-    W = w; H = h; lastDpr = d;
-    if (!W || !H) return;
-    const dpr = d;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function focus(idx, t) {
-    from = to || IDS[idx];
-    to = IDS[idx];
-    morphT0 = t;
-    active = idx;
-  }
-
-  function rr(x, y, w, h, r) {
-    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
-    else { ctx.beginPath(); ctx.rect(x, y, w, h); }
-  }
-
-  function drawFingerprint(cx, cy, R, p, t) {
-    const a = from, b = to;
-    const col = mixHex(a.hue, b.hue, p);
-    const spin = REDUCED ? 0 : t / 9000;
-    ctx.lineCap = 'round';
-    for (let k = 0; k < 3; k++) {
-      const A = a.arcs[k], B = b.arcs[k];
-      const a0 = lerpAng(A.a0, B.a0, p) + spin * (k % 2 ? -1 : 1);
-      const gap = A.gap + (B.gap - A.gap) * p;
-      const r = R * (A.r + (B.r - A.r) * p);
-      const w = A.w + (B.w - A.w) * p;
-      ctx.strokeStyle = col;
-      ctx.globalAlpha = 0.95 - k * 0.18;
-      ctx.lineWidth = w;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, a0 + gap, a0 + Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-    // outer halo + centre dot
-    const halo = ctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * 1.25);
-    halo.addColorStop(0, hexA(b.hue, 0.16 * (1 - Math.abs(0.5 - p) * 2)));
-    halo.addColorStop(1, hexA(b.hue, 0));
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(cx, cy, R * 1.25, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = col;
-    ctx.beginPath(); ctx.arc(cx, cy, Math.max(2.2, R * 0.06), 0, 6.2832); ctx.fill();
-    // a scanning sweep passes over the print while it re-forms
-    if (p < 1) {
-      const sy = cy - R * 1.1 + R * 2.2 * p;
-      const g = ctx.createLinearGradient(0, sy - R * 0.5, 0, sy);
-      g.addColorStop(0, hexA(b.hue, 0));
-      g.addColorStop(1, hexA(b.hue, 0.35));
-      ctx.save();
-      ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, 6.2832); ctx.clip();
-      ctx.fillStyle = g;
-      ctx.fillRect(cx - R * 1.1, sy - R * 0.5, R * 2.2, R * 0.5);
-      ctx.fillStyle = hexA(b.hue, 0.9);
-      ctx.fillRect(cx - R * 1.1, sy, R * 2.2, 1.2);
-      ctx.restore();
-    }
-    return col;
-  }
-
-  function render(t) {
-    if (!W || !H) return;
-    ctx.clearRect(0, 0, W, H);
-    const narrow = W < 460;
-    const pad = narrow ? 10 : 16;
-    const x0 = pad, y0 = pad, w = W - pad * 2, h = H - pad * 2;
-
-    // ---- window chrome
-    ctx.fillStyle = PAL.bg2;
-    rr(x0, y0, w, h, 10); ctx.fill();
-    ctx.strokeStyle = PAL.line; ctx.lineWidth = 1;
-    rr(x0 + 0.5, y0 + 0.5, w - 1, h - 1, 10); ctx.stroke();
-
-    // ---- tab strip
-    const stripY = y0 + 8, tabH = 26;
-    const tw = Math.min(124, Math.max(narrow ? 54 : 74, (w - 24) / 5 - 4));
-    let tx = x0 + 10;
-    const tabRects = [];
-    ctx.font = '500 10px "IBM Plex Mono", monospace';
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
-    open.forEach(tab => {
-      const id = IDS[tab.id];
-      let ap = REDUCED ? 1 : Math.min(1, (t - tab.t0) / 320);
-      ap = easeOut(ap);
-      if (tab.closing) ap *= Math.max(0, 1 - (t - tab.closing) / 220);
-      const cw = tw * ap;
-      if (cw < 1) { tabRects.push(null); return; }
-      const isA = tab.id === active;
-      ctx.globalAlpha = ap;
-      ctx.fillStyle = isA ? PAL.bg3 : 'transparent';
-      if (isA) { rr(tx, stripY, cw, tabH, 6); ctx.fill(); }
-      // colour tag along the top edge — the tab's identity at a glance
-      ctx.fillStyle = id.hue;
-      ctx.fillRect(tx + 6, stripY, Math.max(0, cw - 12), 2);
-      // favicon dot + host
-      ctx.beginPath(); ctx.arc(tx + 11, stripY + tabH / 2, 3, 0, 6.2832); ctx.fill();
-      ctx.save();
-      ctx.beginPath(); ctx.rect(tx, stripY, Math.max(0, cw - 6), tabH); ctx.clip();
-      ctx.fillStyle = isA ? PAL.fg : PAL.muted;
-      ctx.fillText(narrow ? id.host.split('.')[0] : id.host, tx + 19, stripY + tabH / 2 + 0.5);
-      ctx.restore();
-      ctx.globalAlpha = 1;
-      tabRects.push({ x: tx, w: cw });
-      tx += cw + 4;
+  // each project: the window zooms open, then its name types and its notes dissolve in
+  const projs = Array.from(document.querySelectorAll('.proj'));
+  projs.forEach(p => {
+    const win = p.querySelector('.win');
+    if (win) hide(win);
+    p.querySelectorAll('[data-dz]').forEach(hide);
+  });
+  const pio = new IntersectionObserver(entries => {
+    entries.filter(en => en.isIntersecting).forEach((en, i) => {
+      pio.unobserve(en.target);
+      const p = en.target, win = p.querySelector('.win');
+      setTimeout(() => zoomOpen(win, () => {
+        dissolve(win, 0, 380);
+        p.querySelectorAll('[data-type]').forEach(el => typeIn(el, 260));
+        p.querySelectorAll('[data-dz]').forEach((el, j) => dissolve(el, 460 + j * 140, 420));
+      }), i * 170);
     });
-    // "+" ghost tab
-    ctx.fillStyle = PAL.muted;
-    ctx.globalAlpha = 0.6;
-    ctx.fillText('+', tx + 6, stripY + tabH / 2 + 0.5);
-    ctx.globalAlpha = 1;
+  }, { threshold: 0.3 });
+  projs.forEach(p => pio.observe(p));
 
-    // ---- address bar
-    const ay = stripY + tabH + 6, ah = 24;
-    ctx.fillStyle = PAL.bg;
-    rr(x0 + 10, ay, w - 20, ah, 7); ctx.fill();
-    ctx.strokeStyle = PAL.line;
-    rr(x0 + 10.5, ay + 0.5, w - 21, ah - 1, 7); ctx.stroke();
-    const p = to ? (REDUCED ? 1 : easeIO(Math.min(1, (t - morphT0) / 620))) : 0;
-    if (to) {
-      // padlock
-      ctx.fillStyle = mixHex(from.hue, to.hue, p);
-      ctx.fillRect(x0 + 22, ay + 10, 7, 6);
-      ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 1.4;
-      ctx.beginPath(); ctx.arc(x0 + 25.5, ay + 10, 2.6, Math.PI, 0); ctx.stroke();
-      ctx.fillStyle = PAL.muted;
-      ctx.fillText('https://', x0 + 36, ay + ah / 2 + 0.5);
-      ctx.fillStyle = PAL.fg;
-      ctx.fillText(scramble(to.host, p), x0 + 36 + ctx.measureText('https://').width, ay + ah / 2 + 0.5);
-      // isolation pill, pops in as the identity settles
-      const pillT = Math.max(0, (p - 0.7) / 0.3);
-      if (pillT > 0 && !narrow) {
-        const s = 0.7 + 0.3 * easeOut(pillT);
-        const label = 'isolated ✓';
-        ctx.font = '600 9px "IBM Plex Mono", monospace';
-        const lw = ctx.measureText(label).width + 16;
-        const px = x0 + w - 16 - lw, py = ay + 4;
-        ctx.save();
-        ctx.translate(px + lw / 2, py + 8); ctx.scale(s, s); ctx.translate(-(px + lw / 2), -(py + 8));
-        ctx.globalAlpha = pillT;
-        ctx.fillStyle = hexA(to.hue, 0.14);
-        rr(px, py, lw, 16, 8); ctx.fill();
-        ctx.strokeStyle = hexA(to.hue, 0.6); ctx.lineWidth = 1;
-        rr(px + 0.5, py + 0.5, lw - 1, 15, 8); ctx.stroke();
-        ctx.fillStyle = to.hue;
-        ctx.textAlign = 'center';
-        ctx.fillText(label, px + lw / 2, py + 8.5);
-        ctx.restore();
-        ctx.textAlign = 'left';
-        ctx.font = '500 10px "IBM Plex Mono", monospace';
-      }
-    }
-
-    // ---- page body: fingerprint left, identity readout right
-    const by = ay + ah + 10, bh = y0 + h - by - 10;
-    if (!to || bh < 40) return;
-    const R = Math.min(bh * 0.38, w * 0.13, 66);
-    const fx = x0 + (narrow ? 14 + R : w * 0.2), fy = by + bh / 2;
-    const col = drawFingerprint(fx, fy, R, p, t);
-
-    const rx = narrow ? fx + R + 18 : x0 + w * 0.42;
-    const rows = [
-      ['exit ip', to.ip + '  ' + to.cc, from.ip + '  ' + from.cc, true],
-      ['timezone', to.tz, from.tz, false],
-      ['device', to.dev, from.dev, false],
-      ['cookies', null],
-      ['fingerprint', to.hash, from.hash, true],
-    ].filter(r => !(narrow && r[0] === 'device'));
-    const lineH = Math.min(24, (bh - 8) / rows.length);
-    let ry = by + (bh - lineH * rows.length) / 2 + lineH / 2;
-    const labelW = narrow ? 70 : 82;
-    rows.forEach(r => {
-      ctx.font = '500 9px "IBM Plex Mono", monospace';
-      ctx.fillStyle = PAL.muted;
-      ctx.fillText(r[0], rx, ry);
-      if (r[0] === 'cookies') {
-        // the jar: one square per cookie, in the tab's colour — a different count every tab
-        const n = Math.round(from.jar + (to.jar - from.jar) * p);
-        const cell = 5, gapC = 2, per = Math.max(6, Math.floor((x0 + w - 14 - (rx + labelW)) / (cell + gapC)));
-        for (let i = 0; i < n; i++) {
-          const cxq = rx + labelW + (i % per) * (cell + gapC);
-          const cyq = ry - cell / 2 + Math.floor(i / per) * (cell + gapC) - (n > per ? 3 : 0);
-          ctx.fillStyle = hexA(col, i < n - 1 || p >= 1 ? 0.9 : 0.5);
-          ctx.fillRect(cxq, cyq, cell, cell);
-        }
-        ctx.fillStyle = PAL.fg;
-        ctx.font = '600 10px "IBM Plex Mono", monospace';
-        const nx = rx + labelW + Math.min(n, per) * (cell + gapC) + 6;
-        if (nx < x0 + w - 24) ctx.fillText(String(n), nx, ry);
-      } else {
-        ctx.font = '600 10.5px "IBM Plex Mono", monospace';
-        ctx.fillStyle = r[3] ? col : PAL.fg;
-        const txt = p >= 1 ? r[1] : scramble(r[1], p, r[3]);
-        ctx.save();
-        ctx.beginPath(); ctx.rect(rx + labelW, ry - 8, x0 + w - 12 - (rx + labelW), 16); ctx.clip();
-        ctx.fillText(txt, rx + labelW, ry);
-        ctx.restore();
-      }
-      ry += lineH;
+  // everything else reveals as it arrives
+  const rest = el => !el.closest('.proj') && !el.hasAttribute('data-at');
+  const dz = Array.from(document.querySelectorAll('[data-dz]')).filter(rest);
+  dz.forEach(hide);
+  const io = new IntersectionObserver(entries => {
+    entries.filter(en => en.isIntersecting).forEach((en, i) => {
+      io.unobserve(en.target);
+      if (en.target.hasAttribute('data-type')) typeIn(en.target, i * 90);
+      else dissolve(en.target, 120 + i * 140, 480);
     });
-
-    // ---- partition label under the print
-    ctx.font = '500 8.5px "IBM Plex Mono", monospace';
-    ctx.fillStyle = PAL.muted;
-    ctx.textAlign = 'center';
-    ctx.globalAlpha = 0.85;
-    const cap = 'partition · persist:tab-' + (active + 1);
-    const capW = ctx.measureText(cap).width;
-    // keep the caption inside the window on narrow cards
-    const capX = Math.min(Math.max(fx, x0 + 12 + capW / 2), x0 + w - 12 - capW / 2);
-    ctx.fillText(cap, capX, fy + R + 14);
-    ctx.globalAlpha = 1;
-    ctx.textAlign = 'left';
-
-    // ---- seal: the verdict, plus a sweep across the tab strip
-    if (phase === 'seal') {
-      const el = t - phaseT0;
-      const a = Math.min(1, el / 300) * (el > 1400 ? Math.max(0, 1 - (el - 1400) / 300) : 1);
-      const sweep = Math.min(1, el / 900);
-      ctx.fillStyle = hexA(PAL.accent, 0.9 * (1 - sweep));
-      ctx.fillRect(x0 + 10 + (w - 20) * sweep, stripY - 2, 1.5, tabH + 4);
-      ctx.globalAlpha = a;
-      const msg = open.length + ' sessions · 0 shared state · ' + open.length + ' exit IPs';
-      ctx.font = '600 10px "IBM Plex Mono", monospace';
-      const mw = ctx.measureText(msg).width + 22;
-      const mx = x0 + w / 2 - mw / 2, my = y0 + h - 30;
-      ctx.fillStyle = PAL.bg3;
-      rr(mx, my, mw, 20, 10); ctx.fill();
-      ctx.strokeStyle = hexA(PAL.accent, 0.6);
-      rr(mx + 0.5, my + 0.5, mw - 1, 19, 10); ctx.stroke();
-      ctx.fillStyle = PAL.accent;
-      ctx.textAlign = 'center';
-      ctx.fillText(msg, x0 + w / 2, my + 10.5);
-      ctx.textAlign = 'left';
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  function tick(t) {
-    const el = t - phaseT0;
-    if (phase === 'spawn') {
-      if (open.length < IDS.length && t - stepT0 > (open.length ? 380 : 200)) {
-        const idx = order[open.length];
-        open.push({ id: idx, t0: t, closing: 0 });
-        focus(idx, t);
-        stepT0 = t;
-      } else if (open.length === IDS.length && t - stepT0 > 1100) {
-        phase = 'tour'; phaseT0 = t; stepT0 = t; step = 0;
-        focus(order[0], t);
-      }
-    } else if (phase === 'tour') {
-      if (t - stepT0 > 1500) {
-        step++;
-        if (step >= IDS.length) { phase = 'seal'; phaseT0 = t; clogUnlock('umbra-cycle'); }
-        else { focus(order[step], t); stepT0 = t; }
-      }
-    } else if (phase === 'seal') {
-      if (el > 1800) { phase = 'close'; phaseT0 = t; stepT0 = 0; }
-    } else if (phase === 'close') {
-      const live = open.filter(tab => !tab.closing);
-      if (live.length && t - stepT0 > 140) {
-        const last = live[live.length - 1];
-        last.closing = t;
-        stepT0 = t;
-        const nxt = live[live.length - 2];
-        if (nxt) focus(nxt.id, t);
-      }
-      open = open.filter(tab => !tab.closing || t - tab.closing < 240);
-      if (!open.length) {
-        order.push(order.shift());
-        phase = 'spawn'; phaseT0 = t; stepT0 = t;
-      }
-    }
-  }
-
-  function frame(t) {
-    if (!running) { raf = 0; return; }
-    if (!phaseT0) { phaseT0 = t; stepT0 = t; }
-    tick(t);
-    render(t);
-    raf = requestAnimationFrame(frame);
-  }
-
-  size();
-  if (REDUCED) {
-    // a still: every tab open, the first one in focus
-    open = order.map(i => ({ id: i, t0: 0, closing: 0 }));
-    from = to = IDS[order[0]]; active = order[0]; phase = 'still';
-    render(1);
-  } else {
-    const io = new IntersectionObserver(entries => {
-      const vis = entries.some(e => e.isIntersecting);
-      if (vis && !running) {
-        if (canvas.width !== Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) size();
-        running = true;
-        if (!raf) raf = requestAnimationFrame(frame);
-      } else if (!vis) {
-        running = false;
-      }
-    }, { threshold: 0.2 });
-    io.observe(canvas);
-  }
-  repaints.push(() => { size(); render(performance.now()); });
+  }, { threshold: 0.35 });
+  typed.filter(rest).forEach(el => io.observe(el));
+  dz.forEach(el => io.observe(el));
 });
 
-/* ---------- grand exchange: live ledger from the GitHub API ---------- */
+/* ---------- window focus: pinstripes follow your attention ---------- */
 
-safe('initTicker', function initTicker() {
-  const el = document.getElementById('ge-ticker');
+safe('initFocus', function initFocus() {
+  const wins = Array.from(document.querySelectorAll('.win'));
+  if (!wins.length) return;
+  let hovered = null, centred = null;
+  const paint = () => wins.forEach(w => w.classList.toggle('active', w === (hovered || centred)));
+  wins.forEach(w => {
+    w.addEventListener('mouseenter', () => { hovered = w; paint(); });
+    w.addEventListener('mouseleave', () => { if (hovered === w) hovered = null; paint(); });
+  });
+  if (!('IntersectionObserver' in window)) return;
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) centred = en.target;
+      else if (centred === en.target) centred = null;
+    });
+    paint();
+  }, { rootMargin: '-45% 0px -45% 0px' });
+  wins.forEach(w => io.observe(w));
+});
+
+/* ---------- menu bar: London time, cursor position, the section you are in ---------- */
+
+safe('initMenubar', function initMenubar() {
+  const clock = document.getElementById('clock');
+  if (clock && window.Intl) {
+    const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const tick = () => { clock.textContent = 'London ' + fmt.format(new Date()); setTimeout(tick, 1000 - (Date.now() % 1000) + 5); };
+    tick();
+  }
+
+  const coords = document.getElementById('coords');
+  if (coords && FINE) {
+    let x = 0, y = 0, queued = false;
+    const pad = n => String(Math.max(0, Math.round(n))).padStart(4, '0');
+    const paint = () => { queued = false; coords.textContent = 'x ' + pad(x) + '  y ' + pad(y); };
+    document.addEventListener('pointermove', e => {
+      x = e.pageX; y = e.pageY;
+      if (!queued) { queued = true; requestAnimationFrame(paint); }
+    }, { passive: true });
+  }
+
+  const odo = document.getElementById('odo');
+  const name = document.getElementById('sec-name');
+  const secs = Array.from(document.querySelectorAll('[data-sec]'));
+  if (!odo || !name || !secs.length) return;
+  const cols = [0, 1].map(() => {
+    const d = document.createElement('span');
+    d.className = 'dig';
+    const inner = document.createElement('span');
+    for (let i = 0; i < 10; i++) { const n = document.createElement('i'); n.textContent = String(i); inner.appendChild(n); }
+    d.appendChild(inner);
+    odo.appendChild(d);
+    return inner;
+  });
+  let current = -1;
+  function show(n, label) {
+    if (n === current) return;
+    current = n;
+    cols[0].style.setProperty('--v', String(Math.floor(n / 10)));
+    cols[1].style.setProperty('--v', String(n % 10));
+    name.textContent = label;
+    name.classList.remove('swap');
+    void name.offsetWidth; // restart the wipe
+    name.classList.add('swap');
+  }
+  show(parseInt(secs[0].dataset.sec, 10) || 0, secs[0].dataset.name || '');
+  if (!('IntersectionObserver' in window)) return;
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => { if (en.isIntersecting) show(parseInt(en.target.dataset.sec, 10) || 0, en.target.dataset.name || ''); });
+  }, { rootMargin: '-50% 0px -50% 0px' });
+  secs.forEach(s => io.observe(s));
+});
+
+/* ---------- email: never in the page source; decoded letter by letter on request ---------- */
+
+safe('initEmail', function initEmail() {
+  const btn = document.getElementById('email');
+  const text = document.getElementById('email-text');
+  if (!btn || !text) return;
+  const rot13 = s => s.replace(/[a-z]/g, c => String.fromCharCode((c.charCodeAt(0) - 97 + 13) % 26 + 97));
+  const coded = 'znephf' + String.fromCharCode(64) + 'qrnpbaqrif.pbz';
+  const addr = rot13(coded);
+  btn.addEventListener('click', () => {
+    const finish = () => {
+      const li = btn.parentNode;
+      const a = document.createElement('a');
+      a.className = 'row';
+      a.href = 'mailto:' + addr;
+      a.innerHTML = '<span class="k">Email</span><span></span><span class="go" aria-hidden="true">→</span>';
+      a.children[1].textContent = addr;
+      li.replaceChild(a, btn);
+      a.focus({ preventScroll: true });
+    };
+    if (REDUCED) { finish(); return; }
+    btn.disabled = true;
+    // each letter turns through the alphabet thirteen places, the way it was encoded
+    const t0 = performance.now(), PER = 34, STAGGER = 26;
+    const tick = t => {
+      let out = '', settled = true;
+      for (let i = 0; i < coded.length; i++) {
+        const c = coded[i];
+        if (c < 'a' || c > 'z') { out += c; continue; }
+        const k = Math.max(0, Math.min(13, Math.floor((t - t0 - i * STAGGER) / PER)));
+        if (k < 13) settled = false;
+        out += String.fromCharCode((c.charCodeAt(0) - 97 + k) % 26 + 97);
+      }
+      text.textContent = out;
+      if (settled) finish(); else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+});
+
+/* ---------- the last commit, read live from GitHub ---------- */
+
+safe('initCommit', function initCommit() {
+  const el = document.getElementById('commit');
   if (!el || !window.fetch) return;
-  const ledger = el.querySelector('.ge-link');
-  if (ledger) ledger.addEventListener('click', () => clogUnlock('ge-ledger'));
   const rel = iso => {
     const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
     if (s < 90) return 'just now';
     const m = s / 60, h = m / 60, d = h / 24;
-    if (m < 90) return Math.round(m) + ' min ago';
-    if (h < 36) return Math.round(h) + ' hr ago';
+    if (m < 90) return Math.round(m) + ' minutes ago';
+    if (h < 36) return Math.round(h) + ' hours ago';
     return Math.round(d) + ' days ago';
   };
   fetch('https://api.github.com/repos/Nerhh/deacondevs.com/commits?per_page=1')
     .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(list => {
-      const c = list[0];
+      const c = list && list[0];
       if (!c) return;
       let msg = (c.commit.message || '').split('\n')[0];
-      if (msg.length > 72) msg = msg.slice(0, 71) + '…';
-      document.getElementById('ge-msg').textContent = msg;
-      document.getElementById('ge-sha').textContent = c.sha.slice(0, 7);
-      document.getElementById('ge-when').textContent = rel(c.commit.author.date);
+      if (msg.length > 64) msg = msg.slice(0, 63) + '…';
+      el.textContent = 'Last commit ';
+      const b = document.createElement('b');
+      b.textContent = c.sha.slice(0, 7);
+      el.append(b, ' — ' + msg + ', ' + rel(c.commit.author.date) + '.');
       el.hidden = false;
-      // the offer fills GE-style once it scrolls into view
-      const bar = document.getElementById('ge-bar');
-      const fill = document.getElementById('ge-fill');
-      const state = document.getElementById('ge-state');
-      const complete = () => {
-        bar.classList.add('done');
-        state.textContent = 'offer complete';
-      };
-      if (REDUCED || !('IntersectionObserver' in window)) {
-        fill.style.transition = 'none';
-        fill.style.width = '100%';
-        complete();
-        return;
-      }
-      state.textContent = 'filling offer…';
-      const io = new IntersectionObserver(entries => {
-        if (entries.some(e => e.isIntersecting)) {
-          io.disconnect();
-          requestAnimationFrame(() => { fill.style.width = '100%'; });
-          fill.addEventListener('transitionend', complete, { once: true });
-          setTimeout(complete, 2200); // safety if the transition event is missed
-        }
-      }, { threshold: 0.4 });
-      io.observe(el);
+      hide(el);
+      dissolve(el, 0, 420);
     })
-    .catch(() => { /* rate-limited or offline — show nothing rather than fake data */ });
+    .catch(() => { /* offline or rate-limited: say nothing rather than something made up */ });
 });
 
-/* ---------- quest log ---------- */
-
-safe('initQuests', function initQuests() {
-  const section = document.getElementById('quests');
-  const qp = document.getElementById('quest-points');
-  if (!section || !qp) return;
-  let total = 0, done = 0;
-  section.querySelectorAll('.quest').forEach(q => {
-    const v = parseInt(q.dataset.qp, 10) || 0;
-    total += v;
-    if (q.classList.contains('quest-done')) done += v;
-  });
-  qp.textContent = String(done);
-  qp.className = done === 0 ? 'is-locked' : done === total ? 'is-done' : 'is-progress';
-});
-
-/* ---------- OSRS xp drops on click ---------- */
-
-let xpTotal = 0;
-try { xpTotal = parseInt(localStorage.getItem('dd-xp'), 10) || 0; } catch (e) { /* ignore */ }
-
-if (xpTotal > 0) updateXpTracker(xpTotal, 0);
-document.addEventListener('click', e => {
-  const el = e.target.closest('[data-xp]');
-  if (!el) return;
-  const gained = parseInt(el.dataset.xp, 10) || 0;
-  xpTotal += gained;
-  try { localStorage.setItem('dd-xp', String(xpTotal)); } catch (e2) { /* ignore */ }
-  if (xpTotal >= 100) clogUnlock('xp-100');
-  updateXpTracker(xpTotal, gained);
-  if (REDUCED) return;
-  const d = document.createElement('span');
-  d.className = 'xp-drop';
-  d.textContent = '+' + el.dataset.xp + ' xp';
-  d.style.left = Math.max(8, e.clientX - 16) + 'px';
-  d.style.top = Math.max(8, e.clientY - 26) + 'px';
-  document.body.appendChild(d);
-  d.addEventListener('animationend', () => d.remove());
-  setTimeout(() => d.remove(), 1500);
-});
-
-/* ---------- npc contact dialogue ---------- */
-
-safe('initDialogue', function initDialogue() {
-  const box = document.getElementById('npc');
-  if (!box) return;
-
-  // pixel-art Marcus for the dialogue head — hooded, gold crest, red eyes
-  const face = document.getElementById('npc-face');
-  if (face) {
-    const f = face.getContext('2d');
-    const HEAD = [
-      '...GGG...',
-      '..HGGGH..',
-      '.HGGGGGH.',
-      '.HBBBBBH.',
-      '.HBEBEBH.',
-      '.HMMMMMH.',
-      '..MMMMM..',
-      '..RRRRR..',
-      '.RRRRRRR.',
-    ];
-    const P = { G: '#d9a821', H: '#1d1a19', B: '#26221f', E: '#d93025', M: '#5f7370', R: '#8a2c22' };
-    const cell = 8;
-    HEAD.forEach((row, ry) => {
-      for (let rx = 0; rx < row.length; rx++) {
-        const k = row[rx];
-        if (k === '.') continue;
-        f.fillStyle = P[k];
-        f.fillRect(rx * cell, ry * cell, cell, cell);
-      }
-    });
-  }
-
-  const LINES = [
-    'Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.',
-    'I’m Marcus. I build the sort of tools you just scrolled past — and the occasional LEGO city.',
-    'Want to talk tickets, watches, wealth or bricks?',
-  ];
-  let idx = 0;
-  const line = document.getElementById('npc-line');
-  const opts = document.getElementById('npc-options');
-  const cont = document.getElementById('npc-continue');
-
-  function show() {
-    line.textContent = LINES[idx];
-    const last = idx >= LINES.length - 1;
-    opts.hidden = !last;
-    cont.hidden = last;
-  }
-  show();
-  cont.addEventListener('click', () => {
-    idx = Math.min(idx + 1, LINES.length - 1);
-    show();
-  });
-
-  opts.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => { line.textContent = 'Safe travels, adventurer.'; });
-  });
-  document.getElementById('npc-email').addEventListener('click', () => {
-    const rot13 = s => s.replace(/[a-z]/g, c => String.fromCharCode((c.charCodeAt(0) - 97 + 13) % 26 + 97));
-    const addr = rot13('znephf') + String.fromCharCode(64) + rot13('qrnpbaqrif') + '.' + rot13('pbz');
-    line.innerHTML = 'You can write to me at <a href="mailto:' + addr + '">' + addr + '</a>. Tell them the duel sent you.';
-    clogUnlock('email-reveal');
-  });
-});
-
-/* ---------- examine tooltips ---------- */
-
-safe('initExamine', function initExamine() {
-  if (!window.matchMedia || !matchMedia('(hover: hover)').matches) return;
-  const tip = document.createElement('div');
-  tip.className = 'examine';
-  document.body.appendChild(tip);
-  let showing = false;
-  document.addEventListener('mouseover', e => {
-    const el = e.target.closest('[data-ex]');
-    if (!el) {
-      if (showing) { tip.classList.remove('on'); showing = false; }
-      return;
-    }
-    tip.textContent = el.dataset.ex;
-    tip.classList.add('on');
-    showing = true;
-  });
-  document.addEventListener('mousemove', e => {
-    if (!showing) return;
-    let x = e.clientX + 14, y = e.clientY + 18;
-    const r = tip.getBoundingClientRect();
-    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 10;
-    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 10;
-    tip.style.left = x + 'px';
-    tip.style.top = y + 'px';
-  });
-  document.addEventListener('click', () => { tip.classList.remove('on'); showing = false; });
-});
-
-/* ---------- login screen fires (the classic doom-fire propagation) ---------- */
-
-safe('initFires', function initFires() {
-  const cvs = ['fire-l', 'fire-r'].map(id => document.getElementById(id)).filter(Boolean);
-  if (!cvs.length) return;
-  const CW = 24, CH = 40, TORCH = 8; // fire cells, plus a torch under them (24x48, drawn at 3x / 2x)
-  // 32 heat levels, torch-coloured: nothing → ember red → orange → yellow → near-white
-  const STOPS = [[0, 0, 0, 0], [40, 6, 0, 0.6], [110, 18, 0, 0.9], [170, 40, 4, 1], [214, 74, 10, 1], [240, 122, 18, 1], [255, 176, 32, 1], [255, 224, 96, 1], [255, 246, 200, 1]];
-  // palette as packed little-endian RGBA so a frame is one putImageData, not ~600 fillRects
-  const PAL32 = new Uint32Array(32);
-  for (let i = 0; i < 32; i++) {
-    const f = i / 31 * (STOPS.length - 1), k = Math.min(STOPS.length - 2, Math.floor(f)), p = f - k;
-    const a = STOPS[k], b = STOPS[k + 1];
-    const r = Math.round(a[0] + (b[0] - a[0]) * p), gg = Math.round(a[1] + (b[1] - a[1]) * p), bb = Math.round(a[2] + (b[2] - a[2]) * p), al = Math.round((a[3] + (b[3] - a[3]) * p) * 255);
-    PAL32[i] = (al << 24 | bb << 16 | gg << 8 | r) >>> 0;
-  }
-  const fires = cvs.map(canvas => {
-    canvas.width = CW;
-    canvas.height = CH + TORCH;
-    const heat = new Uint8Array(CW * CH);
-    // the source row: hottest in the middle, tapering to the sides like a torch flame
-    for (let x = 0; x < CW; x++) {
-      const d = Math.abs(x - (CW - 1) / 2) / (CW / 2);
-      heat[(CH - 1) * CW + x] = d < 0.42 ? 31 : d < 0.7 ? 22 : 8;
-    }
-    const img = new ImageData(CW, CH);
-    return { canvas, ctx: canvas.getContext('2d'), heat, img, px: new Uint32Array(img.data.buffer) };
-  });
-
-  function step(f) {
-    const h = f.heat;
-    for (let x = 0; x < CW; x++) {
-      for (let y = 1; y < CH; y++) {
-        const src = y * CW + x;
-        const r = (Math.random() * 3) | 0;
-        let dx = x - r + 1;
-        if (dx < 0) dx = 0; else if (dx >= CW) dx = CW - 1;
-        const dst = (y - 1) * CW + dx;
-        const v = h[src] - (r & 1) - (Math.random() < 0.55 ? 1 : 0) - (Math.random() < 0.15 ? 1 : 0);
-        h[dst] = v < 0 ? 0 : v;
-      }
-    }
-  }
-
-  function draw(f) {
-    const g = f.ctx;
-    const h = f.heat, px = f.px;
-    for (let i = 0; i < CW * CH; i++) px[i] = PAL32[h[i]];
-    g.clearRect(0, CH, CW, TORCH);
-    g.putImageData(f.img, 0, 0);
-    // the torch: iron sconce and a dark wooden handle
-    const cx = CW / 2;
-    g.fillStyle = '#5a5045'; g.fillRect(cx - 4, CH - 1, 8, 2);
-    g.fillStyle = '#3b332b'; g.fillRect(cx - 3, CH + 1, 6, 1);
-    g.fillStyle = '#4a3220'; g.fillRect(cx - 1, CH + 2, 2, TORCH - 2);
-    g.fillStyle = '#2b1c12'; g.fillRect(cx, CH + 2, 1, TORCH - 2);
-  }
-
-  if (REDUCED) {
-    fires.forEach(f => { for (let i = 0; i < 60; i++) step(f); draw(f); });
-    return;
-  }
-  let running = false, raf = 0, last = 0;
-  function loop(t) {
-    if (!running) { raf = 0; return; }
-    if (t - last > 42) { // ~24fps reads more like the original than 60
-      last = t;
-      fires.forEach(f => { step(f); draw(f); });
-    }
-    raf = requestAnimationFrame(loop);
-  }
-  const io = new IntersectionObserver(entries => {
-    const vis = entries.some(e => e.isIntersecting);
-    if (vis && !running) { running = true; if (!raf) raf = requestAnimationFrame(loop); }
-    else if (!vis) running = false;
-  }, { threshold: 0.1 });
-  io.observe(cvs[0]);
-});
-
-/* ---------- click cross: yellow to walk, red to interact ---------- */
-
-safe('initClickCross', function initClickCross() {
-  if (REDUCED || !window.matchMedia || !matchMedia('(pointer: fine)').matches) return;
-  document.addEventListener('pointerdown', e => {
-    if (e.button !== 0) return;
-    const interactive = e.target.closest('a, button, canvas, [data-xp], .slot, .quest-btn, input, label');
-    const el = document.createElement('span');
-    el.className = 'click-x ' + (interactive ? 'red' : 'yellow');
-    el.style.left = e.clientX + 'px';
-    el.style.top = e.clientY + 'px';
-    document.body.appendChild(el);
-    el.addEventListener('animationend', () => el.remove());
-    setTimeout(() => el.remove(), 700);
-  }, { passive: true });
-});
-
-safe('initChat', function initChat() {
-  const box = document.getElementById('chat');
-  const toggle = document.getElementById('chat-toggle');
-  chatReady = true;
-  if (!box) { chatQueue.splice(0).forEach(([t, k]) => toast(t, k)); return; }
-  const open = on => {
-    box.classList.toggle('open', on);
-    if (toggle) toggle.setAttribute('aria-expanded', String(on));
-    const log = document.getElementById('chat-log');
-    if (log) log.scrollTop = log.scrollHeight;
-  };
-  if (toggle) toggle.addEventListener('click', () => open(!box.classList.contains('open')));
-  box.addEventListener('click', e => { if (!e.target.closest('button')) open(!box.classList.contains('open')); });
-  gameMessage('Welcome to marcus.gg.');
-  chatQueue.splice(0).forEach(([t, k]) => gameMessage(t, k));
-  setTimeout(() => gameMessage('Marcus is currently building Umbra — a multi-session browser.'), 1400);
-  if (window.matchMedia && matchMedia('(pointer: fine)').matches) setTimeout(() => gameMessage('Right-click things to examine them.'), 4200);
-});
-
-/* ---------- right-click: choose option ---------- */
-
-safe('initContextMenu', function initContextMenu() {
-  if (!window.matchMedia || !matchMedia('(pointer: fine)').matches) return;
-  const menu = document.createElement('div');
-  menu.className = 'ctx';
-  menu.hidden = true;
-  menu.setAttribute('role', 'menu');
-  document.body.appendChild(menu);
-  let opener = null;
-  const close = (restore) => {
-    if (menu.hidden) return;
-    menu.hidden = true;
-    if (restore && opener && opener.focus) opener.focus({ preventScroll: true });
-  };
-  menu.addEventListener('keydown', e => {
-    const items = Array.from(menu.querySelectorAll('button'));
-    const i = items.indexOf(document.activeElement);
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const n = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
-      items[n].focus();
-    } else if (e.key === 'Home' || e.key === 'End') {
-      e.preventDefault();
-      items[e.key === 'Home' ? 0 : items.length - 1].focus();
-    } else if (e.key === 'Tab') {
-      close(true);
-    }
-  });
-
-  document.addEventListener('contextmenu', e => {
-    const el = e.target.closest('[data-ex]');
-    if (!el || e.target.closest('input, textarea, .npc-options')) { close(); return; }
-    const link = e.target.closest('a');
-    if (link && link !== el) { close(); return; } // a plain link inside a panel keeps the browser menu
-    e.preventDefault();
-    opener = el;
-    const name = el.dataset.name || (el.querySelector('h3') || {}).textContent || 'this';
-    const isNpc = /^(Marcus|Deacon|the duel)$/.test(name);
-    const items = [];
-    if (el.id === 'arena' || el.id === 'hero-canvas') {
-      const canvas = document.getElementById('hero-canvas');
-      const rect = canvas.getBoundingClientRect();
-      const who = (e.clientX - rect.left) < rect.width / 2 ? 'Marcus' : 'Deacon';
-      items.push({ act: 'Attack', obj: who, cls: 'obj-npc', run: () => {
-        canvas.dispatchEvent(new MouseEvent('click', { clientX: e.clientX, clientY: e.clientY, bubbles: true }));
-      } });
-    }
-    if (el.id === 'npc') items.push({ act: 'Talk-to', obj: 'Marcus', cls: 'obj-npc', run: () => {
-      const c = document.getElementById('npc-continue');
-      if (c && !c.hidden) c.click();
-      el.scrollIntoView({ block: 'center', behavior: REDUCED ? 'auto' : 'smooth' });
-    } });
-    if (el.tagName === 'A' || el.dataset.href) items.push({ act: 'Open', obj: name, cls: 'obj-object', run: () => {
-      const href = el.dataset.href || el.getAttribute('href');
-      if (el.target === '_blank') window.open(href, '_blank', 'noopener'); else location.href = href;
-    } });
-    if (el.id === 'theme-toggle') items.push({ act: 'Toggle', obj: 'the lights', cls: 'obj-object', run: () => el.click() });
-    items.push({ act: 'Examine', obj: name, cls: isNpc ? 'obj-npc' : 'obj-object', run: () => gameMessage(el.dataset.ex, 'examine') });
-    items.push({ act: 'Cancel', run: close });
-
-    menu.innerHTML = '<div class="ctx-title">Choose Option</div>';
-    items.forEach(it => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.setAttribute('role', 'menuitem');
-      b.innerHTML = it.act + (it.obj ? ' <span class="' + it.cls + '"></span>' : '');
-      if (it.obj) b.querySelector('span').textContent = it.obj;
-      b.addEventListener('click', ev => { ev.stopPropagation(); close(); it.run(); });
-      menu.appendChild(b);
-    });
-    menu.hidden = false;
-    // the game opens the menu with the title under the cursor, kept on-screen
-    const mw = menu.offsetWidth, mh = menu.offsetHeight;
-    let x = e.clientX - mw / 2, y = e.clientY - 8;
-    x = Math.max(4, Math.min(innerWidth - mw - 4, x));
-    y = Math.max(4, Math.min(innerHeight - mh - 4, y));
-    menu.style.left = x + 'px';
-    menu.style.top = y + 'px';
-    const first = menu.querySelector('button');
-    if (first) first.focus({ preventScroll: true });
-  });
-  document.addEventListener('click', e => { if (!menu.contains(e.target)) close(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(true); });
-  window.addEventListener('scroll', close, { passive: true });
-  menu.addEventListener('mouseleave', close);
-});
-
-/* ---------- quest journal: click a quest, the parchment unrolls ---------- */
-
-function closeJournals() {
-  document.querySelectorAll('.quest.open').forEach(q => {
-    q.classList.remove('open');
-    const b = q.querySelector('.quest-btn');
-    if (b) b.setAttribute('aria-expanded', 'false');
-    const j = q.querySelector('.journal');
-    if (j) j.inert = true;
-  });
-}
-safe('initJournals', function initJournals() {
-  document.querySelectorAll('.quest-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const li = btn.closest('.quest');
-      const open = !li.classList.contains('open');
-      closeJournals();
-      if (!open) return;
-      li.classList.add('open');
-      btn.setAttribute('aria-expanded', 'true');
-      const j = li.querySelector('.journal');
-      if (j) j.inert = false;
-      gameMessage('You open the quest journal: ' + btn.textContent.trim() + '.');
-    });
-  });
-});
-
-/* ---------- logout: back to the login screen ---------- */
-
-safe('initLogout', function initLogout() {
-  const btn = document.getElementById('logout');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    gameMessage('You have been logged out. See you soon, adventurer.');
-    window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' });
-    closeJournals();
-  });
-});
-
-/* ---------- global repaint on resize ---------- */
+/* ---------- repaint on resize and once the typeface has arrived ---------- */
 
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => repaints.forEach(fn => fn()), 200);
 });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => repaints.forEach(fn => fn()));
 
 })();

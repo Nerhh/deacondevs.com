@@ -1,91 +1,68 @@
 <!DOCTYPE html>
-<html lang="en-GB" data-theme="dark">
+<html lang="en-GB">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Adventure log — marcus.gg</title>
-  <meta name="description" content="Build notes from Marcus Deacon's workshop — what got built, what broke, and what's next.">
-  <meta property="og:title" content="Adventure log — marcus.gg">
-  <meta property="og:description" content="Build notes from the workshop.">
+  <title>Log — Marcus Deacon</title>
+  <meta name="description" content="Build notes from Marcus Deacon: what got built, what broke, and what's next.">
+  <meta property="og:title" content="Log — Marcus Deacon">
+  <meta property="og:description" content="Build notes: what got built, what broke, and what's next.">
   <meta property="og:url" content="https://marcus.gg/log/">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://marcus.gg/assets/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
-  <meta name="theme-color" content="#0c0a08">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15' shape-rendering='crispEdges'%3E%3Crect x='4' y='2' width='7' height='11' fill='%23c0281a'/%3E%3Crect x='2' y='4' width='11' height='7' fill='%23c0281a'/%3E%3Crect x='1' y='7' width='1' height='2' fill='%236f100a'/%3E%3Crect x='13' y='6' width='1' height='2' fill='%236f100a'/%3E%3Crect x='7' y='1' width='2' height='1' fill='%236f100a'/%3E%3Crect x='6' y='13' width='2' height='1' fill='%236f100a'/%3E%3C/svg%3E">
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/vt323-400.woff2">
+  <meta name="theme-color" content="#fbfbf9">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23fbfbf9'/%3E%3Ccircle cx='8' cy='8' r='6' fill='%23151515'/%3E%3C/svg%3E">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-500.woff2">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <canvas class="fx" id="fx" aria-hidden="true"></canvas>
 
-  <header class="site-head">
-    <a class="wordmark" href="/" data-xp="12" data-ex="The way home." data-name="marcus.gg">marcus<span>.gg</span></a>
-    <nav aria-label="Primary">
-      <a href="/#projects" data-xp="15">Projects</a>
-      <a href="/#quests" data-xp="15">Quests</a>
-      <a href="/log/" class="is-active" data-xp="15">Log</a>
-      <a href="/#about" data-xp="15">About</a>
-      <a href="/#contact" data-xp="15">Contact</a>
-      <button id="theme-toggle" class="stone stone-sm" aria-label="Toggle colour theme" data-ex="Let there be light. Or not." data-name="the lights"><canvas id="theme-icon" width="8" height="8" aria-hidden="true"></canvas></button>
+  <header class="menubar">
+    <a class="mb-home" href="/"><canvas id="mb-orb" width="16" height="16" aria-hidden="true"></canvas>marcus.gg</a>
+    <nav class="mb-nav" aria-label="Sections">
+      <a href="/#work">Work</a>
+      <a href="/log/" aria-current="page">Log</a>
+      <a href="/#about">About</a>
+      <a href="/#contact">Contact</a>
     </nav>
+    <div class="mb-right" aria-hidden="true">
+      <span class="mb-dim" id="coords"></span>
+      <span class="mb-sec"><span class="odo" id="odo"></span><span class="sec-name" id="sec-name">Log</span></span>
+      <span id="clock"></span>
+    </div>
   </header>
 
   <main>
-    <section class="section section-last">
-      <div class="ui-head"><h2 class="ui-title">Adventure Log</h2><span class="ui-count">newest first</span></div>
 
-      <div class="log-list">
-
-        <article class="log-entry panel" id="umbra" data-ex="Every tab, its own shadow." data-name="Entry II">
-          <header>
-            <h3><span class="n">Entry II</span> — Umbra, and the Old School coat</h3>
-            <time datetime="2026-09-26">26 September 2026</time>
-          </header>
-          <p>The newest thing on the front page is <strong class="u">Umbra</strong>: a multi-session desktop browser where <strong>every tab is its own isolated browser</strong>. Each tab gets its own cookies, storage and cache, its own proxy and exit IP, and its own fingerprint — the screen, GPU, fonts and clock set together so they agree with each other and with the network they appear on. It's for people who genuinely need many accounts, QA across regions, or want to see a page from somewhere they aren't.</p>
-          <p>Under the hood it's an <strong>Electron + React + TypeScript</strong> desktop app, with a small <strong>Go</strong> network engine doing the wire-level work and a <strong>Next.js</strong> account platform behind it. It's in beta, and it's where most of my evenings currently go. The demo on the front page is a canvas re-enactment of the core idea: five tabs open, five identities, nothing shared between them.</p>
-          <p>The site also got the coat it should have had from the start: the game's own interface. Pixel type for the chrome, bevelled stone panels, the login screen with its two fires, a quest list in red, yellow and green, a collection log with real item slots, a right-click <strong>Choose Option</strong> menu, a chatbox for game messages, and XP that levels up on the actual Old School experience table. Everything else — the duel, the charts, the NPC at the bottom — stayed exactly where it was.</p>
-        </article>
-
-        <article class="log-entry panel" id="building-this-place" data-ex="Where it all began." data-name="Entry I">
-          <header>
-            <h3><span class="n">Entry I</span> — Building this place</h3>
-            <time datetime="2026-07-06">6 July 2026</time>
-          </header>
-          <p>This site went from an empty folder to what you're looking at in a handful of build sessions: <strong>no frameworks, no build step</strong> — hand-written HTML, one stylesheet, and a single main.js doing everything you can see. The duel, the live charts, the quest log, the collection log: all hand-rolled canvas and vanilla JavaScript.</p>
-          <p>Some things I learned shipping it. The <strong>.gg registry publishes its zone in batches</strong>, so marcus.gg spent its first afternoon registered but invisible to the entire internet — nothing was wrong, the Channel Islands just publish on their own schedule. GitHub Pages will quietly refuse to issue an HTTPS certificate if you attach a domain before its DNS exists; removing and re-adding the domain wakes it up. And Jekyll was processing this site on every deploy for no reason at all until a <strong>.nojekyll</strong> file put a stop to it.</p>
-          <p>The fighters in the duel are modelled on my actual Old School RuneScape characters — the hood, the crest, and the twisted bow are the real loadout. If you've clicked a fighter, you've met the dragon.</p>
-          <p>The quest log on the front page is the honest ledger of what's in progress. More entries here as more things get built.</p>
-        </article>
-
+    <section class="sec entry" id="umbra" data-sec="2" data-name="Entry II">
+      <p class="sec-label"><span class="n">II</span><time datetime="2026-09-26" data-type>26.09.2026</time></p>
+      <div>
+        <h2 data-dz>Umbra, and a quieter room</h2>
+        <p data-dz>The newest thing on the front page is <strong>Umbra</strong>: a multi-session desktop browser where every tab is its own isolated browser. Each tab gets its own cookies, storage and cache, its own proxy and exit IP, and its own fingerprint — screen, graphics, fonts and clock set together so they agree with each other and with the network they appear on. It's for people who genuinely need many accounts, QA across regions, or want to see a page from somewhere they aren't.</p>
+        <p data-dz>Under the hood it's an <strong>Electron, React and TypeScript</strong> desktop app, with a small <strong>Go</strong> network engine doing the wire-level work and a <strong>Next.js</strong> account platform behind it. It's in beta, and it's where most of my evenings go. The window on the front page re-enacts the core idea: five tabs, five identities, nothing shared between them.</p>
+        <p data-dz>The site changed with it. It is quieter now: off-white and grey, one typeface, and the manners of an older kind of computer. Windows zoom open from their centres. Text types itself in behind a block caret. Paragraphs arrive through a dithered dissolve. The sphere on the index is shaded per pixel, reduced to one bit with an ordered dither, and lit from wherever your cursor is. Still no frameworks, still no build step.</p>
       </div>
     </section>
+
+    <section class="sec entry" id="building-this-place" data-sec="1" data-name="Entry I">
+      <p class="sec-label"><span class="n">I</span><time datetime="2026-07-06" data-type>06.07.2026</time></p>
+      <div>
+        <h2 data-dz>Building this place</h2>
+        <p data-dz>This site went from an empty folder to a working page in a handful of build sessions: <strong>no frameworks, no build step</strong> — hand-written HTML, one stylesheet, and a single script doing everything you can see. The live charts in the Work section date from then, all hand-rolled canvas and plain JavaScript.</p>
+        <p data-dz>Some things I learned shipping it. The <strong>.gg registry publishes its zone in batches</strong>, so marcus.gg spent its first afternoon registered but invisible to the entire internet — nothing was wrong, the Channel Islands just publish on their own schedule. GitHub Pages will quietly refuse to issue an HTTPS certificate if you attach a domain before its DNS exists; removing and re-adding the domain wakes it up. And Jekyll was processing this site on every deploy for no reason at all until a <strong>.nojekyll</strong> file put a stop to it.</p>
+        <p data-dz>The first version opened on a duel between my two Old School RuneScape characters, with a quest log where a skills grid would usually go. Both have retired to the git history, where the duel is still perfectly playable.</p>
+      </div>
+    </section>
+
   </main>
 
   <footer>
-    <p class="logout-q">Are you sure you want to logout?</p>
-    <a class="stone" href="/" data-xp="10" data-ex="Back to the login screen." data-name="the logout button">Click here to logout</a>
-    <p class="foot-meta">© 2026 Marcus Deacon · marcus.gg · built brick by brick · <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="20">source ↗</a></p>
+    <span>© 2026 Marcus Deacon</span>
+    <span>Written by hand. No frameworks, no build step.</span>
   </footer>
-
-  <aside class="chat panel dark-ui" id="chat" aria-label="Game messages">
-    <div class="chat-tabs">
-      <button type="button" class="stone stone-sm chat-tab" id="chat-toggle" aria-expanded="false" aria-controls="chat-log">Game</button>
-    </div>
-    <div class="chat-log" id="chat-log" aria-live="polite"></div>
-    <div class="lvl" id="lvl" hidden role="status">
-      <h4>Congratulations, you've just advanced a Clicking level.</h4>
-      <p id="lvl-text">Your Clicking level is now 2.</p>
-      <button type="button" class="npc-continue" id="lvl-close">Click here to continue</button>
-    </div>
-  </aside>
-
-  <div class="xp-track panel dark-ui" id="xp-track" hidden>
-    <canvas id="xp-lamp" width="8" height="8" aria-hidden="true"></canvas>
-    <span>Clicking <b id="xp-lvl">1</b> · <span id="xp-total">0</span> xp</span>
-  </div>
 
   <script src="/js/main.js"></script>
 </body>
