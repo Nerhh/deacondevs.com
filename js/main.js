@@ -1,4 +1,4 @@
-/* deacondevs.com — hand-rolled, zero dependencies */
+/* marcus.gg — hand-rolled, zero dependencies */
 (() => {
 'use strict';
 
@@ -99,7 +99,7 @@ function refreshPalette() {
   const v = name => cs.getPropertyValue(name).trim();
   PAL = {
     fg: v('--fg'), muted: v('--muted'), line: v('--line'),
-    bg: v('--bg'), bg2: v('--bg2'),
+    bg: v('--bg'), bg2: v('--bg2'), bg3: v('--bg3') || v('--bg2'), line2: v('--line2') || v('--line'),
     accent: v('--accent-bright'), green: v('--green'), red: v('--red'),
     chart: [v('--c1'), v('--c2'), v('--c3'), v('--c4')],
   };
@@ -124,9 +124,20 @@ function applyTheme(t) {
   if (btn) btn.addEventListener('click', () => {
     const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore */ }
-    applyTheme(next);
-    clogUnlock('theme-flip');
-    checkMoon();
+    const go = () => { applyTheme(next); clogUnlock('theme-flip'); checkMoon(); };
+    if (REDUCED || !document.startViewTransition) { go(); return; }
+    // the new theme floods out from the button in a circle
+    const r = btn.getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    let vt;
+    try { vt = document.startViewTransition(go); } catch (e) { go(); return; }
+    vt.ready.then(() => {
+      root.animate(
+        { clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + R + 'px at ' + x + 'px ' + y + 'px)'] },
+        { duration: 700, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' }
+      );
+    }).catch(() => { /* fell back to an instant swap */ });
   });
 }
 
@@ -137,6 +148,7 @@ const CLOG_ENTRIES = [
   { id: 'spec-deacon', name: "Deacon's special attack", hint: 'the mage answers too' },
   { id: 'duel-death', name: 'A fighter falls', hint: 'watch a duel to the end' },
   { id: 'watch-scan', name: 'A full dial scan', hint: 'let the watch finish its reading' },
+  { id: 'umbra-cycle', name: 'Every shadow accounted for', hint: 'watch umbra open all of its sessions' },
   { id: 'theme-flip', name: 'Flipped the lights', hint: 'try the other theme' },
   { id: 'email-reveal', name: 'The secret email', hint: 'scrapers never find it' },
   { id: 'ge-ledger', name: 'The full ledger', hint: 'inspect the grand exchange' },
@@ -146,14 +158,14 @@ const CLOG_ENTRIES = [
 let clogState = {};
 try { clogState = JSON.parse(localStorage.getItem('dd-clog') || '{}'); } catch (e) { /* ignore */ }
 
-function clogRender() {
+function clogRender(justId) {
   const grid = document.getElementById('clog-grid');
   const count = document.getElementById('clog-count');
   const total = document.getElementById('clog-total');
   if (!grid) return;
   grid.innerHTML = CLOG_ENTRIES.map(en => {
     const done = !!clogState[en.id];
-    return '<li class="clog-item' + (done ? ' done' : '') + '"><span class="clog-mark">' + (done ? '✓' : '?') +
+    return '<li class="clog-item' + (done ? ' done' : '') + (en.id === justId ? ' just' : '') + '"><span class="clog-mark">' + (done ? '✓' : '?') +
       '</span><div><h3>' + en.name + '</h3><p>' + en.hint + '</p></div></li>';
   }).join('');
   if (count) count.textContent = String(CLOG_ENTRIES.filter(en => clogState[en.id]).length);
@@ -168,7 +180,7 @@ function clogUnlock(id) {
   if (clogState[id] || !CLOG_ENTRIES.some(en => en.id === id)) return;
   clogState[id] = Date.now();
   try { localStorage.setItem('dd-clog', JSON.stringify(clogState)); } catch (e) { /* ignore */ }
-  clogRender();
+  clogRender(id);
   const finished = clogComplete() && !root.classList.contains('gilded');
   if (finished) root.classList.add('gilded');
   if (REDUCED) return;
@@ -1286,6 +1298,367 @@ checkMoon();
   repaints.push(() => { size(); render(phaseT0 || 1); });
 })();
 
+/* ---------- umbra: every tab is its own browser ---------- */
+
+(function initUmbra() {
+  const canvas = document.getElementById('umbra-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  // documentation-range IPs only (RFC 5737) — nothing here points at a real machine
+  const IDS = [
+    { host: 'bank.example', hue: '#34d1c9', ip: '198.51.100.9',  cc: 'GB', tz: 'Europe/London',     dev: 'Chrome 129 · macOS',   jar: 14, seed: 3 },
+    { host: 'shop.example',     hue: '#f5c518', ip: '203.0.113.42',  cc: 'US', tz: 'America/New_York',  dev: 'Chrome 128 · Windows', jar: 9,  seed: 7 },
+    { host: 'mail.example',     hue: '#a78bfa', ip: '192.0.2.131',   cc: 'DE', tz: 'Europe/Berlin',     dev: 'Chrome 129 · Windows', jar: 21, seed: 11 },
+    { host: 'work.example',   hue: '#7dd3fc', ip: '198.51.100.77', cc: 'AU', tz: 'Australia/Sydney',  dev: 'Chrome 127 · macOS',   jar: 6,  seed: 5 },
+    { host: 'ads.example',      hue: '#fb7185', ip: '192.0.2.44',    cc: 'CA', tz: 'America/Toronto',   dev: 'Chrome 129 · Linux',   jar: 12, seed: 13 },
+  ];
+  const rnd = (seed, i) => { const x = Math.sin(seed * 127.1 + i * 311.7) * 43758.5453; return x - Math.floor(x); };
+  const HEX = '0123456789abcdef';
+  // each identity gets a deterministic fingerprint: three arcs (a nod to the Umbra mark) + a hash
+  IDS.forEach(id => {
+    id.arcs = [0, 1, 2].map(k => ({
+      a0: rnd(id.seed, k) * Math.PI * 2,
+      gap: 0.8 + rnd(id.seed, k + 10) * 1.6,
+      r: 0.42 + k * 0.24,
+      w: 1.6 + rnd(id.seed, k + 20) * 1.6,
+    }));
+    let h = '';
+    for (let i = 0; i < 8; i++) h += HEX[Math.floor(rnd(id.seed, 40 + i) * 16)];
+    id.hash = 'fp:' + h.slice(0, 4) + '·' + h.slice(4);
+  });
+  const rgb = hex => { let h = hex.replace('#', ''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const mixHex = (a, b, p) => { const A = rgb(a), B = rgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * p)).join(',')})`; };
+  const lerpAng = (a, b, p) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * p; };
+  const easeIO = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const SCR = 'abcdefghijklmnopqrstuvwxyz0123456789./:-';
+  const scramble = (s, p, hex) => {
+    let out = '';
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      const pos = i / s.length;
+      if (c === ' ' || c === '·' || pos < p) out += c;
+      else out += hex ? HEX[Math.floor(Math.random() * 16)] : SCR[Math.floor(Math.random() * SCR.length)];
+    }
+    return out;
+  };
+
+  let W = 0, H = 0, running = false, raf = 0;
+  let order = [0, 1, 2, 3, 4];
+  let open = []; // { id, t0 (spawn time), closing }
+  let active = -1, phase = 'spawn', phaseT0 = 0, stepT0 = 0, step = 0;
+  let from = null, to = null, morphT0 = 0;
+
+  function size() {
+    W = canvas.clientWidth;
+    H = canvas.clientHeight;
+    if (!W || !H) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function focus(idx, t) {
+    from = to || IDS[idx];
+    to = IDS[idx];
+    morphT0 = t;
+    active = idx;
+  }
+
+  function rr(x, y, w, h, r) {
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+    else { ctx.beginPath(); ctx.rect(x, y, w, h); }
+  }
+
+  function drawFingerprint(cx, cy, R, p, t) {
+    const a = from, b = to;
+    const col = mixHex(a.hue, b.hue, p);
+    const spin = REDUCED ? 0 : t / 9000;
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 3; k++) {
+      const A = a.arcs[k], B = b.arcs[k];
+      const a0 = lerpAng(A.a0, B.a0, p) + spin * (k % 2 ? -1 : 1);
+      const gap = A.gap + (B.gap - A.gap) * p;
+      const r = R * (A.r + (B.r - A.r) * p);
+      const w = A.w + (B.w - A.w) * p;
+      ctx.strokeStyle = col;
+      ctx.globalAlpha = 0.95 - k * 0.18;
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, a0 + gap, a0 + Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // outer halo + centre dot
+    const halo = ctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * 1.25);
+    halo.addColorStop(0, hexA(b.hue, 0.16 * (1 - Math.abs(0.5 - p) * 2)));
+    halo.addColorStop(1, hexA(b.hue, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.25, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(cx, cy, Math.max(2.2, R * 0.06), 0, 6.2832); ctx.fill();
+    // a scanning sweep passes over the print while it re-forms
+    if (p < 1) {
+      const sy = cy - R * 1.1 + R * 2.2 * p;
+      const g = ctx.createLinearGradient(0, sy - R * 0.5, 0, sy);
+      g.addColorStop(0, hexA(b.hue, 0));
+      g.addColorStop(1, hexA(b.hue, 0.35));
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, 6.2832); ctx.clip();
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - R * 1.1, sy - R * 0.5, R * 2.2, R * 0.5);
+      ctx.fillStyle = hexA(b.hue, 0.9);
+      ctx.fillRect(cx - R * 1.1, sy, R * 2.2, 1.2);
+      ctx.restore();
+    }
+    return col;
+  }
+
+  function render(t) {
+    if (!W || !H) return;
+    ctx.clearRect(0, 0, W, H);
+    const narrow = W < 460;
+    const pad = narrow ? 10 : 16;
+    const x0 = pad, y0 = pad, w = W - pad * 2, h = H - pad * 2;
+
+    // ---- window chrome
+    ctx.fillStyle = PAL.bg2;
+    rr(x0, y0, w, h, 10); ctx.fill();
+    ctx.strokeStyle = PAL.line; ctx.lineWidth = 1;
+    rr(x0 + 0.5, y0 + 0.5, w - 1, h - 1, 10); ctx.stroke();
+
+    // ---- tab strip
+    const stripY = y0 + 8, tabH = 26;
+    const tw = Math.min(124, Math.max(narrow ? 54 : 74, (w - 24) / 5 - 4));
+    let tx = x0 + 10;
+    const tabRects = [];
+    ctx.font = '500 10px "IBM Plex Mono", monospace';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    open.forEach(tab => {
+      const id = IDS[tab.id];
+      let ap = REDUCED ? 1 : Math.min(1, (t - tab.t0) / 320);
+      ap = easeOut(ap);
+      if (tab.closing) ap *= Math.max(0, 1 - (t - tab.closing) / 220);
+      const cw = tw * ap;
+      if (cw < 1) { tabRects.push(null); return; }
+      const isA = tab.id === active;
+      ctx.globalAlpha = ap;
+      ctx.fillStyle = isA ? PAL.bg3 : 'transparent';
+      if (isA) { rr(tx, stripY, cw, tabH, 6); ctx.fill(); }
+      // colour tag along the top edge — the tab's identity at a glance
+      ctx.fillStyle = id.hue;
+      ctx.fillRect(tx + 6, stripY, Math.max(0, cw - 12), 2);
+      // favicon dot + host
+      ctx.beginPath(); ctx.arc(tx + 11, stripY + tabH / 2, 3, 0, 6.2832); ctx.fill();
+      ctx.save();
+      ctx.beginPath(); ctx.rect(tx, stripY, Math.max(0, cw - 6), tabH); ctx.clip();
+      ctx.fillStyle = isA ? PAL.fg : PAL.muted;
+      ctx.fillText(narrow ? id.host.split('.')[0] : id.host, tx + 19, stripY + tabH / 2 + 0.5);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      tabRects.push({ x: tx, w: cw });
+      tx += cw + 4;
+    });
+    // "+" ghost tab
+    ctx.fillStyle = PAL.muted;
+    ctx.globalAlpha = 0.6;
+    ctx.fillText('+', tx + 6, stripY + tabH / 2 + 0.5);
+    ctx.globalAlpha = 1;
+
+    // ---- address bar
+    const ay = stripY + tabH + 6, ah = 24;
+    ctx.fillStyle = PAL.bg;
+    rr(x0 + 10, ay, w - 20, ah, 7); ctx.fill();
+    ctx.strokeStyle = PAL.line;
+    rr(x0 + 10.5, ay + 0.5, w - 21, ah - 1, 7); ctx.stroke();
+    const p = to ? (REDUCED ? 1 : easeIO(Math.min(1, (t - morphT0) / 620))) : 0;
+    if (to) {
+      // padlock
+      ctx.fillStyle = mixHex(from.hue, to.hue, p);
+      ctx.fillRect(x0 + 22, ay + 10, 7, 6);
+      ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(x0 + 25.5, ay + 10, 2.6, Math.PI, 0); ctx.stroke();
+      ctx.fillStyle = PAL.muted;
+      ctx.fillText('https://', x0 + 36, ay + ah / 2 + 0.5);
+      ctx.fillStyle = PAL.fg;
+      ctx.fillText(scramble(to.host, p), x0 + 36 + ctx.measureText('https://').width, ay + ah / 2 + 0.5);
+      // isolation pill, pops in as the identity settles
+      const pillT = Math.max(0, (p - 0.7) / 0.3);
+      if (pillT > 0 && !narrow) {
+        const s = 0.7 + 0.3 * easeOut(pillT);
+        const label = 'isolated ✓';
+        ctx.font = '600 9px "IBM Plex Mono", monospace';
+        const lw = ctx.measureText(label).width + 16;
+        const px = x0 + w - 16 - lw, py = ay + 4;
+        ctx.save();
+        ctx.translate(px + lw / 2, py + 8); ctx.scale(s, s); ctx.translate(-(px + lw / 2), -(py + 8));
+        ctx.globalAlpha = pillT;
+        ctx.fillStyle = hexA(to.hue, 0.14);
+        rr(px, py, lw, 16, 8); ctx.fill();
+        ctx.strokeStyle = hexA(to.hue, 0.6); ctx.lineWidth = 1;
+        rr(px + 0.5, py + 0.5, lw - 1, 15, 8); ctx.stroke();
+        ctx.fillStyle = to.hue;
+        ctx.textAlign = 'center';
+        ctx.fillText(label, px + lw / 2, py + 8.5);
+        ctx.restore();
+        ctx.textAlign = 'left';
+        ctx.font = '500 10px "IBM Plex Mono", monospace';
+      }
+    }
+
+    // ---- page body: fingerprint left, identity readout right
+    const by = ay + ah + 10, bh = y0 + h - by - 10;
+    if (!to || bh < 40) return;
+    const R = Math.min(bh * 0.38, w * 0.13, 66);
+    const fx = x0 + (narrow ? 14 + R : w * 0.2), fy = by + bh / 2;
+    const col = drawFingerprint(fx, fy, R, p, t);
+
+    const rx = narrow ? fx + R + 18 : x0 + w * 0.42;
+    const rows = [
+      ['exit ip', to.ip + '  ' + to.cc, from.ip + '  ' + from.cc, true],
+      ['timezone', to.tz, from.tz, false],
+      ['device', to.dev, from.dev, false],
+      ['cookies', null],
+      ['fingerprint', to.hash, from.hash, true],
+    ].filter(r => !(narrow && r[0] === 'device'));
+    const lineH = Math.min(24, (bh - 8) / rows.length);
+    let ry = by + (bh - lineH * rows.length) / 2 + lineH / 2;
+    const labelW = narrow ? 70 : 82;
+    rows.forEach(r => {
+      ctx.font = '500 9px "IBM Plex Mono", monospace';
+      ctx.fillStyle = PAL.muted;
+      ctx.fillText(r[0], rx, ry);
+      if (r[0] === 'cookies') {
+        // the jar: one square per cookie, in the tab's colour — a different count every tab
+        const n = Math.round(from.jar + (to.jar - from.jar) * p);
+        const cell = 5, gapC = 2, per = Math.max(6, Math.floor((x0 + w - 14 - (rx + labelW)) / (cell + gapC)));
+        for (let i = 0; i < n; i++) {
+          const cxq = rx + labelW + (i % per) * (cell + gapC);
+          const cyq = ry - cell / 2 + Math.floor(i / per) * (cell + gapC) - (n > per ? 3 : 0);
+          ctx.fillStyle = hexA(col, i < n - 1 || p >= 1 ? 0.9 : 0.5);
+          ctx.fillRect(cxq, cyq, cell, cell);
+        }
+        ctx.fillStyle = PAL.fg;
+        ctx.font = '600 10px "IBM Plex Mono", monospace';
+        const nx = rx + labelW + Math.min(n, per) * (cell + gapC) + 6;
+        if (nx < x0 + w - 24) ctx.fillText(String(n), nx, ry);
+      } else {
+        ctx.font = '600 10.5px "IBM Plex Mono", monospace';
+        ctx.fillStyle = r[3] ? col : PAL.fg;
+        const txt = p >= 1 ? r[1] : scramble(r[1], p, r[3]);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(rx + labelW, ry - 8, x0 + w - 12 - (rx + labelW), 16); ctx.clip();
+        ctx.fillText(txt, rx + labelW, ry);
+        ctx.restore();
+      }
+      ry += lineH;
+    });
+
+    // ---- partition label under the print
+    ctx.font = '500 8.5px "IBM Plex Mono", monospace';
+    ctx.fillStyle = PAL.muted;
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.85;
+    const cap = 'partition · persist:tab-' + (active + 1);
+    const capW = ctx.measureText(cap).width;
+    // keep the caption inside the window on narrow cards
+    const capX = Math.min(Math.max(fx, x0 + 12 + capW / 2), x0 + w - 12 - capW / 2);
+    ctx.fillText(cap, capX, fy + R + 14);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+
+    // ---- seal: the verdict, plus a sweep across the tab strip
+    if (phase === 'seal') {
+      const el = t - phaseT0;
+      const a = Math.min(1, el / 300) * (el > 1400 ? Math.max(0, 1 - (el - 1400) / 300) : 1);
+      const sweep = Math.min(1, el / 900);
+      ctx.fillStyle = hexA(PAL.accent, 0.9 * (1 - sweep));
+      ctx.fillRect(x0 + 10 + (w - 20) * sweep, stripY - 2, 1.5, tabH + 4);
+      ctx.globalAlpha = a;
+      const msg = open.length + ' sessions · 0 shared state · ' + open.length + ' exit IPs';
+      ctx.font = '600 10px "IBM Plex Mono", monospace';
+      const mw = ctx.measureText(msg).width + 22;
+      const mx = x0 + w / 2 - mw / 2, my = y0 + h - 30;
+      ctx.fillStyle = PAL.bg3;
+      rr(mx, my, mw, 20, 10); ctx.fill();
+      ctx.strokeStyle = hexA(PAL.accent, 0.6);
+      rr(mx + 0.5, my + 0.5, mw - 1, 19, 10); ctx.stroke();
+      ctx.fillStyle = PAL.accent;
+      ctx.textAlign = 'center';
+      ctx.fillText(msg, x0 + w / 2, my + 10.5);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function tick(t) {
+    const el = t - phaseT0;
+    if (phase === 'spawn') {
+      if (open.length < IDS.length && t - stepT0 > (open.length ? 380 : 200)) {
+        const idx = order[open.length];
+        open.push({ id: idx, t0: t, closing: 0 });
+        focus(idx, t);
+        stepT0 = t;
+      } else if (open.length === IDS.length && t - stepT0 > 1100) {
+        phase = 'tour'; phaseT0 = t; stepT0 = t; step = 0;
+        focus(order[0], t);
+      }
+    } else if (phase === 'tour') {
+      if (t - stepT0 > 1500) {
+        step++;
+        if (step >= IDS.length) { phase = 'seal'; phaseT0 = t; clogUnlock('umbra-cycle'); }
+        else { focus(order[step], t); stepT0 = t; }
+      }
+    } else if (phase === 'seal') {
+      if (el > 1800) { phase = 'close'; phaseT0 = t; stepT0 = 0; }
+    } else if (phase === 'close') {
+      const live = open.filter(tab => !tab.closing);
+      if (live.length && t - stepT0 > 140) {
+        const last = live[live.length - 1];
+        last.closing = t;
+        stepT0 = t;
+        const nxt = live[live.length - 2];
+        if (nxt) focus(nxt.id, t);
+      }
+      open = open.filter(tab => !tab.closing || t - tab.closing < 240);
+      if (!open.length) {
+        order.push(order.shift());
+        phase = 'spawn'; phaseT0 = t; stepT0 = t;
+      }
+    }
+  }
+
+  function frame(t) {
+    if (!running) { raf = 0; return; }
+    if (!phaseT0) { phaseT0 = t; stepT0 = t; }
+    tick(t);
+    render(t);
+    raf = requestAnimationFrame(frame);
+  }
+
+  size();
+  if (REDUCED) {
+    // a still: every tab open, the first one in focus
+    open = order.map(i => ({ id: i, t0: 0, closing: 0 }));
+    from = to = IDS[order[0]]; active = order[0]; phase = 'still';
+    render(1);
+  } else {
+    const io = new IntersectionObserver(entries => {
+      const vis = entries.some(e => e.isIntersecting);
+      if (vis && !running) {
+        if (canvas.width !== Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) size();
+        running = true;
+        if (!raf) raf = requestAnimationFrame(frame);
+      } else if (!vis) {
+        running = false;
+      }
+    }, { threshold: 0.2 });
+    io.observe(canvas);
+  }
+  repaints.push(() => { size(); render(performance.now()); });
+})();
+
 /* ---------- grand exchange: live ledger from the GitHub API ---------- */
 
 (function initTicker() {
@@ -1346,12 +1719,19 @@ checkMoon();
   const section = document.getElementById('quests');
   const qp = document.getElementById('quest-points');
   if (!section || !qp) return;
-  let total = 0;
-  section.querySelectorAll('.quest').forEach(q => { total += parseInt(q.dataset.qp, 10) || 0; });
-  if (REDUCED) { qp.textContent = total; return; }
+  let total = 0, done = 0;
+  section.querySelectorAll('.quest').forEach(q => {
+    const v = parseInt(q.dataset.qp, 10) || 0;
+    total += v;
+    if (q.classList.contains('quest-done')) done += v;
+  });
+  const fill = document.getElementById('qp-fill');
+  const pct = total ? Math.round((done / total) * 100) + '%' : '0%';
+  if (REDUCED) { qp.textContent = total; if (fill) fill.style.width = pct; return; }
   const io = new IntersectionObserver(es => {
     if (es.some(e => e.isIntersecting)) {
       countUp(qp, total, 900);
+      if (fill) requestAnimationFrame(() => { fill.style.width = pct; });
       io.disconnect();
     }
   }, { threshold: 0.25 });
@@ -1496,6 +1876,136 @@ document.addEventListener('click', e => {
     el.style.transitionDelay = ((i % 4) * 70) + 'ms';
     io.observe(el);
   });
+})();
+
+/* ---------- scroll progress ---------- */
+
+(function initProgress() {
+  const el = document.querySelector('.progress');
+  if (!el) return;
+  let queued = false;
+  const update = () => {
+    queued = false;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    root.style.setProperty('--scroll', max > 0 ? (window.scrollY / max).toFixed(4) : '0');
+  };
+  window.addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(update); } }, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+})();
+
+/* ---------- nav: a pill that slides to the section you're in ---------- */
+
+(function initNav() {
+  const nav = document.querySelector('.site-head nav');
+  if (!nav) return;
+  const ind = nav.querySelector('.nav-ind');
+  const links = Array.from(nav.querySelectorAll('a[href]'));
+  if (!ind || !links.length) return;
+  let current = links.find(a => a.classList.contains('is-active')) || null;
+
+  function move(a, instant) {
+    links.forEach(l => l.classList.toggle('is-active', l === a));
+    if (!a) { ind.classList.remove('on'); return; }
+    const nr = nav.getBoundingClientRect(), r = a.getBoundingClientRect();
+    if (instant) ind.style.transition = 'none';
+    ind.style.width = r.width + 'px';
+    ind.style.transform = 'translateX(' + (r.left - nr.left) + 'px)';
+    ind.classList.add('on');
+    if (instant) requestAnimationFrame(() => { ind.style.transition = ''; });
+  }
+
+  // hovering borrows the pill; leaving hands it back to the current section
+  if (!REDUCED) {
+    links.forEach(a => a.addEventListener('mouseenter', () => move(a)));
+    nav.addEventListener('mouseleave', () => move(current));
+  }
+
+  const map = new Map();
+  const hero = document.querySelector('.hero');
+  if (hero) map.set(hero, null);
+  links.forEach(a => {
+    const h = a.getAttribute('href');
+    if (h && h.charAt(0) === '#' && h.length > 1) {
+      const s = document.querySelector(h);
+      if (s) map.set(s, a);
+    }
+  });
+  if (map.size && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (en.isIntersecting) { current = map.get(en.target) || null; move(current); }
+      });
+    }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
+    map.forEach((a, s) => io.observe(s));
+  }
+  if (current) move(current, true);
+  window.addEventListener('resize', () => { if (current) move(current, true); });
+})();
+
+/* ---------- cards: a spotlight that follows the cursor ---------- */
+
+(function initSpotlight() {
+  if (!window.matchMedia || !matchMedia('(hover: hover)').matches) return;
+  document.addEventListener('pointermove', e => {
+    const card = e.target.closest ? e.target.closest('.card') : null;
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  }, { passive: true });
+})();
+
+/* ---------- buttons lean toward the cursor ---------- */
+
+(function initMagnetic() {
+  if (REDUCED || !window.matchMedia || !matchMedia('(hover: hover)').matches) return;
+  document.querySelectorAll('.btn').forEach(el => {
+    el.addEventListener('pointermove', e => {
+      const r = el.getBoundingClientRect();
+      const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
+      const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+      el.style.transform = 'translate(' + (dx * 8).toFixed(1) + 'px,' + (dy * 8).toFixed(1) + 'px)';
+    });
+    el.addEventListener('pointerleave', () => { el.style.transform = ''; });
+  });
+})();
+
+/* ---------- kickers decode themselves on the way in ---------- */
+
+(function initDecode() {
+  const els = Array.from(document.querySelectorAll('[data-decode]'));
+  if (!els.length || REDUCED || !('IntersectionObserver' in window)) return;
+  const CH = '0123456789ABCDEF#%&/<>[]{}=+*';
+  function run(el) {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let n;
+    while ((n = walker.nextNode())) nodes.push({ node: n, text: n.nodeValue });
+    const total = nodes.reduce((s, x) => s + x.text.length, 0) || 1;
+    const t0 = performance.now(), dur = 520 + total * 9;
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / dur);
+      let seen = 0;
+      nodes.forEach(x => {
+        let out = '';
+        for (let i = 0; i < x.text.length; i++) {
+          const c = x.text[i];
+          const pos = (seen + i) / total;
+          out += (c === ' ' || pos < p) ? c : CH[Math.floor(Math.random() * CH.length)];
+        }
+        seen += x.text.length;
+        x.node.nodeValue = out;
+      });
+      if (p < 1) requestAnimationFrame(tick);
+      else nodes.forEach(x => { x.node.nodeValue = x.text; });
+    };
+    requestAnimationFrame(tick);
+  }
+  const io = new IntersectionObserver(entries => entries.forEach(en => {
+    if (en.isIntersecting) { io.unobserve(en.target); run(en.target); }
+  }), { threshold: 0.6 });
+  els.forEach(el => io.observe(el));
 })();
 
 /* ---------- global repaint on resize ---------- */

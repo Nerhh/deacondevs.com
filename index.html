@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Marcus Deacon — deacondevs</title>
-  <meta name="description" content="Marcus Deacon — UK software developer building price-analysis tools, wealth-management apps, and the occasional LEGO city.">
+  <title>Marcus Deacon — marcus.gg</title>
+  <meta name="description" content="Marcus Deacon — UK software developer building Umbra, a multi-session browser, alongside price-analysis tools, a wealth tracker and a watch appraiser. All demos live-rendered on canvas.">
   <meta property="og:title" content="Marcus Deacon — marcus.gg">
-  <meta property="og:description" content="UK software developer. Builder of tools that do the boring work — in code and in bricks.">
+  <meta property="og:description" content="UK software developer. Builder of tools that do the boring work — a multi-session browser, a wealth tracker, a ticket watcher and a watch appraiser.">
   <meta property="og:url" content="https://marcus.gg/">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://marcus.gg/assets/og.png">
@@ -14,19 +14,21 @@
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
-  <meta name="theme-color" content="#0e0e11">
+  <meta name="theme-color" content="#0a0a0d">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15' shape-rendering='crispEdges'%3E%3Crect x='4' y='2' width='7' height='11' fill='%23c0281a'/%3E%3Crect x='2' y='4' width='11' height='7' fill='%23c0281a'/%3E%3Crect x='1' y='7' width='1' height='2' fill='%236f100a'/%3E%3Crect x='13' y='6' width='1' height='2' fill='%236f100a'/%3E%3Crect x='7' y='1' width='2' height='1' fill='%236f100a'/%3E%3Crect x='6' y='13' width='2' height='1' fill='%236f100a'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
+  <div class="progress" aria-hidden="true"></div>
 
   <header class="site-head">
-    <a class="wordmark" href="#top" data-xp="12" data-ex="The front door. Mind the hitsplats.">~/deacondevs</a>
-    <nav>
+    <a class="wordmark" href="#top" data-xp="12" data-ex="The front door. Mind the hitsplats."><span class="dot" aria-hidden="true"></span>~/deacondevs</a>
+    <nav aria-label="Primary">
+      <span class="nav-ind" aria-hidden="true"></span>
       <a href="#projects" data-xp="15">projects</a>
       <a href="#quests" data-xp="15">quests</a>
       <a href="/log/" data-xp="15">log</a>
@@ -36,22 +38,93 @@
     </nav>
   </header>
 
-  <main id="top">
+  <main>
 
-    <section class="hero">
-      <h1 class="sr-only">Marcus Deacon</h1>
-      <canvas id="hero-canvas" aria-hidden="true" data-ex="Two halves of the same adventurer, settling it properly."></canvas>
-      <noscript><p class="hero-noscript">MARCUS DEACON</p></noscript>
-      <p class="hero-sub reveal">software developer · UK born · father · <span class="lvl-badge" data-xp="30" data-ex="He's older than he looks.">Lvl 30</span></p>
-      <p class="hero-line reveal">I build tools that do the boring work — watching ticket prices, tracking net worth, automating the rest.</p>
-      <p class="status reveal"><span class="prompt">$</span> now building <a href="#p-vestra">vestra</a> — personal wealth management<span class="cursor">█</span></p>
-      <p class="hero-hint" aria-hidden="true">click a fighter to unleash their special attack</p>
+    <section class="hero" id="top">
+      <div class="aurora" aria-hidden="true"></div>
+      <div class="grid-bg" aria-hidden="true"></div>
+
+      <div class="hero-copy">
+        <p class="hero-kicker fade" style="--i:0" data-decode><span class="prompt">$</span> whoami — marcus deacon · software developer · uk</p>
+        <h1 class="hero-title">
+          <span class="line"><span class="line-in" style="--i:0">I build tools</span></span>
+          <span class="line"><span class="line-in" style="--i:1">that do the</span></span>
+          <span class="line"><span class="line-in" style="--i:2"><em>boring work.</em></span></span>
+        </h1>
+        <p class="hero-line fade" style="--i:1">Watching ticket prices, tracking net worth, pricing watches from live listings — and lately <strong>a browser where every tab is its own machine</strong>. Automating the rest.</p>
+        <p class="status fade" style="--i:2"><span class="prompt">$</span> now building <a href="#p-umbra">umbra</a> — a multi-session browser<span class="cursor">█</span></p>
+        <div class="hero-cta fade" style="--i:3">
+          <a class="btn btn-primary" href="#projects" data-xp="20" data-ex="Mind the step.">see the projects <span class="arr">↓</span></a>
+          <a class="btn btn-ghost" href="/log/" data-xp="15" data-ex="Build notes. Everything in it actually happened.">read the log</a>
+        </div>
+        <div class="hero-meta fade" style="--i:4">
+          <span><b>UK</b> born &amp; raised</span>
+          <span><b>father</b>, patience load-tested</span>
+          <span><b>no</b> frameworks, <b>no</b> build step</span>
+          <span class="lvl-badge" data-xp="30" data-ex="He's older than he looks.">Lvl 30</span>
+        </div>
+      </div>
+
+      <div class="scene" data-ex="Two halves of the same adventurer, settling it properly.">
+        <div class="scene-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span> duel arena <span class="hint" aria-hidden="true">click a fighter → special attack</span></div>
+        <canvas id="hero-canvas" aria-label="An Old School RuneScape style duel between Marcus the ranger and Deacon the mage" role="img"></canvas>
+        <noscript><p class="hero-noscript">MARCUS DEACON</p></noscript>
+      </div>
     </section>
 
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <ul>
+          <li><b class="u">umbra</b> multi-session browser</li>
+          <li><b>vestra</b> wealth, where you can see it</li>
+          <li><b>dial</b> point a camera at a watch</li>
+          <li><b>stubhub lens</b> deals before checkout regret</li>
+          <li>hand-built, on purpose</li>
+          <li>no frameworks harmed</li>
+        </ul>
+        <ul>
+          <li><b class="u">umbra</b> multi-session browser</li>
+          <li><b>vestra</b> wealth, where you can see it</li>
+          <li><b>dial</b> point a camera at a watch</li>
+          <li><b>stubhub lens</b> deals before checkout regret</li>
+          <li>hand-built, on purpose</li>
+          <li>no frameworks harmed</li>
+        </ul>
+      </div>
+    </div>
+
     <section id="projects" class="section">
-      <h2 class="section-h reveal"><span class="slash">//</span> projects</h2>
-      <p class="section-note reveal">The demos below are real, live-rendered on canvas — not screenshots.</p>
+      <div class="section-head reveal">
+        <div>
+          <p class="kicker" data-decode><span class="slash">//</span> <span class="num">01</span> projects</p>
+          <h2 class="section-title">Live demos, <em>not screenshots.</em></h2>
+        </div>
+        <p class="total">every card draws its own data on canvas</p>
+      </div>
+      <p class="section-note reveal">Four builds and a spare slot. Each demo is rendered in real time by the same hand-written JavaScript that runs the rest of this page — hover a card to see it light up.</p>
+
       <div class="cards">
+
+        <article class="card card-featured reveal" id="p-umbra" data-ex="Every tab, its own shadow.">
+          <div class="feat">
+            <div class="feat-demo">
+              <canvas id="umbra-canvas" role="img" aria-label="Animated demo: a browser opens five tabs and each one carries its own isolated cookies, exit IP, timezone and fingerprint"></canvas>
+            </div>
+            <div class="feat-copy">
+              <header class="card-head">
+                <h3><svg class="umbra-mark" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.35"><path d="M20.989 11.953A9.4 9.4 0 1 1 12.047 3.011"/><path d="M18.595 12.135A7 7 0 1 1 11.865 5.405"/><path d="M16.105 11.468A4.6 4.6 0 1 1 12.532 7.895"/></g><circle cx="11.6" cy="12.4" r="1.05" fill="currentColor"/></svg>umbra</h3>
+                <span class="badge badge-beta badge-live">beta · active</span>
+              </header>
+              <p>A multi-session desktop browser where <strong>every tab is its own isolated browser</strong> — its own cookies and storage, its own proxy and exit IP, its own coherent fingerprint. Built for people who run many accounts, test across regions, or need to see what a page actually looks like from somewhere else.</p>
+              <ul class="feat-rows">
+                <li><span><b>Sealed sessions</b> — cookies, storage and cache never cross between tabs.</span></li>
+                <li><span><b>One exit per tab</b> — bring your own proxies; Umbra tests, assigns and rotates them.</span></li>
+                <li><span><b>A coherent device</b> — screen, GPU, fonts and clock set together, tracking the proxy.</span></li>
+              </ul>
+              <ul class="tags"><li>electron</li><li>react</li><li>typescript</li><li>go</li><li>next.js</li></ul>
+            </div>
+          </div>
+        </article>
 
         <article class="card reveal" id="p-stubhub" data-ex="It watches ticket prices so you don't have to.">
           <header class="card-head">
@@ -128,17 +201,29 @@
     </section>
 
     <section id="quests" class="section">
-      <h2 class="section-h reveal"><span class="slash">//</span> quest log <span class="total">quest points <b id="quest-points">—</b></span></h2>
+      <div class="section-head reveal">
+        <div>
+          <p class="kicker" data-decode><span class="slash">//</span> <span class="num">02</span> quest log</p>
+          <h2 class="section-title">Shipped, in progress, <em>not yet discovered.</em></h2>
+        </div>
+        <p class="total">quest points <b id="quest-points">—</b></p>
+      </div>
       <p class="section-note reveal">A quest log instead of a skills grid — things shipped and things in progress, no self-assigned levels.</p>
+      <div class="qp-bar reveal" aria-hidden="true"><i id="qp-fill"></i></div>
       <ul class="quests">
         <li class="quest quest-done reveal" data-qp="2">
           <span class="q-status" aria-hidden="true">✓</span>
           <div><h3>Portfolio, Brick by Brick</h3><p>Design and ship this site by hand — no frameworks, no build step. You're looking at the proof.</p></div>
           <span class="q-tag">completed</span>
         </li>
-        <li class="quest quest-active reveal" data-qp="1">
+        <li class="quest quest-done reveal" data-qp="2">
+          <span class="q-status" aria-hidden="true">✓</span>
+          <div><h3>Portfolio II: A Fresh Coat</h3><p>Redesign the whole place — serif headlines over the terminal voice, a bento grid, spotlight cards, and a live demo for Umbra. Still no frameworks.</p></div>
+          <span class="q-tag">completed</span>
+        </li>
+        <li class="quest quest-active quest-umbra reveal" data-qp="1">
           <span class="q-status" aria-hidden="true">●</span>
-          <div><h3>The Ticket Watcher</h3><p>Build a Chrome extension that watches StubHub prices and flags genuine deals before checkout regret sets in.</p></div>
+          <div><h3>Umbra I: One Browser, Many Shadows</h3><p>Build a multi-session browser where every tab is its own machine — sealed cookies, its own exit IP, a fingerprint that holds together. Currently in beta.</p></div>
           <span class="q-tag">in progress</span>
         </li>
         <li class="quest quest-active reveal" data-qp="1">
@@ -149,6 +234,11 @@
         <li class="quest quest-active reveal" data-qp="1">
           <span class="q-status" aria-hidden="true">●</span>
           <div><h3>The Appraiser's Eye</h3><p>Dial — scan a watch, pull the live market, and price it honestly from the 20 cheapest listings.</p></div>
+          <span class="q-tag">in progress</span>
+        </li>
+        <li class="quest quest-active reveal" data-qp="1">
+          <span class="q-status" aria-hidden="true">●</span>
+          <div><h3>The Ticket Watcher</h3><p>Build a Chrome extension that watches StubHub prices and flags genuine deals before checkout regret sets in.</p></div>
           <span class="q-tag">in progress</span>
         </li>
         <li class="quest quest-active reveal" data-qp="1">
@@ -165,46 +255,91 @@
     </section>
 
     <section id="clog" class="section">
-      <h2 class="section-h reveal"><span class="slash">//</span> collection log <span class="total">logged <b id="clog-count">0</b>/<span id="clog-total">9</span></span></h2>
-      <p class="section-note reveal">Things a visitor can discover on this page. Progress lives only in your browser.</p>
+      <div class="section-head reveal">
+        <div>
+          <p class="kicker" data-decode><span class="slash">//</span> <span class="num">03</span> collection log</p>
+          <h2 class="section-title">Things a visitor <em>can discover.</em></h2>
+        </div>
+        <p class="total">logged <b id="clog-count">0</b>/<span id="clog-total">10</span></p>
+      </div>
+      <p class="section-note reveal">Poke around. Progress lives only in your browser — fill the log and the whole page turns gilded.</p>
       <ul class="clog-grid reveal" id="clog-grid"></ul>
     </section>
 
     <section id="about" class="section">
-      <h2 class="section-h reveal"><span class="slash">//</span> about</h2>
-      <div class="about-col">
-        <p class="reveal"><strong>I'm Marcus Deacon</strong> — 30, UK born and raised, and a father, which means my patience has been professionally load-tested.</p>
-        <p class="reveal">By day I build software: browser tooling, data-heavy apps, and small sharp utilities that quietly save people money. Current obsessions are <a href="#p-stubhub">ticket-price analysis</a> and <a href="#p-vestra">personal wealth tracking</a>.</p>
-        <p class="reveal">Off the clock it's <strong>LEGO</strong> — proper sets and freeform builds — and <strong>Old School RuneScape</strong>, which taught me everything I know about long-term incremental progress. The grind is the point.</p>
-        <p class="reveal">This site is hand-built: no frameworks, no build step — just HTML, CSS and vanilla JavaScript doing every animation you can see.</p>
+      <div class="section-head reveal">
+        <div>
+          <p class="kicker" data-decode><span class="slash">//</span> <span class="num">04</span> about</p>
+          <h2 class="section-title">The grind <em>is the point.</em></h2>
+        </div>
+      </div>
+      <div class="about-grid">
+        <div class="about-col">
+          <p class="lede reveal"><strong>I'm Marcus Deacon</strong> — 30, UK born and raised, and a father, which means my patience has been <em>professionally load-tested.</em></p>
+          <p class="reveal">By day I build software: browser tooling, data-heavy apps, and small sharp utilities that quietly save people money. The current obsession is <a href="#p-umbra">Umbra</a>, a browser where every tab is its own isolated machine — alongside <a href="#p-stubhub">ticket-price analysis</a> and <a href="#p-vestra">personal wealth tracking</a>.</p>
+          <p class="reveal">Off the clock it's <strong>LEGO</strong> — proper sets and freeform builds — and <strong>Old School RuneScape</strong>, which taught me everything I know about long-term incremental progress.</p>
+          <p class="reveal">This site is hand-built: no frameworks, no build step — just HTML, CSS and vanilla JavaScript doing every animation you can see, including the duel up top.</p>
+        </div>
+        <aside class="sheet reveal" aria-label="Character sheet">
+          <div class="sheet-head"><span>character sheet</span><b>combat lvl 30</b></div>
+          <dl>
+            <dt>name</dt><dd>Marcus Deacon</dd>
+            <dt>class</dt><dd>software developer</dd>
+            <dt>home</dt><dd>United Kingdom</dd>
+            <dt>guilds</dt><dd>LEGO · Old School RuneScape</dd>
+            <dt>loadout</dt><dd>twisted bow · arcane spirit shield</dd>
+            <dt>patience</dt><dd><span class="bar" style="--w:100%"><i></i></span>load-tested</dd>
+            <dt>frameworks</dt><dd><span class="bar" style="--w:0%"><i></i></span>none harmed</dd>
+          </dl>
+        </aside>
       </div>
     </section>
 
     <section id="contact" class="section section-last">
-      <h2 class="section-h reveal"><span class="slash">//</span> contact</h2>
-      <p class="section-note reveal">Say hello. XP is awarded on click.</p>
-
-      <div class="npc reveal" id="npc">
-        <canvas class="npc-face" id="npc-face" width="72" height="72" aria-hidden="true" data-ex="It's him. The man himself."></canvas>
-        <div class="npc-body">
-          <div class="npc-name">Marcus Deacon</div>
-          <p class="npc-line" id="npc-line">Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.</p>
-          <div class="npc-options" id="npc-options" hidden>
-            <span class="npc-opt-title">Select an option</span>
-            <a href="https://x.com/nerhhx" target="_blank" rel="noopener" data-xp="42">1. Message me on X</a>
-            <a href="https://open.spotify.com/user/z4c56k3259wkjrmovv3xabag4" target="_blank" rel="noopener" data-xp="27">2. What are you listening to?</a>
-            <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="84">3. Show me the code</a>
-            <button type="button" id="npc-email" data-xp="120">4. What’s your email?</button>
-          </div>
-          <button type="button" class="npc-continue" id="npc-continue">Click here to continue</button>
+      <div class="section-head reveal">
+        <div>
+          <p class="kicker" data-decode><span class="slash">//</span> <span class="num">05</span> contact</p>
+          <h2 class="section-title">Say hello. <em>XP is awarded on click.</em></h2>
         </div>
       </div>
-
+      <div class="contact-grid">
+        <div class="npc reveal" id="npc">
+          <canvas class="npc-face" id="npc-face" width="72" height="72" aria-hidden="true" data-ex="It's him. The man himself."></canvas>
+          <div class="npc-body">
+            <div class="npc-name">Marcus Deacon</div>
+            <p class="npc-line" id="npc-line">Hello, adventurer. You’ve reached the bottom of the page — most don’t make it this far.</p>
+            <div class="npc-options" id="npc-options" hidden>
+              <span class="npc-opt-title">Select an option</span>
+              <a href="https://x.com/nerhhx" target="_blank" rel="noopener" data-xp="42">1. Message me on X</a>
+              <a href="https://open.spotify.com/user/z4c56k3259wkjrmovv3xabag4" target="_blank" rel="noopener" data-xp="27">2. What are you listening to?</a>
+              <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="84">3. Show me the code</a>
+              <button type="button" id="npc-email" data-xp="120">4. What’s your email?</button>
+            </div>
+            <button type="button" class="npc-continue" id="npc-continue">Click here to continue</button>
+          </div>
+        </div>
+        <div class="contact-side reveal">
+          <p class="big">Tickets, watches, wealth, browsers <em>or bricks.</em></p>
+          <p>Talk to the NPC. He knows where the email is hidden — scrapers never find it.</p>
+        </div>
+      </div>
     </section>
 
   </main>
 
-  <footer data-ex="No frameworks were harmed in the making.">© 2026 Marcus Deacon · marcus.gg · built brick by brick — no frameworks harmed</footer>
+  <footer>
+    <div class="foot-inner">
+      <a class="foot-mark" href="#top" data-xp="12" data-ex="No frameworks were harmed in the making.">marcus.gg</a>
+      <div class="foot-row">
+        <span>© 2026 Marcus Deacon · built brick by brick — no frameworks harmed</span>
+        <div class="foot-links">
+          <a href="https://github.com/Nerhh/deacondevs.com" target="_blank" rel="noopener" data-xp="20">source ↗</a>
+          <a href="/log/" data-xp="15">log</a>
+          <a class="to-top" href="#top" data-xp="10">back to top <span class="arr">↑</span></a>
+        </div>
+      </div>
+    </div>
+  </footer>
 
   <script src="js/main.js"></script>
 </body>
