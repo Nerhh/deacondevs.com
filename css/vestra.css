@@ -72,7 +72,9 @@
   font-size: 12px; line-height: 1.7; color: var(--ink-2);
 }
 ul.vs-data { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 18px; }
-.js .vs-data { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.js .vs-data, .vs-sr { position: absolute; width: 1px; height: 1px; margin: 0; clip-path: inset(50%); white-space: nowrap; }
+.js ul.vs-data { display: block; }
+.js .vs-data li { display: block; }
 
 /* money in / time-weighted: one toggle, two labelled halves, the pressed half inverted */
 .vs-toggle { display: none; }

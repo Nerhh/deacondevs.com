@@ -1,0 +1,168 @@
+/* Section Price Insights — this page only.
+   Four panels that travel sideways past a fixed window as you scroll down (wide screens,
+   motion allowed), or sit in a plain stack everywhere else. Zones are told apart by
+   one-bit patterns, never by colour. */
+
+/* the title is too long for one line: two typed lines, sized to fit at 320px */
+.pg-insights .pg-head h1 { white-space: normal; font-size: clamp(34px, 9vw, 104px); }
+.pg-insights .pg-head h1 .ins-l { display: block; max-width: 100%; }
+
+/* ---------- zone markings: the same 1-bit patterns the canvases fill with ---------- */
+
+.sw {
+  display: inline-block; flex: none; width: 11px; height: 11px; margin-right: 8px; vertical-align: -1px;
+  border: 1px solid var(--ink); background-color: var(--paper);
+  image-rendering: pixelated;
+}
+/* Field 25% · Lower Level 50% · Club diagonal hatch · Mezzanine 75% · Upper Level 12.5% */
+.sw-0 { background-size: 2px 2px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' fill='%23151515'/%3E%3C/svg%3E"); }
+.sw-1 { background-size: 2px 2px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' fill='%23151515'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23151515'/%3E%3C/svg%3E"); }
+.sw-2 { background-size: 4px 4px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' fill='%23151515'/%3E%3Crect x='3' y='1' width='1' height='1' fill='%23151515'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23151515'/%3E%3Crect x='1' y='3' width='1' height='1' fill='%23151515'/%3E%3C/svg%3E"); }
+.sw-3 { background-size: 2px 2px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='2' height='1' fill='%23151515'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23151515'/%3E%3C/svg%3E"); }
+.sw-4 { background-size: 4px 4px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' fill='%23151515'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23151515'/%3E%3C/svg%3E"); }
+
+/* ---------- the four panels: a plain stack by default ---------- */
+
+.ins-run { border-top: 1px solid var(--rule); }
+.ins-frame { background: none; border: 0; box-shadow: none; }
+.ins-bar, .ins-steps { display: none; }
+
+.ins-panel {
+  display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 28px 56px; align-items: start;
+  padding: 64px 0; border-top: 1px solid var(--rule);
+}
+.ins-rail > .ins-panel:first-child { border-top: 0; }
+
+.ins-copy { min-width: 0; }
+.ins-n { font-size: 12px; color: var(--ink-3); margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+.ins-panel h2 { font-size: clamp(20px, 2.3vw, 28px); font-weight: 500; line-height: 1.2; margin-bottom: 18px; }
+.ins-copy p:not(.ins-n) { font-size: 14px; line-height: 1.7; color: var(--ink-2); max-width: 44ch; margin-bottom: 14px; }
+.ins-copy p:last-child { margin-bottom: 0; }
+.ins-copy .ins-small { font-size: 12px; line-height: 1.65; color: var(--ink-3); }
+
+.ins-fig {
+  position: relative; min-width: 0; height: var(--h, 380px);
+  background: var(--paper); border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink);
+}
+.ins-fig canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+html:not(.js) .ins-fig { display: none; }
+
+.ins-p1 { --h: 300px; }
+.ins-p2, .ins-p3 { --h: 420px; }
+
+.ins-p4 { grid-template-areas: "copy fig" "tbl fig"; grid-template-rows: auto 1fr; }
+.ins-p4 .ins-copy { grid-area: copy; }
+.ins-p4 .ins-tbl { grid-area: tbl; }
+.ins-p4 .ins-fig { grid-area: fig; height: auto; aspect-ratio: 1; width: 100%; max-width: 520px; justify-self: center; }
+
+/* ---------- the retro table ---------- */
+
+.ins-tbl { min-width: 0; }
+.ins-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px; line-height: 1.35; font-variant-numeric: tabular-nums;
+  background: var(--paper); border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink);
+}
+.ins-table th, .ins-table td { padding: 5px 9px; text-align: right; white-space: nowrap; font-weight: 400; }
+.ins-table thead th { font-size: 11px; color: var(--ink-3); border-bottom: 1px solid var(--ink); }
+.ins-table thead th[aria-sort] { color: var(--ink); font-weight: 500; }
+.ins-table thead th:first-child, .ins-table tbody th { text-align: left; }
+.ins-table tbody tr + tr > * { border-top: 1px solid var(--rule); }
+.ins-table tr.open { background: var(--ink); color: var(--paper); }
+.ins-table tr.open > * { border-top-color: var(--ink); }
+.ins-table tr.s { color: var(--ink-2); font-size: 11.5px; }
+.ins-table tr.s th { padding-left: 32px; }
+.ins-table tr.open + tr.s > * { border-top-color: var(--ink); }
+.car {
+  display: inline-block; width: 0; height: 0; margin-right: 8px; vertical-align: 1px;
+  border-left: 4px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+}
+tr.open .car { transform: rotate(90deg); }
+.ast { cursor: help; }
+.js .ins-table tr.off { visibility: hidden; }
+.ins-foot { margin-top: 12px; font-size: 11px; line-height: 1.55; color: var(--ink-3); }
+
+/* ---------- the note and the about block ---------- */
+
+.ins-note { padding: 20px 0 64px; max-width: 70ch; }
+.ins-about {
+  display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0 40px;
+  padding: 72px 0 88px; border-top: 1px solid var(--rule);
+}
+.ins-about h2 { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+
+/* ---------- the horizontal track: JS adds .ins-track when the screen is wide and tall
+   enough and motion is allowed; the section grows tall and a window stays pinned while
+   the panels slide through it ---------- */
+
+.ins-run.ins-track { height: 400vh; border-top: 0; }
+.ins-track .ins-stick {
+  position: sticky; top: var(--bar-h);
+  height: calc(100vh - var(--bar-h)); padding: 18px 0 26px;
+  display: flex; flex-direction: column;
+}
+.ins-track .ins-frame {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  background: var(--paper); border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink);
+}
+.ins-track .ins-bar { display: flex; flex: none; }
+.ins-track .ins-view { position: relative; flex: 1; min-height: 0; overflow: hidden; overflow: clip; }
+.ins-track .ins-rail { display: flex; width: 400%; height: 100%; will-change: transform; }
+.ins-track .ins-panel {
+  flex: 0 0 25%; width: 25%; height: 100%; border: 0;
+  padding: clamp(20px, 4vh, 44px) clamp(24px, 3.4vw, 48px);
+  grid-template-rows: minmax(0, 1fr); align-items: center;
+}
+.ins-track .ins-fig { height: min(100%, 600px); border: 1px solid var(--rule); box-shadow: none; }
+.ins-track .ins-p4 { grid-template-rows: auto minmax(0, 1fr); align-items: start; align-content: center; }
+.ins-track .ins-p4 .ins-fig { grid-row: 1 / span 2; align-self: center; height: auto; max-height: 100%; aspect-ratio: 1; max-width: 100%; width: auto; }
+.ins-track .ins-p4 .ins-copy p:not(.ins-n) { margin-bottom: 0; }
+
+.ins-track .ins-steps {
+  display: flex; flex: none; align-items: center; gap: 18px;
+  height: 34px; padding: 0 14px; border-top: 1px solid var(--ink);
+  font-size: 11.5px; line-height: 1; color: var(--ink-3); font-variant-numeric: tabular-nums;
+}
+.ins-count { white-space: nowrap; }
+.ins-count b { font-weight: 500; color: var(--ink); }
+.ins-meter { position: relative; flex: 0 1 240px; height: 9px; border: 1px solid var(--ink); background: var(--paper); }
+.ins-meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 25%; background: var(--ink); }
+.ins-meter .tk { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--rule-2); }
+.ins-meter .tk:nth-of-type(1) { left: 25%; }
+.ins-meter .tk:nth-of-type(2) { left: 50%; }
+.ins-meter .tk:nth-of-type(3) { left: 75%; }
+.ins-name { margin-left: auto; min-width: 0; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* short windows: tighten the panels so the table and bowl still fit */
+@media (max-height: 820px) {
+  .ins-track .ins-stick { padding: 12px 0 16px; }
+  .ins-track .ins-panel h2 { margin-bottom: 12px; }
+  .ins-track .ins-n { margin-bottom: 8px; }
+  .ins-track .ins-copy p:not(.ins-n) { font-size: 13px; line-height: 1.6; margin-bottom: 10px; }
+  .ins-track .ins-table th, .ins-track .ins-table td { padding-top: 3px; padding-bottom: 3px; }
+  .ins-track .ins-foot { margin-top: 8px; }
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 900px) {
+  .ins-panel { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 52px 0; }
+  .ins-p4 { grid-template-areas: "copy" "fig" "tbl"; grid-template-rows: none; }
+  .ins-p1 { --h: 270px; }
+  .ins-p2, .ins-p3 { --h: 400px; }
+  .ins-p4 .ins-fig { max-width: 480px; }
+  .ins-about { grid-template-columns: 1fr; padding: 52px 0 64px; }
+  .ins-about h2 { margin-bottom: 20px; }
+}
+
+@media (max-width: 480px) {
+  .ins-table { font-size: 11px; }
+  .ins-table th, .ins-table td { padding: 5px 5px; }
+  .ins-table thead th { font-size: 10.5px; }
+  .ins-table tr.s { font-size: 10.5px; }
+  .ins-table tr.s th { padding-left: 24px; }
+  .ins-table th:first-child { padding-left: 8px; }
+  .ins-table th:last-child, .ins-table td:last-child { padding-right: 8px; }
+  .sw { margin-right: 6px; }
+  .car { margin-right: 6px; }
+}
