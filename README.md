@@ -14,7 +14,7 @@ Off-white paper, grey rules, ink. The motion is borrowed from older machines.
 | `/umbra/` | Umbra, a multi-session desktop browser | A sticky split-screen story driven by scroll: one window splits into sealed partitions. |
 | `/vestra/` | Vestra, a net-worth tracker | Full-screen typographic statements, one figure at a time. |
 | `/dial/` | Dial, a watch valuer | A single instrument you step through: capture, identify, details, market, value. |
-| `/insights/` | Section Price Insights, a Chrome extension | A horizontal track: listings load, fall into zones, and become low, typical and high prices. |
+| `/tessera/` | Tessera, a ticket-price Chrome extension | A horizontal track: listings load, fall into zones, and become low, typical and high prices. |
 
 ## The motion
 

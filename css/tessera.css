@@ -1,13 +1,13 @@
-/* Section Price Insights — this page only.
+/* Tessera — this page only.
    Four panels that travel sideways past a fixed window as you scroll down (wide screens,
    motion allowed), or sit in a plain stack everywhere else. Zones are told apart by
    one-bit patterns, never by colour. */
 
 /* the title is too long for one line: two typed lines, sized to fit at 320px */
-.pg-insights .pg-head h1 { white-space: normal; font-size: clamp(34px, 8.4vw, 96px); }
-.pg-insights .pg-head h1 .ins-l { display: block; max-width: 100%; }
+.pg-tessera .pg-head h1 { white-space: normal; font-size: clamp(34px, 8.4vw, 96px); }
+.pg-tessera .pg-head h1 .ins-l { display: block; max-width: 100%; }
 /* let the typed text's clip reach below the baseline, so descenders are not cut */
-.pg-insights .tw-text { padding-bottom: 0.22em; margin-bottom: -0.22em; }
+.pg-tessera .tw-text { padding-bottom: 0.22em; margin-bottom: -0.22em; }
 
 /* ---------- zone markings: the same 1-bit patterns the canvases fill with ---------- */
 

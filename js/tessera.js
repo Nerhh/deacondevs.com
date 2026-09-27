@@ -1,4 +1,4 @@
-/* Section Price Insights — one invented event, drawn four ways.
+/* Tessera — one invented event, drawn four ways.
    Wide screens get a horizontal track driven by vertical scroll; everything else gets a
    plain stack in which each panel plays as it arrives. Every figure on the page comes
    from the same 254 made-up listings below, so the panels always agree. */

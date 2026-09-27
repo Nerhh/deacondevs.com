@@ -361,7 +361,7 @@ function mini(name, draw, settled) {
   }, 1e9);
 })();
 
-// Section Price Insights: every listing falls into its zone; each zone becomes low, typical, high
+// Tessera: every listing falls into its zone; each zone becomes low, typical, high
 (function () {
   const R = rng(5);
   const zones = [
