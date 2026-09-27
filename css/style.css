@@ -92,7 +92,7 @@ main { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); }
 }
 .hero h1 { margin: 0 0 18px; font-size: clamp(34px, 6.2vw, 68px); font-weight: 500; line-height: 1.05; white-space: nowrap; }
 .role { margin: 0 0 34px; font-size: 13px; color: var(--ink-2); }
-.lede { margin: 0 0 34px; font-size: 16px; line-height: 1.62; max-width: 38ch; }
+.lede { margin: 0 0 34px; font-size: 16px; line-height: 1.62; max-width: 38ch; text-wrap: balance; }
 .now { font-size: 13px; color: var(--ink-2); }
 .caret {
   display: inline-block; width: 0.62em; height: 1.2em; margin-left: 4px; vertical-align: -0.24em;
@@ -188,23 +188,6 @@ footer {
 .foot-links a:hover, .foot-links a:focus-visible { background: var(--ink); color: var(--paper); outline: none; }
 .foot-links a:hover .go, .foot-links a:focus-visible .go { transform: translate(2px, -2px); }
 
-/* ---------- log page ---------- */
-
-.sec {
-  display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0 40px;
-  padding: 72px 0 88px; border-top: 1px solid var(--rule);
-}
-main > .sec:first-child { border-top: 0; }
-.sec-label {
-  position: sticky; top: calc(var(--bar-h) + 28px); align-self: start;
-  font-size: 12px; font-weight: 400; color: var(--ink-3); line-height: 1.4;
-}
-.sec-label .n { color: var(--ink); margin-right: 12px; }
-.entry h2 { margin: 0 0 18px; font-size: 20px; font-weight: 500; line-height: 1.3; }
-.entry p { margin: 0 0 16px; font-size: 14.5px; line-height: 1.75; color: var(--ink-2); max-width: 64ch; }
-.entry p:last-child { margin-bottom: 0; }
-.entry strong { color: var(--ink); font-weight: 500; }
-
 /* ---------- project pages: the shared frame (each page lays out its own middle) ---------- */
 
 .pg-head { padding: clamp(56px, 10vh, 112px) 0 clamp(40px, 7vh, 72px); max-width: 780px; }
@@ -267,8 +250,7 @@ main > .sec:first-child { border-top: 0; }
   .fig { justify-self: center; max-width: 340px; }
   .pj { grid-template-columns: minmax(0, 1fr); padding: 44px 0; }
   .about { grid-template-columns: 1fr; }
-  .sec, .pg-facts { grid-template-columns: 1fr; padding: 52px 0 64px; }
-  .sec-label { position: static; margin-bottom: 26px; }
+  .pg-facts { grid-template-columns: 1fr; padding: 52px 0 64px; }
   .pg-facts h2 { margin-bottom: 20px; }
   .pg-next a { grid-template-columns: minmax(0, 1fr) auto; }
   .pg-next .k { grid-column: 1 / -1; margin-bottom: 8px; }
