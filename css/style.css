@@ -169,13 +169,18 @@ main { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); }
 
 /* ---------- footer ---------- */
 
+/* one line: copyright, the note, links on the right. On phones: copyright and links share the top line,
+   the note sits under them */
 footer {
   max-width: var(--max); margin: 0 auto; padding: 22px var(--gutter) 44px;
-  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px 24px;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "copy hand links";
+  align-items: baseline; gap: 10px 24px;
   border-top: 1px solid var(--rule);
   font-size: 11.5px; color: var(--ink-3);
 }
-.foot-note { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; }
+.foot-copy { grid-area: copy; }
+.foot-hand { grid-area: hand; text-wrap: balance; }
+.foot-links { grid-area: links; }
 /* each link is a padded key (24px+ to tap); the outer margins keep the text on the column edges, wrapped or not */
 .foot-links { display: flex; gap: 4px; list-style: none; margin: 0 -8px; padding: 0; }
 .foot-links a { display: inline-flex; gap: 6px; align-items: baseline; padding: 5px 8px; color: var(--ink); text-decoration: none; }
@@ -268,6 +273,10 @@ main > .sec:first-child { border-top: 0; }
   .pg-next a { grid-template-columns: minmax(0, 1fr) auto; }
   .pg-next .k { grid-column: 1 / -1; margin-bottom: 8px; }
   .mb-dim { display: none; }
+}
+
+@media (max-width: 700px) {
+  footer { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "copy links" "hand hand"; }
 }
 
 @media (max-width: 480px) {
