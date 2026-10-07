@@ -157,6 +157,33 @@ main { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); }
 .pj:focus-visible { outline: none; }
 .pj-fig .mini { width: 100%; height: clamp(200px, 22vw, 264px); }
 
+/* ---------- more projects: one band at the foot of the index, a two-up grid on /more/ ---------- */
+
+/* the band reads like the next-project link: an ink rule, then one padded key that inverts as a whole;
+   it names what's behind it so the index never has to grow */
+.more { border-top: 1px solid var(--ink); }
+.more a {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 40px; align-items: center;
+  margin: 0 -12px; padding: 34px 20px 38px 12px; text-decoration: none;
+}
+.more-n, .more-t, .more-l { grid-column: 1; justify-self: start; }
+.more-n { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.more-t { font-size: clamp(26px, 3.2vw, 34px); font-weight: 500; line-height: 1.15; }
+.more-l { display: grid; gap: 2px; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+.more-go { grid-column: 2; grid-row: 1 / 4; font-size: clamp(22px, 3vw, 34px); transition: transform 0.24s steps(3, end); }
+.more a:hover, .more a:focus-visible { background: var(--ink); color: var(--paper); outline: none; }
+.more a:hover .more-n, .more a:focus-visible .more-n, .more a:hover .more-l, .more a:focus-visible .more-l { color: var(--rule-2); }
+.more a:hover .more-go, .more a:focus-visible .more-go { transform: translateX(8px); }
+
+.more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 56px; margin-bottom: 40px; border-top: 1px solid var(--rule); }
+.more-grid li { padding: 44px 0 52px; border-bottom: 1px solid var(--rule); }
+.more-grid .pj, .more-grid li:first-child .pj { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 30px; padding: 0; border-top: 0; }
+.more-grid .pj-fig { order: -1; }
+.more-grid .pj-fig .mini { height: clamp(220px, 21vw, 252px); }
+.more-grid .pj-line { max-width: 46ch; }
+/* "More projects" is thirteen glyphs: on the narrowest phones it shrinks to fit rather than run off the page */
+.pg-more .pg-head h1 { font-size: min(104px, max(30px, calc((100vw - 2 * var(--gutter)) / 8.6))); }
+
 
 /* ---------- about ---------- */
 
@@ -249,6 +276,9 @@ footer {
   .hero { grid-template-columns: 1fr; min-height: 0; padding: 44px 0 56px; }
   .fig { justify-self: center; max-width: 340px; }
   .pj { grid-template-columns: minmax(0, 1fr); padding: 44px 0; }
+  .more-grid { grid-template-columns: minmax(0, 1fr); }
+  .more-grid li { padding: 40px 0 44px; }
+  .more a { gap: 10px 24px; padding: 30px 16px 34px 12px; }
   .about { grid-template-columns: 1fr; }
   .pg-facts { grid-template-columns: 1fr; padding: 52px 0 64px; }
   .pg-facts h2 { margin-bottom: 20px; }
