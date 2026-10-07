@@ -1,0 +1,153 @@
+/* Admit — the wallet beside the door.
+   Without script the door's eight checks, the attempts and a sample log read as plain text.
+   With it, the wallet signs real codes and the door runs each attempt through the checks. */
+
+.ad { padding: 0 0 clamp(64px, 10vh, 104px); }
+
+/* ---------- the bench: the wallet, then the door ---------- */
+
+.ad-bench { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 24px 40px; align-items: stretch; }
+.ad-phone, .ad-door { display: flex; flex-direction: column; min-width: 0; }
+.ad-phone canvas { flex: 1 1 auto; width: 100%; min-height: 490px; }
+
+.ad-code {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; align-items: baseline;
+  margin: 0; padding: 14px 18px 13px; border-bottom: 1px solid var(--ink);
+  font-size: 11.5px; line-height: 1.55;
+}
+.ad-code .k { color: var(--ink-3); }
+.ad-code code { min-height: 3.1em; font: inherit; color: var(--ink-2); overflow-wrap: anywhere; }
+.ad-code i { font-style: normal; color: var(--ink-3); }
+.ad-code mark { background: var(--ink); color: var(--paper); }
+
+/* the eight checks, in the order the door makes them */
+.ad-checks { flex: 1 1 auto; list-style: none; counter-reset: chk; margin: 0; padding: 4px 18px 8px; }
+.ad-checks li {
+  counter-increment: chk;
+  display: grid; grid-template-columns: 22px 17px minmax(0, 1fr); gap: 12px; align-items: center;
+  padding: 8px 0; border-bottom: 1px dotted var(--rule-2);
+  font-size: 13px; line-height: 1.45; color: var(--ink-2);
+}
+.ad-checks li:last-child { border-bottom: 0; }
+.ad-checks li::before { content: counter(chk, decimal-leading-zero); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ad-checks .m { display: grid; place-items: center; width: 17px; height: 17px; border: 1px solid var(--rule-2); font-size: 12px; line-height: 1; }
+.js .ad-checks li { color: var(--ink-3); }
+.js .ad-checks li.ok { color: var(--ink); }
+.ad-checks li.ok .m { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.ad-checks li.ok .m::after { content: '✓'; }
+.js .ad-checks li.no { color: var(--ink); font-weight: 500; }
+.ad-checks li.no .m { border-color: var(--ink); box-shadow: 1px 1px 0 var(--ink); }
+.ad-checks li.no .m::after { content: '×'; font-weight: 600; }
+.js .ad-checks li.skip { color: var(--rule-2); }
+.ad-checks li.skip .m { border-style: dotted; }
+
+/* the verdict: an admission is inverted, a refusal is a key standing proud of the paper */
+.ad-verdict { display: grid; gap: 3px; margin: 0; padding: 15px 18px 17px; border-top: 1px solid var(--ink); min-height: 86px; align-content: center; }
+.ad-verdict b { font-size: clamp(20px, 2.2vw, 26px); font-weight: 500; line-height: 1.2; }
+.ad-verdict span { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); max-width: 56ch; }
+.ad-verdict.ok { background: var(--ink); color: var(--paper); }
+.ad-verdict.ok span { color: var(--rule-2); }
+.ad-verdict.ok b::before { content: '✓ '; }
+.ad-verdict.no b::before { content: '× '; }
+.ad-verdict.no { background: repeating-linear-gradient(to bottom, var(--ink) 0 1px, transparent 1px 4px) left top / 6px 100% no-repeat; padding-left: 22px; }
+
+/* ---------- the attempts: one key each, as the Dial step bar ---------- */
+
+.ad-tries {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 24px;
+  background: var(--paper); border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink);
+}
+.ad-try {
+  position: relative;
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 10px 14px 11px;
+  background: none; border: 0; border-left: 1px solid var(--rule);
+  font-size: 12px; line-height: 1; text-align: left; color: var(--ink-3);
+  cursor: pointer;
+}
+.ad-try:first-child { border-left: 0; }
+.ad-try .n {
+  flex: none; display: inline-grid; place-items: center;
+  width: 19px; height: 19px; border: 1px solid currentColor;
+  font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.ad-try .l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-try[aria-pressed="true"] { color: var(--ink); font-weight: 500; }
+.ad-try[aria-pressed="true"] .n { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.ad-try:hover { background: var(--ink); color: var(--paper); }
+.ad-try:hover .n { border-color: var(--paper); }
+.ad-try[aria-pressed="true"]:hover .n { background: var(--paper); color: var(--ink); }
+.ad-try:focus-visible { outline: 1px solid var(--ink); outline-offset: -5px; }
+.ad-try:hover:focus-visible { outline-color: var(--paper); }
+.ad-try .bar {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: var(--ink); transform: scaleX(0); transform-origin: left center; pointer-events: none;
+}
+.ad-try:not([aria-pressed="true"]) .bar { visibility: hidden; }
+
+.ad-caps { list-style: none; margin: 16px 0 0; padding: 12px 0 0; border-top: 1px solid var(--rule); display: grid; gap: 8px; }
+.ad-caps li { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-content: start; gap: 0 16px; font-size: 13px; line-height: 1.6; }
+.ad-caps .k { color: var(--ink-3); white-space: nowrap; }
+.ad-caps .t { color: var(--ink-2); max-width: 72ch; }
+.js .ad-caps li { grid-area: 1 / 1; visibility: hidden; }
+.js .ad-caps li.on { visibility: visible; }
+
+/* ---------- the door log ---------- */
+
+.ad-log { width: 100%; margin-top: 44px; border-collapse: collapse; font-size: 12.5px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.ad-log caption { padding-bottom: 10px; text-align: left; font-size: 12px; color: var(--ink-3); }
+.ad-log th { padding: 0 16px 8px 0; border-bottom: 1px solid var(--ink); text-align: left; font-weight: 400; font-size: 11.5px; color: var(--ink-3); }
+.ad-log td { padding: 9px 16px 9px 0; border-bottom: 1px solid var(--rule); color: var(--ink-2); vertical-align: top; }
+.ad-log td:first-child { width: 96px; white-space: nowrap; }
+.ad-log td:last-child { color: var(--ink); }
+.ad-log tr.new td { animation: ad-row 0.36s steps(4, end) both; }
+@keyframes ad-row { from { background: var(--ink); color: var(--paper); } to { background: transparent; } }
+.ad-note { margin-top: 14px; max-width: 80ch; line-height: 1.6; }
+
+/* ---------- what it stops, and about ---------- */
+
+.ad-sec { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0 40px; padding: 72px 0 88px; border-top: 1px solid var(--rule); }
+.ad-sec > h2 { font-size: 12px; font-weight: 400; line-height: 1.65; color: var(--ink-3); }
+.ad-threats { display: grid; grid-template-columns: minmax(170px, 0.36fr) minmax(0, 1fr); max-width: 860px; border-top: 1px solid var(--rule); font-size: 13.5px; line-height: 1.6; }
+.ad-threats dt, .ad-threats dd { margin: 0; padding: 11px 0; border-bottom: 1px solid var(--rule); }
+.ad-threats dt { padding-right: 24px; color: var(--ink); }
+.ad-threats dd { color: var(--ink-2); }
+.ad-limit { margin-top: 22px; max-width: 64ch; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+.ad-limit strong { font-weight: 500; color: var(--ink); }
+
+/* without script there is no wallet to hold up: the door's checks, the attempts and the log carry it */
+html:not(.js) .ad-bench { grid-template-columns: minmax(0, 1fr); max-width: 640px; }
+html:not(.js) .ad-phone, html:not(.js) .ad-tries, html:not(.js) .ad-verdict, html:not(.js) .ad-code { display: none; }
+html:not(.js) .ad-caps { margin-top: 28px; }
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 900px) {
+  .ad-bench { grid-template-columns: minmax(0, 1fr); }
+  .ad-phone canvas { min-height: 0; height: 470px; flex: none; }
+  .ad-sec { grid-template-columns: minmax(0, 1fr); padding: 52px 0 64px; }
+  .ad-sec > h2 { margin-bottom: 20px; }
+}
+
+@media (max-width: 720px) {
+  .ad-caps li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .ad-threats { grid-template-columns: minmax(0, 1fr); }
+  .ad-threats dt { padding-bottom: 0; border-bottom: 0; font-weight: 500; }
+  .ad-threats dd { padding-top: 2px; }
+}
+
+@media (max-width: 600px) {
+  .ad-try { justify-content: center; padding: 10px 4px 11px; }
+  .ad-try .l { display: none; }
+  .ad-code { grid-template-columns: minmax(0, 1fr); padding: 12px 14px; }
+  .ad-checks { padding: 2px 14px 6px; }
+  .ad-checks li { grid-template-columns: 20px 17px minmax(0, 1fr); gap: 10px; font-size: 12.5px; }
+  .ad-verdict { padding: 13px 14px 15px; }
+  .ad-verdict.no { padding-left: 20px; }
+  .ad-log td:first-child { width: 72px; }
+}
+
+@media (max-width: 480px) {
+  .pg-admit .pg-facts dl { grid-template-columns: max-content minmax(0, 1fr); }
+  .pg-admit .pg-facts dt { padding-right: 16px; }
+}

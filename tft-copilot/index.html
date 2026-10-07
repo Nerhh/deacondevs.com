@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TFT Copilot — Marcus Deacon</title>
+  <meta name="description" content="TFT Copilot: a decision engine for Teamfight Tactics. Exact roll-down odds, comp picks that account for contest, item and positioning search, and a coach that reviews real lobbies, split by the game clock to stay inside Riot's rules.">
+  <meta property="og:title" content="TFT Copilot — Marcus Deacon">
+  <meta property="og:description" content="A decision engine for Teamfight Tactics: exact roll-down odds, contest-aware comp picks, and a coach that reviews real lobbies.">
+  <meta property="og:url" content="https://marcus.gg/tft-copilot/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://marcus.gg/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
+  <meta name="theme-color" content="#fbfbf9">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23fbfbf9'/%3E%3Ccircle cx='8' cy='8' r='6' fill='%23151515'/%3E%3C/svg%3E">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-500.woff2">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/tft-copilot.css">
+</head>
+<body class="pg-tft">
+
+  <header class="menubar">
+    <a class="mb-home" href="/"><canvas id="mb-orb" width="16" height="16" aria-hidden="true"></canvas>marcus.gg</a>
+    <span class="mb-crumb">/<b>tft-copilot</b></span>
+    <div class="mb-right" aria-hidden="true">
+      <span class="mb-dim" id="coords"></span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <main>
+    <header class="pg-head">
+      <p class="pg-kicker" data-dz data-at="120">06 / 06 — Game tool · Working build</p>
+      <h1 data-type data-at="260" data-cps="60">TFT Copilot</h1>
+      <p class="pg-lede" data-dz data-at="1300">A decision engine for Teamfight Tactics. It plans comps around who else is likely to play them, works out roll-down odds exactly, and reviews your real games afterwards. By Riot’s rules, and by design, it reads nothing from a game in progress.</p>
+    </header>
+
+    <!-- the roll-down: the engine's exact programme, run here on every change, with a simulation checking it -->
+    <section class="tf" aria-labelledby="tf-h">
+      <h2 class="tf-h" id="tf-h" data-type>The roll-down, worked out</h2>
+      <div class="tf-fig" data-zoom>
+        <div class="win active tf-win" data-zoom-target>
+          <div class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Lab — roll down</span></div>
+          <div class="tf-body">
+            <div class="tf-ctl" id="tf-ctl" role="group" aria-label="The situation">
+              <div class="tf-row" data-k="level"><span class="lab" id="l-level">Level</span><span class="tf-step"><button type="button" data-d="-1" aria-label="Lower level">−</button><output aria-labelledby="l-level">8</output><button type="button" data-d="1" aria-label="Raise level">+</button></span></div>
+              <div class="tf-row" data-k="gold"><span class="lab" id="l-gold">Gold to spend</span><span class="tf-step"><button type="button" data-d="-1" aria-label="Less gold">−</button><output aria-labelledby="l-gold">30</output><button type="button" data-d="1" aria-label="More gold">+</button></span></div>
+              <div class="tf-row" data-k="cost"><span class="lab" id="l-cost">Unit cost</span><span class="tf-step"><button type="button" data-d="-1" aria-label="Cheaper unit">−</button><output aria-labelledby="l-cost">4</output><button type="button" data-d="1" aria-label="Dearer unit">+</button></span></div>
+              <div class="tf-row" data-k="held"><span class="lab" id="l-held">Copies you hold</span><span class="tf-step"><button type="button" data-d="-1" aria-label="Fewer held">−</button><output aria-labelledby="l-held">2</output><button type="button" data-d="1" aria-label="More held">+</button></span></div>
+              <div class="tf-row" data-k="need"><span class="lab" id="l-need">Copies to find</span><span class="tf-step"><button type="button" data-d="-1" aria-label="Fewer to find">−</button><output aria-labelledby="l-need">1</output><button type="button" data-d="1" aria-label="More to find">+</button></span></div>
+              <div class="tf-row" data-k="rivals"><span class="lab" id="l-rivals">Held by rivals</span><span class="tf-step"><button type="button" data-d="-1" aria-label="Fewer held by rivals">−</button><output aria-labelledby="l-rivals">0</output><button type="button" data-d="1" aria-label="More held by rivals">+</button></span></div>
+              <div class="tf-row" data-k="tier"><span class="lab" id="l-tier">Other same-cost units out</span><span class="tf-step"><button type="button" data-d="-1" aria-label="Fewer others out">−</button><output aria-labelledby="l-tier">20</output><button type="button" data-d="1" aria-label="More others out">+</button></span></div>
+              <div class="tf-row tf-tog"><span class="lab" id="l-wisp">Wisp in every other shop</span><button type="button" class="tf-sw" id="tf-wisp" role="switch" aria-checked="false" aria-labelledby="l-wisp"><span>off</span><span>on</span></button></div>
+              <button type="button" class="tf-reset" id="tf-reset">Back to the worked example</button>
+            </div>
+            <div class="tf-out">
+              <p class="tf-read" aria-live="polite"><span class="tf-big" id="tf-p">76.3%</span><span class="tf-what" id="tf-what">chance to find it before the gold runs out</span></p>
+              <dl class="tf-stats">
+                <div><dt>One slot</dt><dd id="tf-slot">2.03%</dd></div>
+                <div><dt>One shop</dt><dd id="tf-shop">9.8%</dd></div>
+                <div><dt>Gold left</dt><dd id="tf-left">13</dd></div>
+              </dl>
+              <canvas id="tf-curve" role="img" aria-label="The chance of finding the unit for every budget from 0 to 100 gold, rising in steps of one shop."></canvas>
+              <p class="tf-sim" id="tf-sim">Simulated roll-downs agree to within a point.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="tf-cap" data-dz>The worked example: level 8, 30 gold, the shop on screen included, one more copy of a 4-cost when you hold two and twenty other 4-costs are out. The engine’s exact answer, 76.3%, matches an independent Set 18 worked example, 76.4%, at the two decimal places its test checks. Each shop slot rolls a cost by the level’s odds, then a champion weighted by the copies left; every copy on any board is out of the pool, and you stop rolling once nothing you need could still appear and be bought.</p>
+    </section>
+
+    <section class="tf-clock" aria-labelledby="clock-h">
+      <h2 id="clock-h" data-type>Split by the clock</h2>
+      <div>
+        <ol class="tf-when" data-dz>
+          <li><span class="w">Before the game</span><b>Planner</b><span class="d">Comps ranked by a placement estimate with a 90% range and how often each is contested. Each opens a game plan: boards by stage, item holders, roll timing with exact odds, augments, pivots, and the signs the plan has failed.</span></li>
+          <li class="live"><span class="w">In game</span><b>Cheat sheet</b><span class="d">Up to three pinned plans, condensed: boards at levels 7, 8 and 9, items, roll timing, odds tables. Set up before you queue, it reads nothing from the game.</span></li>
+          <li><span class="w">After the game</span><b>Coach</b><span class="d">Your finished games, from the League client or Riot’s match API: who contested you, item fit, level and gold mistakes, findings grouped by root cause, and the three changes worth most.</span></li>
+          <li><span class="w">Between games</span><b>Lab</b><span class="d">The engines on any situation you type in: stay or pivot, each comp’s expected placement term by term, slam or hold an item, augments, Wisps, level or roll, formations against a board.</span></li>
+        </ol>
+        <p class="tf-why" data-dz>Riot’s developer policy rejects apps that scout opponents’ boards, give dynamic real-time information, or dictate decisions during a game, and since 6 October 2026 unknown apps can’t read game memory at all. So the cleverness lives before, after and between games, and the one page meant for a game in progress is fixed in advance. An audit of the code found no live read of any kind.</p>
+      </div>
+    </section>
+
+    <section class="tf-clock" aria-labelledby="how-h">
+      <h2 id="how-h" data-type>How it decides</h2>
+      <ol class="tf-rules" data-dz>
+        <li><span><b>Comps.</b> Each comp is scored by its expected placement: <span class="tf-eq">H × place if hit + (1 − H) × place if missed + the cost of changing course</span> H is the joint chance of hitting its key units in its roll window, and the cost of changing course grows with the stage and as health falls.</span></li>
+        <li><span><b>Pivots.</b> The best alternative is weighed against what you’re building now, and recommended past a gain of 0.3 places, with lists of what to keep, add and sell.</span></li>
+        <li><span><b>Items.</b> An exhaustive search over component pairings, then an exact assignment of the finished items to the carry, the second carry and the tank, valued from the comp’s own match data where it has enough.</span></li>
+        <li><span><b>Positioning.</b> A reference formation, then hill-climbing against a specific enemy board, scored on who each enemy hits first, how exposed the carry is, area-damage clumping and misplaced units.</span></li>
+        <li><span><b>Comp families.</b> Final boards from Challenger and Grandmaster games, clustered by spherical k-means; each family’s placement is shrunk toward the patch average before it’s tiered, so a small sample can’t top the list.</span></li>
+        <li><span><b>Coach.</b> Every board in a real lobby classified, copies of your units held by others counted, item fit scored per unit, level, gold and dead units checked, and the result turned into ranked lessons.</span></li>
+      </ol>
+    </section>
+
+    <section class="pg-facts" aria-labelledby="facts-h">
+      <h2 id="facts-h" data-type>Facts</h2>
+      <dl data-dz>
+        <dt>Type</dt><dd>Web app in React and TypeScript, with a small local server that holds the Riot key</dd>
+        <dt>Game</dt><dd>Teamfight Tactics, Set 18 “Enchanted Wilds”, patch 18.4</dd>
+        <dt>Data</dt><dd>Community Dragon for the game data; Riot’s match API for ranked games; the League client’s local API, read-only, for your own finished games</dd>
+        <dt>Comp stats</dt><dd>7,166 high-ranked matches from patch 18.3, clustered into comp families</dd>
+        <dt>Code</dt><dd>About 11,200 lines of application code and 2,900 of tests</dd>
+        <dt>Benchmark</dt><dd>57 of 58 hand-written decisions; in-sample, since the engine was tuned on them</dd>
+        <dt>Status</dt><dd>Working build, run locally</dd>
+      </dl>
+    </section>
+  </main>
+
+  <nav class="pg-next" aria-label="Next project">
+    <a href="/umbra/"><span class="k">Next project</span><span class="t">Umbra</span><span class="go" aria-hidden="true">→</span></a>
+  </nav>
+
+  <footer>
+    <span class="foot-copy">© 2026 Marcus Deacon</span>
+    <span class="foot-hand">Written by hand. No&nbsp;frameworks, no build step.</span>
+    <ul class="foot-links" aria-label="Elsewhere">
+      <li><a href="https://x.com/nerhhx" target="_blank" rel="noopener">X <span class="go" aria-hidden="true">↗</span></a></li>
+      <li><a href="https://github.com/Nerhh" target="_blank" rel="noopener">GitHub <span class="go" aria-hidden="true">↗</span></a></li>
+    </ul>
+  </footer>
+
+  <script src="/js/core.js"></script>
+  <script src="/js/tft-copilot.js"></script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+/* TFT Copilot — one instrument (the roll-down, worked out exactly), then the tool split by the game clock.
+   Shares every token with style.css. */
+
+.tf { padding: 0 0 clamp(64px, 10vh, 104px); }
+.tf-h { margin-bottom: 22px; font-size: 12px; font-weight: 400; color: var(--ink-3); }
+
+/* ---------- the instrument: the situation on the left, the answer on the right ---------- */
+
+.tf-body { display: grid; grid-template-columns: minmax(268px, 0.42fr) minmax(0, 1fr); }
+.tf-ctl { display: flex; flex-direction: column; padding: 6px 0 14px; border-right: 1px solid var(--ink); }
+.tf-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 7px 16px; border-bottom: 1px dotted var(--rule-2);
+}
+.tf-row .lab { font-size: 12.5px; line-height: 1.35; color: var(--ink-2); }
+
+/* each value sits between two square keys that invert when pressed, as a menu does */
+.tf-step { display: inline-grid; grid-template-columns: 26px 46px 26px; align-items: center; }
+.tf-step button, .tf-sw {
+  height: 26px; padding: 0;
+  background: var(--paper); border: 1px solid var(--ink); border-radius: 0; box-shadow: 1px 1px 0 var(--ink);
+  font-size: 13px; line-height: 1; cursor: pointer;
+}
+.tf-step button:hover, .tf-sw:hover { background: var(--ink); color: var(--paper); }
+.tf-step button:active, .tf-sw:active { transform: translate(1px, 1px); box-shadow: none; }
+.tf-step button:disabled { border-color: var(--rule-2); box-shadow: 1px 1px 0 var(--rule-2); color: var(--rule-2); background: var(--paper); cursor: default; transform: none; }
+.tf-step output { text-align: center; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.tf-sw { display: inline-flex; padding: 0; }
+.tf-sw span { display: grid; place-items: center; width: 36px; font-size: 11.5px; color: var(--ink-3); }
+.tf-sw span + span { border-left: 1px solid var(--ink); }
+.tf-sw[aria-checked="false"] span:first-child, .tf-sw[aria-checked="true"] span:last-child { background: var(--ink); color: var(--paper); }
+.tf-sw:hover span { color: var(--paper); }
+
+.tf-reset {
+  align-self: flex-start; margin: 14px 16px 0 8px; padding: 4px 8px;
+  background: none; border: 0; font-size: 12px; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px;
+  cursor: pointer;
+}
+.tf-reset:hover { background: var(--ink); color: var(--paper); text-decoration: none; }
+
+.tf-out { display: flex; flex-direction: column; min-width: 0; padding: 18px 22px 14px; }
+.tf-read { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 0; }
+.tf-big { font-size: clamp(44px, 6vw, 76px); font-weight: 500; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tf-what { font-size: 12.5px; color: var(--ink-2); max-width: 26ch; line-height: 1.5; }
+.tf-stats { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 16px 0 8px; padding: 8px 0 0; border-top: 1px solid var(--rule); font-size: 12px; }
+.tf-stats div { display: flex; gap: 10px; align-items: baseline; }
+.tf-stats dt { color: var(--ink-3); }
+.tf-stats dd { margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; }
+#tf-curve { flex: 1 1 auto; width: 100%; min-height: 230px; margin-top: 6px; }
+.tf-sim { margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--rule); font-size: 11.5px; line-height: 1.5; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tf-sim b { font-weight: 500; color: var(--ink); }
+
+.tf-cap { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule); max-width: 92ch; font-size: 13px; line-height: 1.7; color: var(--ink-2); }
+
+/* without script there is nothing to turn: the caption carries the worked example */
+html:not(.js) .tf-fig { display: none; }
+html:not(.js) .tf-cap { margin-top: 0; }
+
+/* ---------- split by the clock, and how it decides ---------- */
+
+.tf-clock { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0 40px; padding: 72px 0 88px; border-top: 1px solid var(--rule); }
+.tf-clock > h2 { font-size: 12px; font-weight: 400; line-height: 1.65; color: var(--ink-3); }
+
+/* four columns in game order; the in-game one is screened in dither, the way the tool keeps out of it */
+.tf-when { position: relative; z-index: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink); }
+.tf-when li { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px 18px; border-left: 1px solid var(--rule); }
+.tf-when li:first-child { padding-left: 0; border-left: 0; }
+.tf-when .w { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.tf-when b { font-size: 19px; font-weight: 500; line-height: 1.2; }
+.tf-when .d { font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+.tf-when li.live { position: relative; }
+.tf-when li.live::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' fill='%23bfbfb9'/%3E%3C/svg%3E") 0 0 / 4px 4px repeat;
+}
+.tf-when li.live .d { color: var(--ink); }
+.tf-why { margin-top: 26px; max-width: 64ch; font-size: 14px; line-height: 1.75; color: var(--ink-2); }
+
+.tf-rules { list-style: none; counter-reset: rule; margin: 0; padding: 0; max-width: 72ch; border-top: 1px solid var(--rule); }
+.tf-rules li {
+  counter-increment: rule;
+  display: grid; grid-template-columns: 32px minmax(0, 1fr);
+  padding: 12px 0; border-bottom: 1px solid var(--rule);
+  font-size: 14px; line-height: 1.7; color: var(--ink-2);
+}
+.tf-rules li::before { content: counter(rule, decimal-leading-zero); color: var(--ink-3); font-size: 12px; line-height: 2; }
+.tf-rules b { font-weight: 500; color: var(--ink); }
+.tf-eq { display: block; width: fit-content; max-width: 100%; margin: 8px 0; padding: 5px 10px; background: var(--paper); border: 1px solid var(--ink); box-shadow: 1px 1px 0 var(--ink); color: var(--ink); }
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 1000px) {
+  .tf-when { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tf-when li:nth-child(3) { padding-left: 0; border-left: 0; }
+  .tf-when li:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+}
+
+@media (max-width: 900px) {
+  .tf-body { grid-template-columns: minmax(0, 1fr); }
+  .tf-ctl { border-right: 0; border-bottom: 1px solid var(--ink); }
+  .tf-clock { grid-template-columns: minmax(0, 1fr); padding: 52px 0 64px; }
+  .tf-clock > h2 { margin-bottom: 20px; }
+}
+
+@media (max-width: 560px) {
+  .tf-when { grid-template-columns: minmax(0, 1fr); }
+  .tf-when li, .tf-when li:nth-child(3) { padding: 14px 0 16px; border-left: 0; }
+  .tf-when li + li { border-top: 1px solid var(--rule); }
+  .tf-when li.live { padding-left: 12px; padding-right: 12px; }
+  .tf-out { padding: 16px 14px 12px; }
+  .tf-row { padding: 6px 14px; }
+}
+
+@media (max-width: 480px) {
+  .pg-tft .pg-facts dl { grid-template-columns: max-content minmax(0, 1fr); }
+  .pg-tft .pg-facts dt { padding-right: 16px; }
+}

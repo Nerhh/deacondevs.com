@@ -3,32 +3,8 @@
 'use strict';
 const MD = window.MD;
 if (!MD) return;
-const { REDUCED, safe, INK, INK2, INK3, RULE, RULE2, PAPER, font, fitText, clamp, lerp, easeOut, easeInOut } = MD;
-
-// seeded randomness so every visitor sees the same arrangement
-function rng(seed) {
-  let a = seed >>> 0;
-  return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-}
-
-// one-bit ordered-dither fills as canvas patterns, 2px cells, crisp at any pixel ratio
-const patCache = new Map();
-function dither(ctx, level, dpr) {
-  const k = clamp(Math.round(level * 16), 0, 16);
-  const key = k + '@' + dpr;
-  if (!patCache.has(key)) {
-    const c = Math.max(1, Math.round(2 * dpr));
-    const tile = document.createElement('canvas');
-    tile.width = tile.height = 4 * c;
-    const g = tile.getContext('2d');
-    g.fillStyle = INK;
-    for (let i = 0; i < 16; i++) if (MD.B4[i] < k) g.fillRect((i & 3) * c, (i >> 2) * c, c, c);
-    patCache.set(key, tile);
-  }
-  const p = ctx.createPattern(patCache.get(key), 'repeat');
-  if (p.setTransform) p.setTransform(new DOMMatrix([1 / dpr, 0, 0, 1 / dpr, 0, 0]));
-  return p;
-}
+const { REDUCED, safe, INK, INK2, INK3, RULE, RULE2, PAPER, font, fitText, clamp, lerp, easeOut, easeInOut, rng, mini } = MD;
+const dither = MD.pattern;
 
 /* ---------- Fig. 1: the sphere ---------- */
 
@@ -148,24 +124,6 @@ safe('orb', function orb() {
 });
 
 /* ---------- miniatures: one small, true-to-life animation per project ---------- */
-
-// each mini gets (ctx, W, H, dpr, time-in-ms); REDUCED draws a settled frame
-function mini(name, draw, settled) {
-  safe('mini-' + name, function () {
-    const canvas = document.querySelector('canvas.mini[data-mini="' + name + '"]');
-    if (!canvas) return;
-    const s = MD.stage(canvas);
-    let lastT = settled;
-    const paint = t => {
-      if (!s.W || !s.H) return;
-      s.ctx.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
-      s.ctx.clearRect(0, 0, s.W, s.H);
-      draw(s.ctx, s.W, s.H, s.dpr, t);
-    };
-    MD.repaints.push(() => { s.size(); paint(lastT); });
-    MD.loop(canvas, (t, dt, el) => { lastT = REDUCED ? settled : el; paint(lastT); });
-  });
-}
 
 // Umbra: five sealed partitions; cookies bounce inside their own, never across
 (function () {
@@ -429,27 +387,4 @@ function mini(name, draw, settled) {
     });
   }, 1e9);
 })();
-
-/* ---------- windows take focus as you hover or scroll past them ---------- */
-
-safe('focus', function focus() {
-  const items = Array.from(document.querySelectorAll('.pj'));
-  const wins = items.map(a => a.querySelector('.win')).filter(Boolean);
-  if (!wins.length) return;
-  let hovered = null, centred = null;
-  const paint = () => wins.forEach(w => w.classList.toggle('active', w === (hovered || centred)));
-  items.forEach(a => {
-    const w = a.querySelector('.win');
-    a.addEventListener('mouseenter', () => { hovered = w; paint(); });
-    a.addEventListener('mouseleave', () => { if (hovered === w) hovered = null; paint(); });
-    a.addEventListener('focus', () => { hovered = w; paint(); });
-    a.addEventListener('blur', () => { if (hovered === w) hovered = null; paint(); });
-  });
-  if (!('IntersectionObserver' in window)) return;
-  const io = new IntersectionObserver(entries => {
-    entries.forEach(en => { const w = en.target.querySelector('.win'); if (en.isIntersecting) centred = w; else if (centred === w) centred = null; });
-    paint();
-  }, { rootMargin: '-45% 0px -45% 0px' });
-  items.forEach(a => io.observe(a));
-});
 })();

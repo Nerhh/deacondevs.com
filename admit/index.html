@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admit — Marcus Deacon</title>
+  <meta name="description" content="Admit: ticketing for independent venues whose tickets can't be copied. The fan's phone signs a fresh code every ten seconds with a key that never leaves it, and one scan lets one person in.">
+  <meta property="og:title" content="Admit — Marcus Deacon">
+  <meta property="og:description" content="Ticketing whose tickets can't be copied: a code signed on the fan's phone every ten seconds, and one scan lets one person in.">
+  <meta property="og:url" content="https://marcus.gg/admit/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://marcus.gg/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://marcus.gg/assets/og.png">
+  <meta name="theme-color" content="#fbfbf9">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23fbfbf9'/%3E%3Ccircle cx='8' cy='8' r='6' fill='%23151515'/%3E%3C/svg%3E">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/ibm-plex-mono-500.woff2">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admit.css">
+</head>
+<body class="pg-admit">
+
+  <header class="menubar">
+    <a class="mb-home" href="/"><canvas id="mb-orb" width="16" height="16" aria-hidden="true"></canvas>marcus.gg</a>
+    <span class="mb-crumb">/<b>admit</b></span>
+    <div class="mb-right" aria-hidden="true">
+      <span class="mb-dim" id="coords"></span>
+      <span id="clock"></span>
+    </div>
+  </header>
+
+  <main>
+    <header class="pg-head">
+      <p class="pg-kicker" data-dz data-at="120">05 / 06 — Ticketing platform · Pre-launch</p>
+      <h1 data-type data-at="260" data-cps="60">Admit</h1>
+      <p class="pg-lede" data-dz data-at="1100">Ticketing for nightclubs, fight nights, grassroots sport and every independent in between, with the same class of protection as Ticketmaster’s SafeTix. A ticket is never an image: the fan’s phone signs a fresh code every ten seconds, and one scan lets one person in.</p>
+    </header>
+
+    <!-- the wallet and the door: real codes, signed in this browser, checked as the door checks them -->
+    <section class="ad" aria-labelledby="ad-h">
+      <h2 class="sr-only" id="ad-h">Try the door</h2>
+      <div class="ad-bench" data-zoom>
+        <div class="win active ad-phone" data-zoom-target>
+          <div class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title" id="ad-phone-title">Wallet — your phone</span></div>
+          <canvas id="ad-ticket" role="img" aria-label="A live ticket for Fight Night 12. Its code changes every ten seconds; an ink strip under it carries a sweeping line, a square that blinks once a second and the time."></canvas>
+        </div>
+        <div class="win ad-door" id="ad-door">
+          <div class="win-bar"><span class="win-box" aria-hidden="true"></span><span class="win-title">Door — Main entrance</span></div>
+          <p class="ad-code"><span class="k">Presented</span><code id="ad-code">ADM1.7K2QM9XRP4TD.1.k3Nq8Q2a.<i>step</i>.<i>signature</i></code></p>
+          <ol class="ad-checks" id="ad-checks">
+            <li><span class="m" aria-hidden="true"></span><span class="t">Reads as an exact ADM1 code</span></li>
+            <li><span class="m" aria-hidden="true"></span><span class="t">A ticket for this event</span></li>
+            <li><span class="m" aria-hidden="true"></span><span class="t">Not cancelled or listed for resale</span></li>
+            <li><span class="m" aria-hidden="true"></span><span class="t">The ticket’s current version</span></li>
+            <li><span class="m" aria-hidden="true"></span><span class="t">Signed by the phone it’s bound to</span></li>
+            <li><span class="m" aria-hidden="true"></span><span class="t">The signature verifies</span></li>
+            <li><span class="m" aria-hidden="true"></span><span class="t">Its time step is within one of now</span></li>
+            <li><span class="m" aria-hidden="true"></span><span class="t">First scan wins: one atomic write</span></li>
+          </ol>
+          <p class="ad-verdict" id="ad-verdict" aria-live="polite"><b>Ready</b><span>Hold something up to the door.</span></p>
+        </div>
+      </div>
+
+      <div class="ad-tries" id="ad-tries" role="group" aria-label="Hold something up to the door">
+        <button type="button" class="ad-try" data-try="0" aria-pressed="false"><span class="n">1</span><span class="l">The phone</span><span class="bar" aria-hidden="true"></span></button>
+        <button type="button" class="ad-try" data-try="1" aria-pressed="false"><span class="n">2</span><span class="l">A screenshot</span><span class="bar" aria-hidden="true"></span></button>
+        <button type="button" class="ad-try" data-try="2" aria-pressed="false"><span class="n">3</span><span class="l">A copy, shared</span><span class="bar" aria-hidden="true"></span></button>
+        <button type="button" class="ad-try" data-try="3" aria-pressed="false"><span class="n">4</span><span class="l">After a transfer</span><span class="bar" aria-hidden="true"></span></button>
+        <button type="button" class="ad-try" data-try="4" aria-pressed="false"><span class="n">5</span><span class="l">An edited copy</span><span class="bar" aria-hidden="true"></span></button>
+      </div>
+      <ol class="ad-caps" id="ad-caps" data-dz>
+        <li><span class="k">1 The phone</span><span class="t">The fan’s phone, live: a code it signed during this ten-second step. Every check passes and the ticket is used.</span></li>
+        <li><span class="k">2 A screenshot</span><span class="t">The same ticket, captured thirty seconds ago. The code is genuine, so it passes until the clock: it’s three steps old.</span></li>
+        <li><span class="k">3 A copy, shared</span><span class="t">A screenshot sent to a friend and scanned seconds after the phone got in. It’s fresh, so only the last check stops it: the single write that admits a ticket has already happened.</span></li>
+        <li><span class="k">4 After a transfer</span><span class="t">The seller’s own copy, taken just before they sent the ticket on. The transfer re-keyed it to the buyer’s phone and bumped its version, so the old code is dead.</span></li>
+        <li><span class="k">5 An edited copy</span><span class="t">The thirty-second-old screenshot with its time step changed to now. Any change breaks the signature, and no one without the phone’s key can make a new one.</span></li>
+      </ol>
+
+      <table class="ad-log">
+        <caption>Door log</caption>
+        <thead><tr><th scope="col">Time</th><th scope="col">Presented</th><th scope="col">Result</th></tr></thead>
+        <tbody id="ad-log">
+          <tr><td>21:04:07</td><td>The phone</td><td>✓ Admitted</td></tr>
+          <tr><td>21:04:15</td><td>A screenshot, 30 s old</td><td>× Code expired, at check 7</td></tr>
+          <tr><td>21:04:22</td><td>A copy, shared</td><td>× Already scanned, at check 8</td></tr>
+          <tr><td>21:04:30</td><td>After a transfer</td><td>× Old ticket code, at check 4</td></tr>
+          <tr><td>21:04:38</td><td>An edited copy</td><td>× Not a valid ticket, at check 6</td></tr>
+        </tbody>
+      </table>
+      <p class="pg-note ad-note" id="ad-note">The event and ticket are invented; the log shows one run of the five attempts.</p>
+    </section>
+
+    <section class="ad-sec" aria-labelledby="stops-h">
+      <h2 id="stops-h" data-type>What it stops</h2>
+      <div>
+        <dl class="ad-threats" data-dz>
+          <dt>Screenshots and photocopies</dt><dd>Codes expire within about twenty seconds, and the moving strip and live clock give a still image away at a glance.</dd>
+          <dt>Codes worked out in advance</dt><dd>Anything more than one step ahead is refused.</dd>
+          <dt>Forged or edited codes</dt><dd>Signing needs the phone’s private key, made on that phone as non-extractable: JavaScript, ours included, can ask it to sign but can never read it out.</dd>
+          <dt>One ticket, two doors</dt><dd>A single conditional database write admits a ticket. Two doors scanning at the same instant can’t both win; it’s tested against real Postgres.</dd>
+          <dt>Reselling after a transfer</dt><dd>A transfer re-keys the ticket, so the seller’s codes die the moment the buyer accepts.</dd>
+          <dt>A lost phone</dt><dd>Removing it from the account stops its codes at every door at once.</dd>
+          <dt>A stolen scanner</dt><dd>Doors hold public keys only. A scanner can check tickets but never mint one.</dd>
+        </dl>
+        <p class="ad-limit" data-dz><strong>Where it stops.</strong> A door working offline from its downloaded list can still hold a seller’s old key after a transfer, and admit them once; the sync flags any second entry. So on events that use offline doors, transfers close before doors open.</p>
+      </div>
+    </section>
+
+    <section class="ad-sec" aria-labelledby="about-h">
+      <h2 id="about-h" data-type>About</h2>
+      <div class="pg-prose" data-dz>
+        <p>Organisers run everything from <strong>Studio</strong>: events, price brackets and sections, rules, door setup and live check-ins, guest lists and a box office, discount and presale codes, refunds, payouts, waitlists and face-value resale. Fans buy at all-in prices on an event page that embeds in any website, and keep their tickets in a wallet that installs from the browser.</p>
+        <p>Any phone, or a handheld USB or Bluetooth scanner, becomes a door with a six-character pairing code, and shows green or red with the guest’s seat. The rules are the organiser’s: transfers on or off, a transfer cut-off, tickets per person, an age limit, re-entry. Pro adds phone lock, offline doors and staged code release.</p>
+        <p>The whole product runs on a laptop with no accounts, against stand-ins for payments and email. What stands between the build and selling real tickets is the business side: a payments account, a domain, a solicitor’s review and an independent penetration test. Admit is a working name.</p>
+      </div>
+    </section>
+
+    <section class="pg-facts" aria-labelledby="facts-h">
+      <h2 id="facts-h" data-type>Facts</h2>
+      <dl data-dz>
+        <dt>Type</dt><dd>Ticketing platform: marketing site, organiser Studio, event pages, wallet, door scanner, admin console</dd>
+        <dt>Ticket code</dt><dd>ADM1: ECDSA P-256 over the ticket, its version, the phone and the ten-second step</dd>
+        <dt>Lifetime</dt><dd>About twenty seconds: one step of grace either side</dd>
+        <dt>Entry</dt><dd>One conditional write per scan; the first scan wins</dd>
+        <dt>Stack</dt><dd>Hono API on Node, Postgres (embedded PGlite locally), React and Vite</dd>
+        <dt>Tests</dt><dd>412 end-to-end security tests that attack the real API; Playwright layout, accessibility and flow suites</dd>
+        <dt>Load</dt><dd>Twenty doors at five scans a second each: p95 6 ms on one desktop, no double admission</dd>
+        <dt>Status</dt><dd>Pre-launch: built and running end to end; launch waits on the business’s accounts and legal sign-off</dd>
+      </dl>
+    </section>
+  </main>
+
+  <nav class="pg-next" aria-label="Next project">
+    <a href="/tft-copilot/"><span class="k">Next project</span><span class="t">TFT Copilot</span><span class="go" aria-hidden="true">→</span></a>
+  </nav>
+
+  <footer>
+    <span class="foot-copy">© 2026 Marcus Deacon</span>
+    <span class="foot-hand">Written by hand. No&nbsp;frameworks, no build step.</span>
+    <ul class="foot-links" aria-label="Elsewhere">
+      <li><a href="https://x.com/nerhhx" target="_blank" rel="noopener">X <span class="go" aria-hidden="true">↗</span></a></li>
+      <li><a href="https://github.com/Nerhh" target="_blank" rel="noopener">GitHub <span class="go" aria-hidden="true">↗</span></a></li>
+    </ul>
+  </footer>
+
+  <script src="/js/core.js"></script>
+  <script src="/js/admit.js"></script>
+</body>
+</html>
