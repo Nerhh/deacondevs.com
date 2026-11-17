@@ -120,6 +120,29 @@ function onVisible(el, cb, threshold) {
   io.observe(el);
 }
 
+/* ---------- the light, shared by the sphere and the top ---------- */
+
+// diffuse plus a specular glint of exponent k: n is the surface normal, l the light, h the half vector (all unit)
+function lit(nx, ny, nz, lx, ly, lz, hx, hy, hz, k) {
+  const diff = Math.max(0, nx * lx + ny * ly + nz * lz);
+  const sp = Math.max(0, nx * hx + ny * hy + nz * hz);
+  return 0.1 + 0.82 * diff + 0.6 * Math.pow(sp, k);
+}
+// a rim of light on the unlit side: nl = max(0, n·l), nv = n·v
+function rim(nl, nv) { return nl < 0.2 ? Math.pow(1 - nv, 4) * 0.35 : 0; }
+// a tilted globe: twelve meridians and five parallels turning with the sphere; wide thickens the lines
+const GT = 0.38, cGT = Math.cos(GT), sGT = Math.sin(GT), TAU = Math.PI * 2;
+function globe(dx, dy, nz, rot, wide) {
+  const w = wide || 1;
+  const yy = dy * cGT - nz * sGT, zz = dy * sGT + nz * cGT;
+  const lat = Math.asin(Math.max(-1, Math.min(1, -yy)));
+  let fm = ((Math.atan2(dx, zz) + rot) / TAU) * 12; fm -= Math.floor(fm);
+  let fp = (lat / Math.PI + 0.5) * 6; fp -= Math.floor(fp);
+  // at w = 1 the thresholds are today's literals exactly, so the sphere and the icons are unchanged to the bit
+  const m = 0.018 * w, mh = w === 1 ? 0.982 : 1 - m, q = 0.024 * w, qh = w === 1 ? 0.976 : 1 - q;
+  return ((fm < m || fm > mh) && Math.abs(lat) < 1.3) || ((fp < q || fp > qh) && Math.abs(lat) < 1.4);
+}
+
 /* ---------- the sphere: shaded per pixel, then reduced to one bit ---------- */
 
 function shadeOrb(buf, N, s) {
@@ -128,7 +151,6 @@ function shadeOrb(buf, N, s) {
   let hx = lx, hy = ly, hz = lz + 1;
   const hn = Math.hypot(hx, hy, hz) || 1; hx /= hn; hy /= hn; hz /= hn;
   const cx = N * 0.5, cy = N * (s.cy || 0.44), R = N * (s.r || 0.33);
-  const T = 0.38, cT = Math.cos(T), sT = Math.sin(T), TAU = Math.PI * 2;
   const floor = s.floor !== false;
   const shx = cx - lx * R * 0.55, shy = cy + R * 1.16, srx = R * 0.95, sry = R * 0.2;
   for (let y = 0, i = 0; y < N; y++) {
@@ -141,18 +163,9 @@ function shadeOrb(buf, N, s) {
       if (r2 <= 1) {
         const nz = Math.sqrt(1 - r2);
         const diff = Math.max(0, dx * lx + dy * ly + nz * lz);
-        const sp = Math.max(0, dx * hx + dy * hy + nz * hz);
-        I = 0.1 + 0.82 * diff + 0.6 * Math.pow(sp, 36);
-        if (s.grid) {
-          // a tilted globe: twelve meridians and five parallels turning with the sphere
-          const yy = dy * cT - nz * sT, zz = dy * sT + nz * cT;
-          const lat = Math.asin(Math.max(-1, Math.min(1, -yy)));
-          let fm = ((Math.atan2(dx, zz) + s.rot) / TAU) * 12; fm -= Math.floor(fm);
-          let fp = (lat / Math.PI + 0.5) * 6; fp -= Math.floor(fp);
-          const on = ((fm < 0.018 || fm > 0.982) && Math.abs(lat) < 1.3) || ((fp < 0.024 || fp > 0.976) && Math.abs(lat) < 1.4);
-          if (on) I = diff > 0.18 ? I * 0.38 : 0.36;
-        }
-        if (diff < 0.2) I += Math.pow(1 - nz, 4) * 0.35;
+        I = lit(dx, dy, nz, lx, ly, lz, hx, hy, hz, 36);
+        if (s.grid && globe(dx, dy, nz, s.rot)) I = diff > 0.18 ? I * 0.38 : 0.36;
+        I += rim(diff, nz);
       } else if (floor) {
         const ex = (x + 0.5 - shx) / srx, ey = (y + 0.5 - shy) / sry, e2 = ex * ex + ey * ey;
         if (e2 < 1) I = 0.52 + 0.48 * e2;
@@ -434,7 +447,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => repa
 window.MD = {
   REDUCED, FINE, root, repaints, safe, easeOut, easeInOut, clamp, lerp, hexA,
   INK, INK2, INK3, RULE, RULE2, PAPER, BG, FONT, font,
-  B4, B8, INK32, bayer, ditherField, shadeOrb, orbIcon,
+  B4, B8, INK32, bayer, ditherField, lit, rim, globe, shadeOrb, orbIcon,
   stage, fitText, loop, progress, onVisible,
   hide, dissolve, prepType, typeIn, zoomOpen,
   rng, pattern, mini,
