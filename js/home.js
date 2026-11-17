@@ -1,10 +1,127 @@
-/* marcus.gg — the index: one miniature per project (Fig. 1, the top, is js/top.js) */
+/* marcus.gg — the index: the sphere, one miniature per project, and the small print */
 (() => {
 'use strict';
 const MD = window.MD;
 if (!MD) return;
 const { REDUCED, safe, INK, INK2, INK3, RULE, RULE2, PAPER, font, fitText, clamp, lerp, easeOut, easeInOut, rng, mini } = MD;
 const dither = MD.pattern;
+
+/* ---------- Fig. 1: the sphere ---------- */
+
+safe('orb', function orb() {
+  const canvas = document.getElementById('orb');
+  if (!canvas) return;
+  const cap = document.getElementById('orb-rot');
+  const g = canvas.getContext('2d');
+  const off = document.createElement('canvas');
+  const og = off.getContext('2d');
+  const BASE = -0.00022; // one slow revolution in about half a minute
+  let S = 0, dpr = 0, cell = 2, N = 0, img = null, buf = null;
+  const st = { rot: 0.9, lx: 0.9, ly: -0.2, lz: -0.55, grid: true }; // lit from behind at first
+  const tgt = { lx: -0.55, ly: -0.45, lz: 0.8 };
+  let vel = BASE, dragging = false, lastX = 0, lastMoveT = 0, pointerT = 0, px = 0, py = 0;
+
+  function setCell(c) {
+    cell = c;
+    if (!S) return;
+    N = Math.max(8, Math.floor(S / c));
+    off.width = N; off.height = N;
+    img = og.createImageData(N, N);
+    buf = new Uint32Array(img.data.buffer);
+  }
+  function size() {
+    const w = canvas.clientWidth, d = Math.min(window.devicePixelRatio || 1, 2);
+    if (w === S && d === dpr && N) return;
+    S = w; dpr = d;
+    if (!S) return;
+    canvas.width = Math.round(S * dpr);
+    canvas.height = Math.round(S * dpr);
+    setCell(cell);
+  }
+  function draw() {
+    if (!N) return;
+    MD.shadeOrb(buf, N, st);
+    og.putImageData(img, 0, 0);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    g.imageSmoothingEnabled = false;
+    const side = Math.round(N * cell * dpr), o = Math.round((canvas.width - side) / 2);
+    g.drawImage(off, o, o, side, side);
+  }
+  function caption() {
+    if (!cap) return;
+    const deg = Math.round((((-st.rot * 180) / Math.PI) % 360 + 360) % 360);
+    cap.textContent = 'rot ' + String(deg).padStart(3, '0') + '°';
+  }
+
+  let running = false, raf = 0, last = 0, lastCap = 0;
+  function frame(t) {
+    if (!running) { raf = 0; return; }
+    const dt = last ? Math.min(64, t - last) : 16;
+    last = t;
+    if (pointerT && t - pointerT < 4000) {
+      const r = canvas.getBoundingClientRect();
+      tgt.lx = clamp((px - (r.left + r.width / 2)) / 360, -1.4, 1.4);
+      tgt.ly = clamp((py - (r.top + r.height * 0.44)) / 360, -1.4, 1.4);
+      tgt.lz = 0.75;
+    } else {
+      tgt.lx = -0.55 + 0.35 * Math.sin(t / 2600);
+      tgt.ly = -0.42 + 0.22 * Math.cos(t / 3300);
+      tgt.lz = 0.8;
+    }
+    const k = 1 - Math.exp(-dt / 260);
+    st.lx += (tgt.lx - st.lx) * k;
+    st.ly += (tgt.ly - st.ly) * k;
+    st.lz += (tgt.lz - st.lz) * k;
+    if (!dragging) {
+      vel = BASE + (vel - BASE) * Math.exp(-dt / 700);
+      st.rot += vel * dt;
+    }
+    draw();
+    if (t - lastCap > 120) { lastCap = t; caption(); }
+    raf = requestAnimationFrame(frame);
+  }
+
+  document.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return;
+    px = e.clientX; py = e.clientY; pointerT = performance.now();
+  }, { passive: true });
+  canvas.addEventListener('pointerdown', e => {
+    dragging = true; lastX = e.clientX; lastMoveT = performance.now();
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const now = performance.now(), dx = e.clientX - lastX;
+    lastX = e.clientX;
+    st.rot -= dx * 0.012;
+    vel = (-dx * 0.012) / Math.max(8, now - lastMoveT);
+    lastMoveT = now;
+    if (REDUCED) { draw(); caption(); }
+  });
+  const end = () => { dragging = false; };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+
+  size();
+  MD.repaints.push(() => { size(); draw(); });
+  if (REDUCED) {
+    Object.assign(st, { lx: -0.55, ly: -0.45, lz: 0.8 });
+    setCell(2);
+    draw();
+    return;
+  }
+  // boot: the sphere resolves from coarse blocks to fine dither
+  const seq = [16, 11, 8, 6, 4, 3, 2];
+  setCell(seq[0]);
+  seq.slice(1).forEach((c, i) => setTimeout(() => setCell(c), 380 + i * 130));
+  const io = new IntersectionObserver(entries => {
+    const vis = entries.some(e => e.isIntersecting);
+    if (vis && !running) { running = true; last = 0; if (!raf) raf = requestAnimationFrame(frame); }
+    else if (!vis) running = false;
+  });
+  io.observe(canvas);
+});
 
 /* ---------- miniatures: one small, true-to-life animation per project ---------- */
 

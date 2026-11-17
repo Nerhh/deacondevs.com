@@ -101,23 +101,8 @@ main { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); }
 @keyframes blink { 50% { opacity: 0; } }
 
 .fig { width: 100%; max-width: 440px; justify-self: end; }
-/* Fig. 1: the still is the default; top.js draws once, unhides the canvas and only then hides the still */
-.fig-stage { position: relative; aspect-ratio: 1; touch-action: pan-y pinch-zoom; -webkit-tap-highlight-color: transparent; }
-.fig-still, canvas[data-top] { display: block; width: 100%; aspect-ratio: 1; }
-canvas[data-top] { position: absolute; inset: 0; height: 100%; }
-.fig-still { color: var(--ink); }
-.fig-live .fig-still { visibility: hidden; }
-/* the cord's button: the keyboard's and assistive tech's way in; it follows the grip, and pointers pass through it */
-.fig-cord {
-  position: absolute; left: 0; top: 0; width: 44px; height: 44px; margin: 0; padding: 0;
-  background: none; border: 0; border-radius: 0; pointer-events: none; touch-action: pan-y pinch-zoom;
-}
-.fig-cord:focus { outline: none; }
-/* the 404: the front page's hero with the top gone; the missing address under the lede */
-.pg-404 .nf-path { margin: -16px 0 30px; max-width: 38ch; overflow-wrap: anywhere; }
-/* the heading is short enough for the typed role to sit beside it: keep them on their own lines */
-.pg-404 .hero h1 { display: block; width: fit-content; }
-.fig-cord:focus-visible { outline: 1px solid var(--ink); outline-offset: 0; }
+#orb { width: 100%; aspect-ratio: 1; cursor: grab; touch-action: pan-y; }
+#orb:active { cursor: grabbing; }
 .fig figcaption {
   display: flex; justify-content: space-between; gap: 12px;
   margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--rule);
@@ -320,13 +305,7 @@ footer {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
 
-@media (forced-colors: active) {
-  canvas[data-top] { background: #fbfbf9; forced-color-adjust: none; }
-}
-
 @media print {
-  canvas[data-top], .fig-cord { display: none !important; }
-  .fig-live .fig-still { visibility: visible !important; }
   * { -webkit-mask-image: none !important; mask-image: none !important; }
   .js .tw .tw-text { clip-path: none !important; }
   .menubar, .zoom, .tw-caret, .caret { display: none !important; }
